@@ -1,0 +1,16 @@
+# Ambiente virtuale Python
+wolware/
+venv/
+
+# File di database locale (MOLTO IMPORTANTE)
+*.db
+*.sqlite3
+dati_gestionale.db
+
+# File di cache di Python (file temporanei inutili su GitHub)
+__pycache__/
+*.pyc
+
+# File di sistema Windows/Mac
+.DS_Store
+Thumbs.db
