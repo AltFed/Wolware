@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scheda Cliente CDL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* Stili Login */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header h1 {
+            font-size: 28px;
+            color: #1e3a5f;
+            margin-bottom: 8px;
+        }
+        .login-header p {
+            color: #64748b;
+            font-size: 14px;
+        }
+        .login-form .form-group {
+            margin-bottom: 20px;
+        }
+        .login-form label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #334155;
+        }
+        .login-form input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        .login-form input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .login-error {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+        .login-error.show {
+            display: block;
+        }
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            margin: 10px 15px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.8);
+        }
+        .user-email {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <!-- Schermata Login -->
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <h1>📋 Scheda Cliente</h1>
+                <p>Accedi per continuare</p>
+            </div>
+            <div id="login-error" class="login-error"></div>
+            <form class="login-form" onsubmit="loginUtente(event)">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" required placeholder="email@esempio.com">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="login-btn" id="login-btn">Accedi</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- App principale (nascosta fino al login) -->
+    <div id="app-main" style="display:none;">
+    
+    <!-- Mobile menu button -->
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+    <div class="mobile-overlay" id="mobile-overlay" onclick="toggleMobileMenu()"></div>
+    
+    <!-- Barra ricerca globale (Ctrl+F) -->
+    <div class="ricerca-globale-overlay" id="ricerca-globale-overlay" style="display:none;">
+        <div class="ricerca-globale-box">
+            <input type="text" id="ricerca-globale-input" class="form-input" placeholder="Cerca clienti, fatture, movimenti... (ESC per chiudere)" oninput="eseguiRicercaGlobale()">
+            <div id="ricerca-globale-risultati"></div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1>📋 Scheda Cliente</h1>
+                <span class="version">v3.0 Web</span>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item active" data-page="clienti" onclick="navigateTo('clienti')">
+                    <span class="nav-icon">🏢</span>
+                    <span>Clienti</span>
+                </li>
+                <li class="nav-item" data-page="prima-nota-studio" onclick="navigateTo('prima-nota-studio')">
+                    <span class="nav-icon">💰</span>
+                    <span>Prima Nota Studio</span>
+                </li>
+                <li class="nav-item" data-page="rendiconto" onclick="navigateTo('rendiconto')">
+                    <span class="nav-icon">📈</span>
+                    <span>Rendiconto</span>
+                </li>
+                <li class="nav-item" data-page="tariffario-base" onclick="navigateTo('tariffario-base')">
+                    <span class="nav-icon">📊</span>
+                    <span>Database Tariffari</span>
+                </li>
+                <li class="nav-item" data-page="impostazioni" onclick="navigateTo('impostazioni')">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Impostazioni</span>
+                </li>
+            </ul>
+            <div class="user-info">
+                <span class="user-email" id="user-email-display"></span>
+                <button class="logout-btn" onclick="logoutUtente()">Esci</button>
+            </div>
+            <div class="sidebar-footer">
+                <button class="btn-icon-sidebar" onclick="apriRicercaGlobale()" title="Cerca (Ctrl+F)">🔍</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <!-- Pagina Clienti (HOME) -->
+            <div class="page active" id="page-clienti">
+                <div class="page-header">
+                    <h1 class="page-title">Clienti</h1>
+                    <div class="header-controls">
+                        <button class="btn-success" onclick="apriImportClienti()">📥 Importa Excel</button>
+                        <button class="btn-secondary" onclick="apriCostiMassivi()">💰 Costi Massivi</button>
+                        <button class="btn-secondary" onclick="apriVariabiliPaghe()">📊 Variabili Paghe</button>
+                        <button class="btn-secondary" onclick="apriContabilizzaCostiFissi()">📋 Contabilizza</button>
+                        <button class="btn-primary" onclick="apriModalNuovoCliente()">+ Nuovo Cliente</button>
+                    </div>
+                </div>
+                <div class="search-box" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+                    <input type="text" id="search-clienti" class="form-input" style="flex:1;min-width:200px;" placeholder="Cerca cliente... (Ctrl+F per ricerca globale)" oninput="filtraClienti()">
+                    <select id="filtro-anno-clienti" class="form-select" style="width:100px;" onchange="caricaClienti()"></select>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="mostra-archiviati" onchange="caricaClienti()"> Mostra archiviati
+                    </label>
+                </div>
+                <div class="clienti-container" id="clienti-grid">
+                    <!-- Clienti caricati dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Pagina Prima Nota Studio -->
+            <div class="page" id="page-prima-nota-studio">
+                <div class="page-header">
+                    <h1 class="page-title">Prima Nota Studio</h1>
+                    <div class="header-controls">
+                        <button class="btn-secondary" onclick="apriGestioneBanche()">🏦 Banche</button>
+                        <button class="btn-secondary" onclick="apriGestioneUscite()">📁 Uscite</button>
+                        <button class="btn-secondary" onclick="apriGestioneEntrate()">📁 Entrate</button>
+                        <button class="btn-success" onclick="apriPreparaFatturazione()">🧾 Fatturazione</button>
+                        <button class="btn-purple" onclick="apriGiroconto()">🔄 Giroconto</button>
+                        <button class="btn-primary" onclick="apriRegistraMovimento()">+ Movimento</button>
+                    </div>
+                </div>
+                <div class="saldi-container" id="saldi-container"></div>
+                <div class="filtri-container">
+                    <select id="filtro-anno-studio" class="form-select" onchange="aggiornaMovimentiStudio()"></select>
+                    <select id="filtro-mese-studio" class="form-select" onchange="aggiornaMovimentiStudio()">
+                        <option value="">Tutti i mesi</option>
+                        <option value="01">Gennaio</option><option value="02">Febbraio</option><option value="03">Marzo</option>
+                        <option value="04">Aprile</option><option value="05">Maggio</option><option value="06">Giugno</option>
+                        <option value="07">Luglio</option><option value="08">Agosto</option><option value="09">Settembre</option>
+                        <option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option>
+                    </select>
+                    <select id="filtro-tipo-studio" class="form-select" onchange="aggiornaMovimentiStudio()">
+                        <option value="">Tutti</option>
+                        <option value="entrata">Entrate</option>
+                        <option value="uscita">Uscite</option>
+                        <option value="giroconto">Giroconti</option>
+                    </select>
+                </div>
+                <div class="movimenti-container" id="movimenti-studio-container"></div>
+            </div>
+
+            <!-- Pagina Rendiconto -->
+            <div class="page" id="page-rendiconto">
+                <div class="page-header">
+                    <h1 class="page-title">Rendiconto</h1>
+                    <div class="header-controls">
+                        <select id="rendiconto-anno" class="form-select" style="width:120px;" onchange="aggiornaRendiconto()"></select>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="rendiconto-mostra-archiviati" onchange="aggiornaRendiconto()"> Mostra archiviati
+                        </label>
+                        <button class="btn-secondary" onclick="generaRendicontoPDF()">📄 Esporta PDF</button>
+                    </div>
+                </div>
+                <div class="saldi-container" id="rendiconto-saldi-container"></div>
+                <div id="rendiconto-riepilogo"></div>
+                <div class="rendiconto-dettaglio">
+                    <h3>📥 Dettaglio Entrate</h3>
+                    <div id="rendiconto-entrate"></div>
+                    <h3>📤 Dettaglio Uscite</h3>
+                    <div id="rendiconto-uscite"></div>
+                    <h3>🔄 Giroconti</h3>
+                    <div id="rendiconto-giroconti"></div>
+                </div>
+            </div>
+
+            <!-- Pagina Database Tariffari -->
+            <div class="page" id="page-tariffario-base">
+                <div class="page-header">
+                    <h1 class="page-title">Database Tariffari</h1>
+                    <div class="header-controls">
+                        <button class="btn-secondary" onclick="apriDuplicaTariffario()">📋 Duplica Esistente</button>
+                        <button class="btn-primary" onclick="apriModalNuovoTariffario()">+ Nuovo Tariffario</button>
+                    </div>
+                </div>
+                <p class="page-description">Crea e gestisci diversi tariffari. Quando crei un cliente, potrai sceglierne uno da applicare.</p>
+                <div class="tariffari-grid" id="tariffari-grid"></div>
+            </div>
+
+            <!-- Pagina Impostazioni -->
+            <div class="page" id="page-impostazioni">
+                <div class="page-header">
+                    <h1 class="page-title">Impostazioni Studio</h1>
+                </div>
+                
+                <div class="impostazioni-container">
+                    <!-- Dati Studio -->
+                    <div class="impostazioni-section">
+                        <h3 class="section-title">🏢 Dati Studio</h3>
+                        <div class="form-group">
+                            <label>Ragione Sociale</label>
+                            <input type="text" id="studio-ragione-sociale" class="form-input" placeholder="Es: Studio Commercialista Rossi">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Partita IVA</label>
+                                <input type="text" id="studio-piva" class="form-input" placeholder="12345678901">
+                            </div>
+                            <div class="form-group">
+                                <label>Codice Fiscale</label>
+                                <input type="text" id="studio-cf" class="form-input" placeholder="RSSMRA80A01H501X">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Indirizzo</label>
+                            <input type="text" id="studio-indirizzo" class="form-input" placeholder="Via Roma 123 - 00100 Roma">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Telefono</label>
+                                <input type="text" id="studio-telefono" class="form-input" placeholder="06 1234567">
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="studio-email" class="form-input" placeholder="info@studio.it">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>PEC</label>
+                            <input type="email" id="studio-pec" class="form-input" placeholder="studio@pec.it">
+                        </div>
+                    </div>
+                    
+                    <!-- Dati Bancari -->
+                    <div class="impostazioni-section">
+                        <h3 class="section-title">🏦 Dati Bancari per Fatture</h3>
+                        <div class="form-group">
+                            <label>Banca</label>
+                            <input type="text" id="studio-banca" class="form-input" placeholder="Es: Banca Intesa Sanpaolo">
+                        </div>
+                        <div class="form-group">
+                            <label>IBAN</label>
+                            <input type="text" id="studio-iban" class="form-input" placeholder="IT60 X054 2811 1010 0000 0123 456">
+                        </div>
+                    </div>
+                    
+                    <!-- Numerazione Fatture -->
+                    <div class="impostazioni-section">
+                        <h3 class="section-title">📄 Numerazione Fatture</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Prossimo Numero Fattura</label>
+                                <input type="number" id="studio-prossimo-numero" class="form-input" value="1" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Anno di Riferimento</label>
+                                <input type="number" id="studio-anno-fatture" class="form-input" value="2026">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Sezionale (opzionale)</label>
+                            <input type="text" id="studio-sezionale" class="form-input" placeholder="Es: A, FE, ...">
+                        </div>
+                    </div>
+                    
+                    <!-- Sicurezza -->
+                    <div class="impostazioni-section">
+                        <h3 class="section-title">🔒 Sicurezza</h3>
+                        <div id="sezione-password"></div>
+                    </div>
+                    
+                    <!-- Cartella Dati -->
+                    <div class="impostazioni-section">
+                        <h3 class="section-title">📁 Cartella Dati</h3>
+                        <p style="color:#64748b;font-size:13px;margin-bottom:16px;">
+                            Percorso dove vengono salvati PDF, estratti conto, fatture e backup.
+                            Le sottocartelle vengono create automaticamente.
+                        </p>
+                        <div id="percorso-dati-info" style="margin-bottom:16px;"></div>
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                            <button class="btn-secondary" onclick="apriCartellaDati()">📂 Apri Cartella</button>
+                            <button class="btn-secondary" onclick="cambiaPercorsoDati()">✏️ Cambia Percorso</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Backup & Ripristino -->
+                    <div class="impostazioni-section">
+                        <h3 class="section-title">💾 Backup & Ripristino</h3>
+                        <p style="color:#64748b;font-size:13px;margin-bottom:16px;">
+                            Esporta tutti i dati in un file JSON per avere una copia di sicurezza. 
+                            In caso di problemi, puoi ripristinare i dati da un backup precedente.
+                        </p>
+                        <div id="backup-ultimo-info" style="margin-bottom:16px;"></div>
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                            <button class="btn-primary" onclick="eseguiBackup()">📤 Esporta Backup</button>
+                            <button class="btn-secondary" onclick="apriRipristino()">📥 Ripristina da Backup</button>
+                        </div>
+                        <input type="file" id="backup-file-input" accept=".json" style="display:none;" onchange="caricaFileBackup(event)">
+                    </div>
+                    
+                    <button class="btn-primary btn-large" onclick="salvaImpostazioniStudio()">💾 Salva Impostazioni</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    
+    <!-- Modal Nuovo Cliente -->
+    <div class="modal-overlay" id="modal-nuovo-cliente">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nuovo Cliente</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-nuovo-cliente')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Denominazione *</label>
+                    <input type="text" id="cliente-denominazione" class="form-input">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>C.F. / P.IVA</label>
+                        <input type="text" id="cliente-cf" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefono</label>
+                        <input type="text" id="cliente-telefono" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="cliente-email" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Indirizzo</label>
+                    <input type="text" id="cliente-indirizzo" class="form-input" placeholder="Via/Piazza, N°, CAP, Città">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data inizio gestione Paghe</label>
+                        <input type="date" id="cliente-inizio-paghe" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Data inizio gestione Contabilità</label>
+                        <input type="date" id="cliente-inizio-contabilita" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tariffario da applicare</label>
+                    <select id="cliente-tariffario" class="form-select">
+                        <option value="">-- Nessun tariffario --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cadenza pagamenti</label>
+                    <div class="cadenza-btns" id="cliente-cadenza-container">
+                        <button type="button" class="cadenza-btn" data-cadenza="mensile" onclick="selezionaCadenza('mensile')">Mensile</button>
+                        <button type="button" class="cadenza-btn" data-cadenza="trimestrale" onclick="selezionaCadenza('trimestrale')">Trimestrale</button>
+                        <button type="button" class="cadenza-btn" data-cadenza="quadrimestrale" onclick="selezionaCadenza('quadrimestrale')">Quadrimestrale</button>
+                        <button type="button" class="cadenza-btn" data-cadenza="semestrale" onclick="selezionaCadenza('semestrale')">Semestrale</button>
+                        <button type="button" class="cadenza-btn" data-cadenza="libero" onclick="selezionaCadenza('libero')">Libero</button>
+                    </div>
+                    <input type="hidden" id="cliente-cadenza" value="">
+                </div>
+                <div class="form-group">
+                    <label>Residuo iniziale € (saldo al 31/12 anno precedente)</label>
+                    <input type="number" id="cliente-residuo-iniziale" class="form-input" step="0.01" value="0" placeholder="0.00">
+                    <small style="color:#64748b;font-size:11px;">Inserisci il residuo dovuto dal cliente (positivo) o il credito (negativo)</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-nuovo-cliente')">Annulla</button>
+                <button class="btn-primary" onclick="salvaCliente()">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Dettaglio Cliente -->
+    <div class="modal-overlay" id="modal-dettaglio-cliente">
+        <div class="modal-content modal-xlarge">
+            <div class="modal-header">
+                <h2 id="dettaglio-cliente-titolo">Cliente</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-dettaglio-cliente')">&times;</button>
+            </div>
+            <div class="modal-body" id="dettaglio-cliente-body"></div>
+        </div>
+    </div>
+
+    <!-- Modal Inserisci Pratiche -->
+    <div class="modal-overlay" id="modal-inserisci-pratiche">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>📋 Inserisci Pratiche</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-inserisci-pratiche')">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-pratiche-body"></div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-inserisci-pratiche')">Annulla</button>
+                <button class="btn-primary" onclick="salvaPraticheMese()">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Gestione Banche -->
+    <div class="modal-overlay" id="modal-gestione-banche">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>🏦 Gestione Banche</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-gestione-banche')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row-inline" style="margin-bottom: 20px;">
+                    <input type="text" id="nuova-banca-nome" class="form-input" placeholder="Nome banca">
+                    <input type="number" id="nuova-banca-saldo" class="form-input" placeholder="Saldo iniziale" step="0.01" style="width: 150px;">
+                    <button class="btn-primary" onclick="aggiungiBanca()">+ Aggiungi</button>
+                </div>
+                <div id="banche-lista"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Gestione Uscite -->
+    <div class="modal-overlay" id="modal-gestione-uscite">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Gestione Categorie Uscite</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-gestione-uscite')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row-inline" style="margin-bottom: 20px;">
+                    <input type="text" id="nuovo-mg-uscite" class="form-input" placeholder="Nome macrogruppo (es. Utenze, Fornitori...)">
+                    <button class="btn-primary" onclick="aggiungiMacrogruppoUscite()">+ Aggiungi</button>
+                </div>
+                <div id="macrogruppi-uscite-lista"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Gestione Entrate -->
+    <div class="modal-overlay" id="modal-gestione-entrate">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Gestione Categorie Entrate</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-gestione-entrate')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row-inline" style="margin-bottom: 20px;">
+                    <input type="text" id="nuovo-mg-entrate" class="form-input" placeholder="Nome macrogruppo (es. Rimborsi...)">
+                    <button class="btn-primary" onclick="aggiungiMacrogruppoEntrate()">+ Aggiungi</button>
+                </div>
+                <div id="macrogruppi-entrate-lista"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Giroconto -->
+    <div class="modal-overlay" id="modal-giroconto">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔄 Giroconto</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-giroconto')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color:#64748b;margin-bottom:20px;">Trasferisci fondi tra cassa e banche</p>
+                <div class="form-group">
+                    <label>Data *</label>
+                    <input type="date" id="giroconto-data" class="form-input">
+                </div>
+                <div style="display:flex;gap:15px;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Da (origine) *</label>
+                        <select id="giroconto-da" class="form-select"></select>
+                    </div>
+                    <div style="display:flex;align-items:center;padding-top:20px;font-size:24px;color:#8b5cf6;">→</div>
+                    <div class="form-group" style="flex:1;">
+                        <label>A (destinazione) *</label>
+                        <select id="giroconto-a" class="form-select"></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Importo *</label>
+                    <input type="number" id="giroconto-importo" class="form-input" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Descrizione</label>
+                    <input type="text" id="giroconto-descrizione" class="form-input" placeholder="Es: Prelievo per cassa, Versamento su conto...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-giroconto')">Annulla</button>
+                <button class="btn-primary" onclick="salvaGiroconto()">Esegui Giroconto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Registra Movimento -->
+    <div class="modal-overlay" id="modal-registra-movimento">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Registra Movimento</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-registra-movimento')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tipo-tabs">
+                    <button class="tab-btn active" onclick="cambiaTipoMovimento('entrata')">💰 Entrata</button>
+                    <button class="tab-btn" onclick="cambiaTipoMovimento('uscita')">💸 Uscita</button>
+                </div>
+                <div id="form-movimento"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-registra-movimento')">Annulla</button>
+                <button class="btn-primary" id="btn-salva-movimento" onclick="salvaMovimento()">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal PDF -->
+    <div class="modal-overlay" id="modal-pdf">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📄 Scarica PDF</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-pdf')">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-pdf-body"></div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-pdf')">Annulla</button>
+                <button class="btn-primary" onclick="generaPDF()">Genera PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Import Clienti -->
+    <div class="modal-overlay" id="modal-import-clienti">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>📥 Importa Clienti da Excel</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-import-clienti')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="background:#f0f9ff;border:1px solid #0ea5e9;border-radius:8px;padding:16px;margin-bottom:20px;">
+                    <p style="margin:0 0 10px 0;"><strong>📋 Istruzioni:</strong></p>
+                    <ol style="margin:0;padding-left:20px;color:#0369a1;">
+                        <li>Scarica il <a href="#" onclick="scaricaTemplateClienti();return false;" style="color:#0ea5e9;font-weight:bold;">Template Excel</a></li>
+                        <li>Compilalo con i dati dei tuoi clienti</li>
+                        <li>Caricalo qui sotto</li>
+                    </ol>
+                </div>
+                <div class="form-group">
+                    <label>Seleziona file Excel (.xlsx)</label>
+                    <input type="file" id="file-import-clienti" accept=".xlsx,.xls" class="form-input" onchange="anteprimaImportClienti()">
+                </div>
+                <div class="form-group">
+                    <label>Tariffario da assegnare ai nuovi clienti</label>
+                    <select id="import-tariffario" class="form-select"></select>
+                </div>
+                <div id="anteprima-import" style="margin-top:16px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-import-clienti')">Annulla</button>
+                <button class="btn-primary" id="btn-esegui-import" onclick="eseguiImportClienti()" disabled>Importa Clienti</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Fattura -->
+    <div class="modal-overlay" id="modal-fattura">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>📄 Genera Fattura</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-fattura')">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-fattura-body"></div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-fattura')">Annulla</button>
+                <button class="btn-primary" onclick="generaFatturaPDF()">Genera Fattura PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Duplica Tariffario -->
+    <div class="modal-overlay" id="modal-duplica-tariffario">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Duplica Tariffario</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-duplica-tariffario')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color:#64748b;margin-bottom:20px;">Seleziona il tariffario da cui partire. Verrà creata una copia che potrai modificare.</p>
+                <div class="form-group">
+                    <label>Tariffario da duplicare *</label>
+                    <select id="tariffario-da-duplicare" class="form-select"></select>
+                </div>
+                <div class="form-group">
+                    <label>Nome nuovo tariffario *</label>
+                    <input type="text" id="nome-tariffario-duplicato" class="form-input" placeholder="Es: Tariffario Premium">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-duplica-tariffario')">Annulla</button>
+                <button class="btn-primary" onclick="eseguiDuplicaTariffario()">Duplica e Modifica</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nuovo/Modifica Tariffario -->
+    <div class="modal-overlay" id="modal-tariffario">
+        <div class="modal-content modal-xlarge">
+            <div class="modal-header">
+                <h2 id="modal-tariffario-titolo">Nuovo Tariffario</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-tariffario')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nome Tariffario *</label>
+                    <input type="text" id="tariffario-nome" class="form-input" placeholder="Es: Tariffario Standard, Tariffario Premium...">
+                </div>
+                <div class="tariffario-container" id="modal-tariffario-container"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-danger" id="btn-elimina-tariffario" onclick="eliminaTariffario()" style="margin-right:auto;display:none;">Elimina Tariffario</button>
+                <button class="btn-secondary" onclick="chiudiModal('modal-tariffario')">Annulla</button>
+                <button class="btn-primary" onclick="salvaTariffario()">Salva Tariffario</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Variabili Paghe -->
+    <div class="modal-overlay" id="modal-variabili-paghe">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>📊 Variabili Paghe</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-variabili-paghe')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row" style="margin-bottom:20px;">
+                    <div class="form-group">
+                        <label>Anno</label>
+                        <select id="vp-anno" class="form-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Mese</label>
+                        <select id="vp-mese" class="form-select" onchange="generaTabellaVariabiliPaghe()">
+                            <option value="01">Gennaio</option>
+                            <option value="02">Febbraio</option>
+                            <option value="03">Marzo</option>
+                            <option value="04">Aprile</option>
+                            <option value="05">Maggio</option>
+                            <option value="06">Giugno</option>
+                            <option value="07">Luglio</option>
+                            <option value="08">Agosto</option>
+                            <option value="09">Settembre</option>
+                            <option value="10">Ottobre</option>
+                            <option value="11">Novembre</option>
+                            <option value="12">Dicembre</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="vp-tabella-container"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-variabili-paghe')">Annulla</button>
+                <button class="btn-primary" onclick="caricaVariabiliSuSchedaCliente()">Caricamento su Scheda Cliente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Contabilizza Costi Fissi -->
+    <div class="modal-overlay" id="modal-contabilizza-costi">
+        <div class="modal-content modal-xlarge">
+            <div class="modal-header">
+                <h2>📋 Contabilizza Costi Fissi</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-contabilizza-costi')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row" style="margin-bottom:20px;">
+                    <div class="form-group">
+                        <label>Anno</label>
+                        <select id="cf-anno" class="form-select" onchange="aggiornaAnteprimaCostiFissi()"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Da Mese</label>
+                        <select id="cf-mese-da" class="form-select" onchange="aggiornaAnteprimaCostiFissi()">
+                            <option value="01">Gennaio</option>
+                            <option value="02">Febbraio</option>
+                            <option value="03">Marzo</option>
+                            <option value="04">Aprile</option>
+                            <option value="05">Maggio</option>
+                            <option value="06">Giugno</option>
+                            <option value="07">Luglio</option>
+                            <option value="08">Agosto</option>
+                            <option value="09">Settembre</option>
+                            <option value="10">Ottobre</option>
+                            <option value="11">Novembre</option>
+                            <option value="12">Dicembre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>A Mese</label>
+                        <select id="cf-mese-a" class="form-select" onchange="aggiornaAnteprimaCostiFissi()">
+                            <option value="01">Gennaio</option>
+                            <option value="02">Febbraio</option>
+                            <option value="03">Marzo</option>
+                            <option value="04">Aprile</option>
+                            <option value="05">Maggio</option>
+                            <option value="06">Giugno</option>
+                            <option value="07">Luglio</option>
+                            <option value="08">Agosto</option>
+                            <option value="09">Settembre</option>
+                            <option value="10">Ottobre</option>
+                            <option value="11">Novembre</option>
+                            <option value="12">Dicembre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cliente</label>
+                        <select id="cf-cliente" class="form-select" onchange="aggiornaAnteprimaCostiFissi()">
+                            <option value="">-- Tutti i clienti --</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="cf-anteprima-container"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-contabilizza-costi')">Annulla</button>
+                <button class="btn-primary" onclick="eseguiContabilizzazione()">Contabilizza</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Sollecito -->
+    <div class="modal-overlay" id="modal-sollecito">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📨 Genera Sollecito</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-sollecito')">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-sollecito-body"></div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-sollecito')">Annulla</button>
+                <button class="btn-primary" onclick="generaSollecitoPDF()">Genera PDF Sollecito</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Anteprima PDF -->
+    <div class="modal-overlay" id="modal-anteprima-pdf" style="display:none;">
+        <div class="modal-content" style="max-width:900px;width:95%;height:90vh;display:flex;flex-direction:column;">
+            <div class="modal-header">
+                <h2 id="anteprima-pdf-titolo">📄 Anteprima PDF</h2>
+                <button class="modal-close" onclick="chiudiAnteprimaPDF()">&times;</button>
+            </div>
+            <div class="modal-body" style="flex:1;padding:0;overflow:hidden;">
+                <iframe id="anteprima-pdf-iframe" style="width:100%;height:100%;border:none;"></iframe>
+            </div>
+            <div class="modal-footer" style="justify-content:space-between;">
+                <button class="btn-secondary" onclick="chiudiAnteprimaPDF()">❌ Annulla</button>
+                <button class="btn-primary" id="anteprima-pdf-salva" onclick="salvaAnteprimaPDF()">💾 Salva PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Login Password -->
+    <div class="modal-overlay" id="modal-login" style="display:none;background:rgba(15,23,42,0.95);">
+        <div class="modal-content" style="max-width:400px;margin-top:15vh;">
+            <div class="modal-header" style="border:none;text-align:center;padding-bottom:0;">
+                <h2 style="width:100%;font-size:24px;">🔐 Accesso Protetto</h2>
+            </div>
+        </div>
+    </div>
+    </div> <!-- Fine app-main -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Funzioni di autenticazione
+        async function loginUtente(event) {
+            event.preventDefault();
+            var email = document.getElementById('login-email').value;
+            var password = document.getElementById('login-password').value;
+            var btn = document.getElementById('login-btn');
+            var errorDiv = document.getElementById('login-error');
+            
+            btn.disabled = true;
+            btn.textContent = 'Accesso in corso...';
+            errorDiv.className = 'login-error';
+            
+            try {
+                var result = await authLogin(email, password);
+                if (result.success) {
+                    mostraApp(result.user.email);
+                } else {
+                    errorDiv.textContent = result.error || 'Credenziali non valide';
+                    errorDiv.className = 'login-error show';
+                }
+            } catch (e) {
+                errorDiv.textContent = 'Errore di connessione';
+                errorDiv.className = 'login-error show';
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'Accedi';
+        }
+        
+        async function logoutUtente() {
+            if (confirm('Vuoi uscire?')) {
+                await authLogout();
+                location.reload();
+            }
+        }
+        
+        async function mostraApp(email) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-main').style.display = 'block';
+            document.getElementById('user-email-display').textContent = email;
+            // Carica i dati dell'app
+            await caricaDatiApp();
+        }
+        
+        // Controlla sessione all'avvio
+        async function checkSessioneIniziale() {
+            var session = await authGetSession();
+            if (session && session.user) {
+                await mostraApp(session.user.email);
+                return true;
+            }
+            return false;
+        }
+    </script>
+</body>
+</html>
