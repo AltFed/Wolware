@@ -884,10 +884,27 @@
     </div>
     </div> <!-- Fine app-main -->
 
+
+<script>
+// Guard: evita errori se i pulsanti vengono cliccati prima che app.js carichi
+function navigateTo(p) { if(window._navigateTo) window._navigateTo(p); }
+function apriImportClienti() { if(window._apriImportClienti) window._apriImportClienti(); }
+function apriCostiMassivi() { if(window._apriCostiMassivi) window._apriCostiMassivi(); }
+function apriVariabiliPaghe() { if(window._apriVariabiliPaghe) window._apriVariabiliPaghe(); }
+function apriContabilizzaCostiFissi() { if(window._apriContabilizzaCostiFissi) window._apriContabilizzaCostiFissi(); }
+function apriModalNuovoCliente() { if(window._apriModalNuovoCliente) window._apriModalNuovoCliente(); }
+function apriGestioneUtenti() { if(window._apriGestioneUtenti) window._apriGestioneUtenti(); }
+function apriRicercaGlobale() { if(window._apriRicercaGlobale) window._apriRicercaGlobale(); }
+function toggleMobileMenu() { if(window._toggleMobileMenu) window._toggleMobileMenu(); }
+function logoutUtente() { if(window._logoutUtente) window._logoutUtente(); }
+function filtraClienti() { if(window._filtraClienti) window._filtraClienti(); }
+function eseguiRicercaGlobale() { if(window._eseguiRicercaGlobale) window._eseguiRicercaGlobale(); }
+</script>
+
 <script type="text/javascript" src="/eel.js"></script>
-<script src="js/eel-bridge.js"></script>
-<script src="js/login.js"></script>
-<script src="js/app.js"></script>
+<script src="js/eel-bridge.js" defer></script>
+<script src="js/login.js" defer></script>
+<script src="js/app.js" defer></script>
         
 
     <!-- Modal Gestione Utenti -->

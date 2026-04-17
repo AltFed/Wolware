@@ -9,6 +9,17 @@ let _sessioneAttiva = false;
 let _utenteCorrente = null;
 let _ruoloCorrente  = null;
 
+// ── Helpers modali (compatibili con app.js) ──────────────────────────────────
+function _apriModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('show');
+}
+function _chiudiModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('show');
+}
+
+
 // ── Setup DOM al caricamento ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     await checkSessioneIniziale();
@@ -205,7 +216,7 @@ async function logoutUtente() {
 async function apriGestioneUtenti() {
     if (_ruoloCorrente !== 'admin') return;
     await _renderGestioneUtenti();
-    apriModal('modal-gestione-utenti');
+    _apriModal('modal-gestione-utenti');
 }
 
 async function _renderGestioneUtenti() {
@@ -290,7 +301,7 @@ async function salvaGestioneUtenti() {
         }
     }
 
-    chiudiModal('modal-gestione-utenti');
+    _chiudiModal('modal-gestione-utenti');
     // Riapri con lista aggiornata
     if (username && password) {
         await apriGestioneUtenti();
@@ -332,3 +343,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const appMain = document.getElementById('app-main');
     if (appMain) _navObserver.observe(appMain, { attributes: true, attributeFilter: ['style'] });
 });
+
+// ── Registrazione funzioni globali login ──
+window._logoutUtente      = logoutUtente;
+window._apriGestioneUtenti = apriGestioneUtenti;
+

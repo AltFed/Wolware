@@ -1,4 +1,4 @@
-// ==================== SCHEDA CLIENTE CDL - VERSIONE EEL + SQLITE ====================const isElectron = false; // Eel non è Electron, ma il flag mantiene compatibilità
+// ==================== SCHEDA CLIENTE CDL - VERSIONE EEL + SQLITE ====================const isElectron = false;
 
 // ==================== TOAST E CONFIRM MODERNI ====================
 function showToast(message, type = 'success', duration = 3000) {
@@ -3052,6 +3052,15 @@ async function salvaMovimento() {
     aggiornaRendiconto();
     
     showToast('Movimento registrato!', 'success');
+    } catch(err) {
+        console.error('Errore salva movimento:', err);
+        showToast('Errore durante il salvataggio: ' + err.message, 'error');
+    } finally {
+        if (typeof btnSalva !== 'undefined' && btnSalva) {
+            btnSalva.disabled = false;
+            btnSalva.classList.remove('btn-loading');
+        }
+    }
 }
 
 // ==================== GIROCONTO ====================
@@ -8665,7 +8674,7 @@ async function caricaDatiApp() {
     document.body.appendChild(loadingDiv);
     
     try {
-        // Carica tutti i dati dal DB locale (SQLite via eel)
+        // Carica tutti i dati da Supabase
         var dati = await dbCaricaTutto();
         
         // Assegna alle variabili globali
@@ -8951,3 +8960,16 @@ async function eseguiImportClienti() {
     
     showToast('Importazione completata!\n\n' + importati + ' clienti importati' + (errori > 0 ? '\n' + errori + ' errori' : ''));
 }
+
+// ── Registrazione funzioni globali (guard compatibilità index.html) ──────────
+window._navigateTo                 = navigateTo;
+window._apriImportClienti          = apriImportClienti;
+window._apriCostiMassivi           = apriCostiMassivi;
+window._apriVariabiliPaghe         = apriVariabiliPaghe;
+window._apriContabilizzaCostiFissi = apriContabilizzaCostiFissi;
+window._apriModalNuovoCliente      = apriModalNuovoCliente;
+window._apriRicercaGlobale         = apriRicercaGlobale;
+window._toggleMobileMenu           = toggleMobileMenu;
+window._filtraClienti              = filtraClienti;
+window._eseguiRicercaGlobale       = eseguiRicercaGlobale;
+
