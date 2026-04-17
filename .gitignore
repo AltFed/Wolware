@@ -1,6 +1,7 @@
 # Ambiente virtuale Python
 wolware/
 venv/
+env/
 
 # File di database locale (MOLTO IMPORTANTE)
 *.db
