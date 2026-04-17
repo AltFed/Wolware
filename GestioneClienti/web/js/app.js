@@ -1,5 +1,4 @@
-// ==================== SCHEDA CLIENTE CDL - VERSIONE WEB ====================
-const isElectron = false;
+// ==================== SCHEDA CLIENTE CDL - VERSIONE WEB ====================const isElectron = false;
 
 // ==================== TOAST E CONFIRM MODERNI ====================
 function showToast(message, type = 'success', duration = 3000) {

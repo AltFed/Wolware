@@ -7,283 +7,289 @@
     <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        /* Stili Login */
-        .login-container {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
-        }
-        .login-box {
-            background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 400px;
-        }
-        .login-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .login-header h1 {
-            font-size: 28px;
-            color: #1e3a5f;
-            margin-bottom: 8px;
-        }
-        .login-header p {
-            color: #64748b;
-            font-size: 14px;
-        }
-        .login-form .form-group {
-            margin-bottom: 20px;
-        }
-        .login-form label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-            color: #334155;
-        }
-        .login-form input {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.2s;
-        }
-        .login-form input:focus {
-            outline: none;
-            border-color: #3b82f6;
-        }
-        .login-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
-        .login-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .login-error {
-            background: #fef2f2;
-            color: #dc2626;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            display: none;
-        }
-        .login-error.show {
-            display: block;
-        }
-        .logout-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-        .logout-btn:hover {
-            background: #dc2626;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            padding: 10px 15px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 8px;
-            margin: 10px 15px;
-            font-size: 12px;
-            color: rgba(255,255,255,0.8);
-        }
-        .user-email {
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-    </style>
-</head>
-<body>
-    <!-- Schermata Login -->
-    <div id="login-screen" class="login-container">
-        <div class="login-box">
-            <div class="login-header">
-                <h1>📋 Scheda Cliente</h1>
-                <p>Accedi per continuare</p>
-            </div>
-            <div id="login-error" class="login-error"></div>
-            <form class="login-form" onsubmit="loginUtente(event)">
-                <div class="form-group">
-                    <label for="login-email">Email</label>
-                    <input type="email" id="login-email" required placeholder="email@esempio.com">
-                </div>
-                <div class="form-group">
-                    <label for="login-password">Password</label>
-                    <input type="password" id="login-password" required placeholder="••••••••">
-                </div>
-                <button type="submit" class="login-btn" id="login-btn">Accedi</button>
-            </form>
-        </div>
-    </div>
+        /* Stili Login */   
+        .login-container {  
+            min-height: 100vh;  
+            display: flex;  
+            align-items: center;    
+            justify-content: center;    
+            background: linear-gradient(135deg, #1e3a5f 0%  , #0f172a 100%);
+        }   
+        .login-box {    
+            background: white;  
+            padding: 40px;  
+            border-radius: 16px;    
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);    
+            width: 100%;    
+            max-width: 400px;   
+        }   
+        .login-header { 
+            text-align: center; 
+            margin-bottom: 30px;    
+        }   
+        .login-header h1 {  
+            font-size: 28px;    
+            color: #1e3a5f; 
+            margin-bottom: 8px; 
+        }   
+        .login-header p {   
+            color: #64748b; 
+            font-size: 14px;    
+        }   
+        .login-form .form-group {   
+            margin-bottom: 20px;    
+        }   
+        .login-form label { 
+            display: block; 
+            margin-bottom: 6px; 
+            font-weight: 600;   
+            color: #334155; 
+        }   
+        .login-form input { 
+            width: 100%;    
+            padding: 12px 16px; 
+            border: 2px solid #e2e8f0;  
+            border-radius: 8px; 
+            font-size: 16px;    
+            transition: border-color 0.2s;  
+        }   
+        .login-form input:focus {   
+            outline: none;  
+            border-color: #3b82f6;  
+        }   
+        .login-btn {    
+            width: 100%;    
+            padding: 14px;  
+            background: linear-gradient(135deg, #3b82f6,    #1d4ed8);
+            color: white;   
+            border: none;   
+            border-radius: 8px; 
+            font-size: 16px;    
+            font-weight: 600;   
+            cursor: pointer;    
+            transition: transform 0.2s, box-shadow 0.2s;    
+        }   
+        .login-btn:hover {  
+            transform: translateY(-2px);    
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4)  ;
+        }   
+        .login-btn:disabled {   
+            opacity: 0.6;   
+            cursor: not-allowed;    
+            transform: none;    
+        }   
+        .login-error {  
+            background: #fef2f2;    
+            color: #dc2626; 
+            padding: 12px;  
+            border-radius: 8px; 
+            margin-bottom: 20px;    
+            font-size: 14px;    
+            display: none;  
+        }   
+        .login-error.show { 
+            display: block; 
+        }   
+        .logout-btn {   
+            background: #ef4444;    
+            color: white;   
+            border: none;   
+            padding: 8px 16px;  
+            border-radius: 6px; 
+            cursor: pointer;    
+            font-size: 12px;    
+            margin-left: 10px;  
+        }   
+        .logout-btn:hover { 
+            background: #dc2626;    
+        }   
+        .user-info {    
+            display: flex;  
+            align-items: center;    
+            padding: 10px 15px; 
+            background: rgba(255,255,255,0.1);  
+            border-radius: 8px; 
+            margin: 10px 15px;  
+            font-size: 12px;    
+            color: rgba(255,255,255,0.8);   
+        }   
+        .user-username {    
+            flex: 1;    
+            overflow: hidden;   
+            text-overflow: ellipsis;    
+            white-space: nowrap;    
+        }   
+    </style>    
+</head> 
+<body>  
+    <!-- Schermata Login -->    
+    <div id="login-screen" class="login-container"> 
+        <div class="login-box"> 
+            <div class="login-header">  
+                <h1>📋 Scheda Cliente</h1>  
+                <p>Accedi per continuare</p>    
+            </div>  
+            <div id="login-error" class="login-error"></div >
+            <form class="login-form" onsubmit="loginUtente( event)">
+                <div class="form-group">    
+                    <label for="login-username">Username</l abel>
+                    <input type="text" id="login-username"  required placeholder="Username">
+                </div>  
+                <div class="form-group">    
+                    <label for="login-password">Password</l abel>
+                    <input type="password" id="login-passwo rd" required placeholder="••••••••">
+                </div>  
+                <button type="submit" class="login-btn" id= "login-btn">Accedi</button>
+            </form> 
+        </div>  
+    </div>  
 
-    <!-- App principale (nascosta fino al login) -->
-    <div id="app-main" style="display:none;">
-    
-    <!-- Mobile menu button -->
-    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
-    <div class="mobile-overlay" id="mobile-overlay" onclick="toggleMobileMenu()"></div>
-    
-    <!-- Barra ricerca globale (Ctrl+F) -->
-    <div class="ricerca-globale-overlay" id="ricerca-globale-overlay" style="display:none;">
-        <div class="ricerca-globale-box">
-            <input type="text" id="ricerca-globale-input" class="form-input" placeholder="Cerca clienti, fatture, movimenti... (ESC per chiudere)" oninput="eseguiRicercaGlobale()">
-            <div id="ricerca-globale-risultati"></div>
-        </div>
-    </div>
+    <!-- App principale (nascosta fino al login) -->    
+    <div id="app-main" style="display:none;">   
+        
+    <!-- Mobile menu button --> 
+    <button class="mobile-menu-btn" onclick="toggleMobileMe nu()">☰</button>
+    <div class="mobile-overlay" id="mobile-overlay" onclick ="toggleMobileMenu()"></div>
+        
+    <!-- Barra ricerca globale (Ctrl+F) --> 
+    <div class="ricerca-globale-overlay" id="ricerca-global e-overlay" style="display:none;">
+        <div class="ricerca-globale-box">   
+            <input type="text" id="ricerca-globale-input" c lass="form-input" placeholder="Cerca clienti, fatture, movimenti... (ESC per chiudere)" oninput="eseguiRicercaGlobale()">
+            <div id="ricerca-globale-risultati"></div>  
+        </div>  
+    </div>  
 
-    <div class="app-container">
-        <!-- Sidebar -->
-        <nav class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <h1>📋 Scheda Cliente</h1>
-                <span class="version">v3.0 Web</span>
-            </div>
-            <ul class="nav-menu">
-                <li class="nav-item active" data-page="clienti" onclick="navigateTo('clienti')">
-                    <span class="nav-icon">🏢</span>
-                    <span>Clienti</span>
-                </li>
-                <li class="nav-item" data-page="prima-nota-studio" onclick="navigateTo('prima-nota-studio')">
-                    <span class="nav-icon">💰</span>
-                    <span>Prima Nota Studio</span>
-                </li>
-                <li class="nav-item" data-page="rendiconto" onclick="navigateTo('rendiconto')">
-                    <span class="nav-icon">📈</span>
-                    <span>Rendiconto</span>
-                </li>
-                <li class="nav-item" data-page="tariffario-base" onclick="navigateTo('tariffario-base')">
-                    <span class="nav-icon">📊</span>
-                    <span>Database Tariffari</span>
-                </li>
-                <li class="nav-item" data-page="impostazioni" onclick="navigateTo('impostazioni')">
-                    <span class="nav-icon">⚙️</span>
-                    <span>Impostazioni</span>
-                </li>
-            </ul>
-            <div class="user-info">
-                <span class="user-email" id="user-email-display"></span>
-                <button class="logout-btn" onclick="logoutUtente()">Esci</button>
-            </div>
-            <div class="sidebar-footer">
-                <button class="btn-icon-sidebar" onclick="apriRicercaGlobale()" title="Cerca (Ctrl+F)">🔍</button>
-            </div>
-        </nav>
+    <div class="app-container"> 
+        <!-- Sidebar -->    
+        <nav class="sidebar" id="sidebar">  
+            <div class="sidebar-header">    
+                <h1>📋 Scheda Cliente</h1>  
+                <span class="version">v3.0 Web</span>   
+            </div>  
+            <ul class="nav-menu">   
+                <li class="nav-item active" data-page="clie nti" onclick="navigateTo('clienti')">
+                    <span class="nav-icon">🏢</span>    
+                    <span>Clienti</span>    
+                </li>   
+                <li class="nav-item" data-page="prima-nota- studio" onclick="navigateTo('prima-nota-studio')">
+                    <span class="nav-icon">💰</span>    
+                    <span>Prima Nota Studio</span>  
+                </li>   
+                <li class="nav-item" data-page="rendiconto"  onclick="navigateTo('rendiconto')">
+                    <span class="nav-icon">📈</span>    
+                    <span>Rendiconto</span> 
+                </li>   
+                <li class="nav-item" data-page="tariffario- base" onclick="navigateTo('tariffario-base')">
+                    <span class="nav-icon">📊</span>    
+                    <span>Database Tariffari</span> 
+                </li>   
+                <li class="nav-item" data-page="impostazion i" onclick="navigateTo('impostazioni')">
+                    <span class="nav-icon">⚙️</span>    
+                    <span>Impostazioni</span>   
+                </li>   
+                <!-- Visibile solo se admin — controllato d a JS dopo login -->
+                <li class="nav-item" id="nav-gestione-utent i" style="display:none"
+                    data-page="gestione-utenti" onclick="ap riGestioneUtenti()">
+                    <span class="nav-icon">👥</span>    
+                    <span>Utenti</span> 
+                </li>   
+            </ul>   
+            <div class="user-info"> 
+                <span class="user-username" id="user-userna me-display"></span>
+                <button class="logout-btn" onclick="logoutU tente()">Esci</button>
+            </div>  
+            <div class="sidebar-footer">    
+                <button class="btn-icon-sidebar" onclick="a priRicercaGlobale()" title="Cerca (Ctrl+F)">🔍</button>
+            </div>  
+        </nav>  
 
-        <!-- Main Content -->
-        <main class="main-content">
+        <!-- Main Content -->   
+        <main class="main-content"> 
 
-            <!-- Pagina Clienti (HOME) -->
-            <div class="page active" id="page-clienti">
-                <div class="page-header">
-                    <h1 class="page-title">Clienti</h1>
-                    <div class="header-controls">
-                        <button class="btn-success" onclick="apriImportClienti()">📥 Importa Excel</button>
-                        <button class="btn-secondary" onclick="apriCostiMassivi()">💰 Costi Massivi</button>
-                        <button class="btn-secondary" onclick="apriVariabiliPaghe()">📊 Variabili Paghe</button>
-                        <button class="btn-secondary" onclick="apriContabilizzaCostiFissi()">📋 Contabilizza</button>
-                        <button class="btn-primary" onclick="apriModalNuovoCliente()">+ Nuovo Cliente</button>
-                    </div>
-                </div>
-                <div class="search-box" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
-                    <input type="text" id="search-clienti" class="form-input" style="flex:1;min-width:200px;" placeholder="Cerca cliente... (Ctrl+F per ricerca globale)" oninput="filtraClienti()">
-                    <select id="filtro-anno-clienti" class="form-select" style="width:100px;" onchange="caricaClienti()"></select>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="mostra-archiviati" onchange="caricaClienti()"> Mostra archiviati
-                    </label>
-                </div>
-                <div class="clienti-container" id="clienti-grid">
-                    <!-- Clienti caricati dinamicamente -->
-                </div>
-            </div>
+            <!-- Pagina Clienti (HOME) -->  
+            <div class="page active" id="page-clienti"> 
+                <div class="page-header">   
+                    <h1 class="page-title">Clienti</h1> 
+                    <div class="header-controls">   
+                        <button class="btn-success" onclick ="apriImportClienti()">📥 Importa Excel</button>
+                        <button class="btn-secondary" oncli ck="apriCostiMassivi()">💰 Costi Massivi</button>
+                        <button class="btn-secondary" oncli ck="apriVariabiliPaghe()">📊 Variabili Paghe</button>
+                        <button class="btn-secondary" oncli ck="apriContabilizzaCostiFissi()">📋 Contabilizza</button>
+                        <button class="btn-primary" onclick ="apriModalNuovoCliente()">+ Nuovo Cliente</button>
+                    </div>  
+                </div>  
+                <div class="search-box" style="display:flex ;gap:16px;align-items:center;flex-wrap:wrap;">
+                    <input type="text" id="search-clienti"  class="form-input" style="flex:1;min-width:200px;" placeholder="Cerca cliente... (Ctrl+F per ricerca globale)" oninput="filtraClienti()">
+                    <select id="filtro-anno-clienti" class= "form-select" style="width:100px;" onchange="caricaClienti()"></select>
+                    <label class="checkbox-label">  
+                        <input type="checkbox" id="mostra-a rchiviati" onchange="caricaClienti()"> Mostra archiviati
+                    </label>    
+                </div>  
+                <div class="clienti-container" id="clienti- grid">
+                    <!-- Clienti caricati dinamicamente --> 
+                </div>  
+            </div>  
 
-            <!-- Pagina Prima Nota Studio -->
-            <div class="page" id="page-prima-nota-studio">
-                <div class="page-header">
-                    <h1 class="page-title">Prima Nota Studio</h1>
-                    <div class="header-controls">
-                        <button class="btn-secondary" onclick="apriGestioneBanche()">🏦 Banche</button>
-                        <button class="btn-secondary" onclick="apriGestioneUscite()">📁 Uscite</button>
-                        <button class="btn-secondary" onclick="apriGestioneEntrate()">📁 Entrate</button>
-                        <button class="btn-success" onclick="apriPreparaFatturazione()">🧾 Fatturazione</button>
-                        <button class="btn-purple" onclick="apriGiroconto()">🔄 Giroconto</button>
-                        <button class="btn-primary" onclick="apriRegistraMovimento()">+ Movimento</button>
-                    </div>
-                </div>
-                <div class="saldi-container" id="saldi-container"></div>
-                <div class="filtri-container">
-                    <select id="filtro-anno-studio" class="form-select" onchange="aggiornaMovimentiStudio()"></select>
-                    <select id="filtro-mese-studio" class="form-select" onchange="aggiornaMovimentiStudio()">
-                        <option value="">Tutti i mesi</option>
-                        <option value="01">Gennaio</option><option value="02">Febbraio</option><option value="03">Marzo</option>
-                        <option value="04">Aprile</option><option value="05">Maggio</option><option value="06">Giugno</option>
-                        <option value="07">Luglio</option><option value="08">Agosto</option><option value="09">Settembre</option>
-                        <option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option>
-                    </select>
-                    <select id="filtro-tipo-studio" class="form-select" onchange="aggiornaMovimentiStudio()">
-                        <option value="">Tutti</option>
-                        <option value="entrata">Entrate</option>
-                        <option value="uscita">Uscite</option>
-                        <option value="giroconto">Giroconti</option>
-                    </select>
-                </div>
-                <div class="movimenti-container" id="movimenti-studio-container"></div>
-            </div>
+            <!-- Pagina Prima Nota Studio -->   
+            <div class="page" id="page-prima-nota-studio">  
+                <div class="page-header">   
+                    <h1 class="page-title">Prima Nota Studi o</h1>
+                    <div class="header-controls">   
+                        <button class="btn-secondary" oncli ck="apriGestioneBanche()">🏦 Banche</button>
+                        <button class="btn-secondary" oncli ck="apriGestioneUscite()">📁 Uscite</button>
+                        <button class="btn-secondary" oncli ck="apriGestioneEntrate()">📁 Entrate</button>
+                        <button class="btn-success" onclick ="apriPreparaFatturazione()">🧾 Fatturazione</button>
+                        <button class="btn-purple" onclick= "apriGiroconto()">🔄 Giroconto</button>
+                        <button class="btn-primary" onclick ="apriRegistraMovimento()">+ Movimento</button>
+                    </div>  
+                </div>  
+                <div class="saldi-container" id="saldi-cont ainer"></div>
+                <div class="filtri-container">  
+                    <select id="filtro-anno-studio" class=" form-select" onchange="aggiornaMovimentiStudio()"></select>
+                    <select id="filtro-mese-studio" class=" form-select" onchange="aggiornaMovimentiStudio()">
+                        <option value="">Tutti i mesi</opti on>
+                        <option value="01">Gennaio</option> <option value="02">Febbraio</option><option value="03">Marzo</option>
+                        <option value="04">Aprile</option>< option value="05">Maggio</option><option value="06">Giugno</option>
+                        <option value="07">Luglio</option>< option value="08">Agosto</option><option value="09">Settembre</option>
+                        <option value="10">Ottobre</option> <option value="11">Novembre</option><option value="12">Dicembre</option>
+                    </select>   
+                    <select id="filtro-tipo-studio" class=" form-select" onchange="aggiornaMovimentiStudio()">
+                        <option value="">Tutti</option> 
+                        <option value="entrata">Entrate</op tion>
+                        <option value="uscita">Uscite</opti on>
+                        <option value="giroconto">Giroconti </option>
+                    </select>   
+                </div>  
+                <div class="movimenti-container" id="movime nti-studio-container"></div>
+            </div>  
 
-            <!-- Pagina Rendiconto -->
-            <div class="page" id="page-rendiconto">
-                <div class="page-header">
-                    <h1 class="page-title">Rendiconto</h1>
-                    <div class="header-controls">
-                        <select id="rendiconto-anno" class="form-select" style="width:120px;" onchange="aggiornaRendiconto()"></select>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="rendiconto-mostra-archiviati" onchange="aggiornaRendiconto()"> Mostra archiviati
-                        </label>
-                        <button class="btn-secondary" onclick="generaRendicontoPDF()">📄 Esporta PDF</button>
-                    </div>
-                </div>
-                <div class="saldi-container" id="rendiconto-saldi-container"></div>
-                <div id="rendiconto-riepilogo"></div>
-                <div class="rendiconto-dettaglio">
-                    <h3>📥 Dettaglio Entrate</h3>
-                    <div id="rendiconto-entrate"></div>
-                    <h3>📤 Dettaglio Uscite</h3>
-                    <div id="rendiconto-uscite"></div>
-                    <h3>🔄 Giroconti</h3>
-                    <div id="rendiconto-giroconti"></div>
-                </div>
-            </div>
+            <!-- Pagina Rendiconto -->  
+            <div class="page" id="page-rendiconto"> 
+                <div class="page-header">   
+                    <h1 class="page-title">Rendiconto</h1>  
+                    <div class="header-controls">   
+                        <select id="rendiconto-anno" class= "form-select" style="width:120px;" onchange="aggiornaRendiconto()"></select>
+                        <label class="checkbox-label">  
+                            <input type="checkbox" id="rend iconto-mostra-archiviati" onchange="aggiornaRendiconto()"> Mostra archiviati
+                        </label>    
+                        <button class="btn-secondary" oncli ck="generaRendicontoPDF()">📄 Esporta PDF</button>
+                    </div>  
+                </div>  
+                <div class="saldi-container" id="rendiconto -saldi-container"></div>
+                <div id="rendiconto-riepilogo"></div>   
+                <div class="rendiconto-dettaglio">  
+                    <h3>📥 Dettaglio Entrate</h3>   
+                    <div id="rendiconto-entrate"></div> 
+                    <h3>📤 Dettaglio Uscite</h3>    
+                    <div id="rendiconto-uscite"></div>  
+                    <h3>🔄 Giroconti</h3>   
+                    <div id="rendiconto-giroconti"></div>   
+                </div>  
+            </div>  
 
-            <!-- Pagina Database Tariffari -->
-            <div class="page" id="page-tariffario-base">
-                <div class="page-header">
+            <!-- Pagina Database Tariffari -->  
+            <div class="page" id="page-tariffario-base">    
+                <div class="page-header">   
                     <h1 class="page-title">Database Tariffari</h1>
                     <div class="header-controls">
                         <button class="btn-secondary" onclick="apriDuplicaTariffario()">📋 Duplica Esistente</button>
@@ -878,64 +884,10 @@
     </div>
     </div> <!-- Fine app-main -->
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="js/supabase-config.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="js/eel-bridge.js"></script>
+    <script src="js/login.js"></script>
     <script src="js/app.js"></script>
-    <script>
-        // Funzioni di autenticazione
-        async function loginUtente(event) {
-            event.preventDefault();
-            var email = document.getElementById('login-email').value;
-            var password = document.getElementById('login-password').value;
-            var btn = document.getElementById('login-btn');
-            var errorDiv = document.getElementById('login-error');
-            
-            btn.disabled = true;
-            btn.textContent = 'Accesso in corso...';
-            errorDiv.className = 'login-error';
-            
-            try {
-                var result = await authLogin(email, password);
-                if (result.success) {
-                    mostraApp(result.user.email);
-                } else {
-                    errorDiv.textContent = result.error || 'Credenziali non valide';
-                    errorDiv.className = 'login-error show';
-                }
-            } catch (e) {
-                errorDiv.textContent = 'Errore di connessione';
-                errorDiv.className = 'login-error show';
-            }
-            
-            btn.disabled = false;
-            btn.textContent = 'Accedi';
-        }
         
-        async function logoutUtente() {
-            if (confirm('Vuoi uscire?')) {
-                await authLogout();
-                location.reload();
-            }
-        }
-        
-        async function mostraApp(email) {
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('app-main').style.display = 'block';
-            document.getElementById('user-email-display').textContent = email;
-            // Carica i dati dell'app
-            await caricaDatiApp();
-        }
-        
-        // Controlla sessione all'avvio
-        async function checkSessioneIniziale() {
-            var session = await authGetSession();
-            if (session && session.user) {
-                await mostraApp(session.user.email);
-                return true;
-            }
-            return false;
-        }
-    </script>
 </body>
 </html>
