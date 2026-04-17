@@ -137,7 +137,7 @@
                 </div>  
                 <div class="form-group">    
                     <label for="login-password">Password</l abel>
-                    <input type="password" id="login-passwo rd" required placeholder="••••••••">
+                    <input type="password" id="login-password" required placeholder="••••••••">
                 </div>  
                 <button type="submit" class="login-btn" id= "login-btn">Accedi</button>
             </form> 
@@ -148,11 +148,11 @@
     <div id="app-main" style="display:none;">   
         
     <!-- Mobile menu button --> 
-    <button class="mobile-menu-btn" onclick="toggleMobileMe nu()">☰</button>
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
     <div class="mobile-overlay" id="mobile-overlay" onclick ="toggleMobileMenu()"></div>
         
     <!-- Barra ricerca globale (Ctrl+F) --> 
-    <div class="ricerca-globale-overlay" id="ricerca-global e-overlay" style="display:none;">
+    <div class="ricerca-globale-overlay" id="ricerca-globale-overlay" style="display:none;">
         <div class="ricerca-globale-box">   
             <input type="text" id="ricerca-globale-input" c lass="form-input" placeholder="Cerca clienti, fatture, movimenti... (ESC per chiudere)" oninput="eseguiRicercaGlobale()">
             <div id="ricerca-globale-risultati"></div>  
@@ -167,11 +167,11 @@
                 <span class="version">v3.0 Web</span>   
             </div>  
             <ul class="nav-menu">   
-                <li class="nav-item active" data-page="clie nti" onclick="navigateTo('clienti')">
+                <li class="nav-item active" data-page="clienti" onclick="navigateTo('clienti')">
                     <span class="nav-icon">🏢</span>    
                     <span>Clienti</span>    
                 </li>   
-                <li class="nav-item" data-page="prima-nota- studio" onclick="navigateTo('prima-nota-studio')">
+                <li class="nav-item" data-page="prima-nota-studio" onclick="navigateTo('prima-nota-studio')">
                     <span class="nav-icon">💰</span>    
                     <span>Prima Nota Studio</span>  
                 </li>   
@@ -179,27 +179,27 @@
                     <span class="nav-icon">📈</span>    
                     <span>Rendiconto</span> 
                 </li>   
-                <li class="nav-item" data-page="tariffario- base" onclick="navigateTo('tariffario-base')">
+                <li class="nav-item" data-page="tariffario-base" onclick="navigateTo('tariffario-base')">
                     <span class="nav-icon">📊</span>    
                     <span>Database Tariffari</span> 
                 </li>   
-                <li class="nav-item" data-page="impostazion i" onclick="navigateTo('impostazioni')">
+                <li class="nav-item" data-page="impostazioni" onclick="navigateTo('impostazioni')">
                     <span class="nav-icon">⚙️</span>    
                     <span>Impostazioni</span>   
                 </li>   
                 <!-- Visibile solo se admin — controllato d a JS dopo login -->
-                <li class="nav-item" id="nav-gestione-utent i" style="display:none"
-                    data-page="gestione-utenti" onclick="ap riGestioneUtenti()">
+                <li class="nav-item" id="nav-gestione-utenti" style="display:none"
+                    data-page="gestione-utenti" onclick="apriGestioneUtenti()">
                     <span class="nav-icon">👥</span>    
                     <span>Utenti</span> 
                 </li>   
             </ul>   
             <div class="user-info"> 
-                <span class="user-username" id="user-userna me-display"></span>
-                <button class="logout-btn" onclick="logoutU tente()">Esci</button>
+                <span class="user-username" id="user-email-display"></span>
+                <button class="logout-btn" onclick="logoutUtente()">Esci</button>
             </div>  
             <div class="sidebar-footer">    
-                <button class="btn-icon-sidebar" onclick="a priRicercaGlobale()" title="Cerca (Ctrl+F)">🔍</button>
+                <button class="btn-icon-sidebar" onclick="apriRicercaGlobale()" title="Cerca (Ctrl+F)">🔍</button>
             </div>  
         </nav>  
 
@@ -211,21 +211,21 @@
                 <div class="page-header">   
                     <h1 class="page-title">Clienti</h1> 
                     <div class="header-controls">   
-                        <button class="btn-success" onclick ="apriImportClienti()">📥 Importa Excel</button>
-                        <button class="btn-secondary" oncli ck="apriCostiMassivi()">💰 Costi Massivi</button>
-                        <button class="btn-secondary" oncli ck="apriVariabiliPaghe()">📊 Variabili Paghe</button>
-                        <button class="btn-secondary" oncli ck="apriContabilizzaCostiFissi()">📋 Contabilizza</button>
-                        <button class="btn-primary" onclick ="apriModalNuovoCliente()">+ Nuovo Cliente</button>
+                        <button class="btn-success" onclick="apriImportClienti()">📥 Importa Excel</button>
+                        <button class="btn-secondary" onclick="apriCostiMassivi()">💰 Costi Massivi</button>
+                        <button class="btn-secondary" onclick="apriVariabiliPaghe()">📊 Variabili Paghe</button>
+                        <button class="btn-secondary" onclick="apriContabilizzaCostiFissi()">📋 Contabilizza</button>
+                        <button class="btn-primary" onclick="apriModalNuovoCliente()">+ Nuovo Cliente</button>
                     </div>  
                 </div>  
-                <div class="search-box" style="display:flex ;gap:16px;align-items:center;flex-wrap:wrap;">
+                <div class="search-box" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
                     <input type="text" id="search-clienti"  class="form-input" style="flex:1;min-width:200px;" placeholder="Cerca cliente... (Ctrl+F per ricerca globale)" oninput="filtraClienti()">
-                    <select id="filtro-anno-clienti" class= "form-select" style="width:100px;" onchange="caricaClienti()"></select>
+                    <select id="filtro-anno-clienti" class="form-select" style="width:100px;" onchange="caricaClienti()"></select>
                     <label class="checkbox-label">  
-                        <input type="checkbox" id="mostra-a rchiviati" onchange="caricaClienti()"> Mostra archiviati
+                        <input type="checkbox" id="mostra-archiviati" onchange="caricaClienti()"> Mostra archiviati
                     </label>    
                 </div>  
-                <div class="clienti-container" id="clienti- grid">
+                <div class="clienti-container" id="clienti-grid">
                     <!-- Clienti caricati dinamicamente --> 
                 </div>  
             </div>  
@@ -235,15 +235,15 @@
                 <div class="page-header">   
                     <h1 class="page-title">Prima Nota Studi o</h1>
                     <div class="header-controls">   
-                        <button class="btn-secondary" oncli ck="apriGestioneBanche()">🏦 Banche</button>
-                        <button class="btn-secondary" oncli ck="apriGestioneUscite()">📁 Uscite</button>
-                        <button class="btn-secondary" oncli ck="apriGestioneEntrate()">📁 Entrate</button>
-                        <button class="btn-success" onclick ="apriPreparaFatturazione()">🧾 Fatturazione</button>
+                        <button class="btn-secondary" onclick="apriGestioneBanche()">🏦 Banche</button>
+                        <button class="btn-secondary" onclick="apriGestioneUscite()">📁 Uscite</button>
+                        <button class="btn-secondary" onclick="apriGestioneEntrate()">📁 Entrate</button>
+                        <button class="btn-success" onclick="apriPreparaFatturazione()">🧾 Fatturazione</button>
                         <button class="btn-purple" onclick= "apriGiroconto()">🔄 Giroconto</button>
-                        <button class="btn-primary" onclick ="apriRegistraMovimento()">+ Movimento</button>
+                        <button class="btn-primary" onclick="apriRegistraMovimento()">+ Movimento</button>
                     </div>  
                 </div>  
-                <div class="saldi-container" id="saldi-cont ainer"></div>
+                <div class="saldi-container" id="saldi-container"></div>
                 <div class="filtri-container">  
                     <select id="filtro-anno-studio" class=" form-select" onchange="aggiornaMovimentiStudio()"></select>
                     <select id="filtro-mese-studio" class=" form-select" onchange="aggiornaMovimentiStudio()">
@@ -260,7 +260,7 @@
                         <option value="giroconto">Giroconti </option>
                     </select>   
                 </div>  
-                <div class="movimenti-container" id="movime nti-studio-container"></div>
+                <div class="movimenti-container" id="movimenti-studio-container"></div>
             </div>  
 
             <!-- Pagina Rendiconto -->  
@@ -268,14 +268,14 @@
                 <div class="page-header">   
                     <h1 class="page-title">Rendiconto</h1>  
                     <div class="header-controls">   
-                        <select id="rendiconto-anno" class= "form-select" style="width:120px;" onchange="aggiornaRendiconto()"></select>
+                        <select id="rendiconto-anno" class="form-select" style="width:120px;" onchange="aggiornaRendiconto()"></select>
                         <label class="checkbox-label">  
-                            <input type="checkbox" id="rend iconto-mostra-archiviati" onchange="aggiornaRendiconto()"> Mostra archiviati
+                            <input type="checkbox" id="rendiconto-mostra-archiviati" onchange="aggiornaRendiconto()"> Mostra archiviati
                         </label>    
-                        <button class="btn-secondary" oncli ck="generaRendicontoPDF()">📄 Esporta PDF</button>
+                        <button class="btn-secondary" onclick="generaRendicontoPDF()">📄 Esporta PDF</button>
                     </div>  
                 </div>  
-                <div class="saldi-container" id="rendiconto -saldi-container"></div>
+                <div class="saldi-container" id="rendiconto-saldi-container"></div>
                 <div id="rendiconto-riepilogo"></div>   
                 <div class="rendiconto-dettaglio">  
                     <h3>📥 Dettaglio Entrate</h3>   
@@ -655,7 +655,7 @@
                 <div style="background:#f0f9ff;border:1px solid #0ea5e9;border-radius:8px;padding:16px;margin-bottom:20px;">
                     <p style="margin:0 0 10px 0;"><strong>📋 Istruzioni:</strong></p>
                     <ol style="margin:0;padding-left:20px;color:#0369a1;">
-                        <li>Scarica il <a href="#" onclick="scaricaTemplateClienti();return false;" style="color:#0ea5e9;font-weight:bold;">Template Excel</a></li>
+                        <li>Scarica il <a href="#" onclick="scaricaTemplateClienti();returnfalse;" style="color:#0ea5e9;font-weight:bold;">Template Excel</a></li>
                         <li>Compilalo con i dati dei tuoi clienti</li>
                         <li>Caricalo qui sotto</li>
                     </ol>
@@ -884,10 +884,26 @@
     </div>
     </div> <!-- Fine app-main -->
 
-    <script type="text/javascript" src="/eel.js"></script>
-    <script src="js/eel-bridge.js"></script>
-    <script src="js/login.js"></script>
-    <script src="js/app.js"></script>
+<script type="text/javascript" src="/eel.js"></script>
+<script src="js/eel-bridge.js"></script>
+<script src="js/login.js"></script>
+<script src="js/app.js"></script>
         
+
+    <!-- Modal Gestione Utenti -->
+    <div class="modal-overlay" id="modal-gestione-utenti">
+        <div class="modal-content" style="max-width:500px;">
+            <div class="modal-header">
+                <h2>👥 Gestione Utenti</h2>
+                <button class="modal-close" onclick="chiudiModal('modal-gestione-utenti')">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-gestione-utenti-body"></div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="chiudiModal('modal-gestione-utenti')">Chiudi</button>
+                <button class="btn-primary" onclick="salvaGestioneUtenti()">Salva</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

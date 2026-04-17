@@ -1,4 +1,4 @@
-// ==================== SCHEDA CLIENTE CDL - VERSIONE WEB ====================const isElectron = false;
+// ==================== SCHEDA CLIENTE CDL - VERSIONE EEL + SQLITE ====================const isElectron = false; // Eel non è Electron, ma il flag mantiene compatibilità
 
 // ==================== TOAST E CONFIRM MODERNI ====================
 function showToast(message, type = 'success', duration = 3000) {
@@ -8665,7 +8665,7 @@ async function caricaDatiApp() {
     document.body.appendChild(loadingDiv);
     
     try {
-        // Carica tutti i dati da Supabase
+        // Carica tutti i dati dal DB locale (SQLite via eel)
         var dati = await dbCaricaTutto();
         
         // Assegna alle variabili globali
@@ -8684,7 +8684,7 @@ async function caricaDatiApp() {
         ultimiEstrattiConto = dati.ultimiEstrattiConto || {};
         
         datiCaricati = true;
-        console.log('✅ Dati caricati da Supabase:', { clienti: clienti.length, pagamenti: pagamenti.length });
+        console.log('✅ Dati caricati dal DB locale:', { clienti: clienti.length, pagamenti: pagamenti.length });
         
         // Rimuovi loading overlay
         document.body.removeChild(loadingDiv);
