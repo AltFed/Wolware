@@ -885,26 +885,65 @@
     </div> <!-- Fine app-main -->
 
 
+
+
 <script>
-// Guard: evita errori se i pulsanti vengono cliccati prima che app.js carichi
-function navigateTo(p) { if(window._navigateTo) window._navigateTo(p); }
-function apriImportClienti() { if(window._apriImportClienti) window._apriImportClienti(); }
-function apriCostiMassivi() { if(window._apriCostiMassivi) window._apriCostiMassivi(); }
-function apriVariabiliPaghe() { if(window._apriVariabiliPaghe) window._apriVariabiliPaghe(); }
-function apriContabilizzaCostiFissi() { if(window._apriContabilizzaCostiFissi) window._apriContabilizzaCostiFissi(); }
-function apriModalNuovoCliente() { if(window._apriModalNuovoCliente) window._apriModalNuovoCliente(); }
-function apriGestioneUtenti() { if(window._apriGestioneUtenti) window._apriGestioneUtenti(); }
-function apriRicercaGlobale() { if(window._apriRicercaGlobale) window._apriRicercaGlobale(); }
-function toggleMobileMenu() { if(window._toggleMobileMenu) window._toggleMobileMenu(); }
-function logoutUtente() { if(window._logoutUtente) window._logoutUtente(); }
-function filtraClienti() { if(window._filtraClienti) window._filtraClienti(); }
-function eseguiRicercaGlobale() { if(window._eseguiRicercaGlobale) window._eseguiRicercaGlobale(); }
+// ── Guard globale: intercetta le chiamate a funzioni non ancora caricate ─────
+// Tutte le funzioni definite in app.js e login.js vengono chiamate inline
+// dall'HTML. Prima che i file JS carichino, queste funzioni non esistono.
+// Il guard le definisce come no-op e le sostituisce non appena i file caricano.
+(function() {
+    var _pending = {};
+    var _appReady = false;
+
+    // Lista completa delle funzioni inline dell'HTML
+    var _fns = [
+        'navigateTo','apriImportClienti','apriCostiMassivi','apriVariabiliPaghe',
+        'apriContabilizzaCostiFissi','apriModalNuovoCliente','apriGestioneUtenti',
+        'apriRicercaGlobale','toggleMobileMenu','logoutUtente','filtraClienti',
+        'eseguiRicercaGlobale','salvaCliente','salvaPraticheMese','salvaGiroconto',
+        'salvaMovimento','salvaTariffario','salvaImpostazioniStudio','salvaAnteprimaPDF',
+        'salvaGestioneUtenti','apriRegistraMovimento','apriModalNuovoTariffario',
+        'apriDuplicaTariffario','apriGestioneBanche','apriGestioneEntrate','apriGestioneUscite',
+        'apriPreparaFatturazione','apriRipristino','apriCartellaDati','cambiaPercorsoDati',
+        'eseguiBackup','eseguiImportClienti','eseguiDuplicaTariffario','eseguiContabilizzazione',
+        'eliminaTariffario','generaPDF','generaFatturaPDF','generaSollecitoPDF',
+        'generaRendicontoPDF','chiudiAnteprimaPDF','anteprimaImportClienti',
+        'caricaFileBackup','scaricaTemplateClienti','aggiungiBanca',
+        'aggiungiMacrogruppoEntrate','aggiungiMacrogruppoUscite','cambiaTipoMovimento',
+        'selezionaCadenza','caricaClienti','aggiornaMovimentiStudio','aggiornaRendiconto',
+        'aggiornaAnteprimaCostiFissi','caricaVariabiliSuSchedaCliente',
+        'generaTabellaVariabiliPaghe','chiudiModal','apriModal'
+    ];
+
+    // Crea stub per ogni funzione
+    _fns.forEach(function(name) {
+        if (typeof window[name] === 'undefined') {
+            window[name] = function() {
+                if (_appReady && typeof window['_real_' + name] === 'function') {
+                    return window['_real_' + name].apply(this, arguments);
+                }
+                // App non ancora pronta: esegui appena pronta
+                console.warn('Funzione ' + name + ' chiamata prima del caricamento di app.js');
+            };
+        }
+    });
+
+    // Quando app.js carica, registra le funzioni reali
+    window._registerAppFunctions = function(fns) {
+        _appReady = true;
+        Object.keys(fns).forEach(function(name) {
+            window['_real_' + name] = fns[name];
+            window[name] = fns[name]; // sovrascrive lo stub con la funzione reale
+        });
+    };
+})();
 </script>
 
 <script type="text/javascript" src="/eel.js"></script>
-<script src="js/eel-bridge.js" defer></script>
-<script src="js/login.js" defer></script>
-<script src="js/app.js" defer></script>
+<script src="js/eel-bridge.js"></script>
+<script src="js/login.js"></script>
+<script src="js/app.js"></script>
         
 
     <!-- Modal Gestione Utenti -->
