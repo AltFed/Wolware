@@ -85,7 +85,7 @@ function mostraSetupIniziale() {
     box.innerHTML = `
         <div class="login-header">
             <h1>Scheda Cliente</h1>
-            <p style="color:#16a34a;font-weight:600;">⚡ Primo avvio — crea il tuo account admin</p>
+            <p style="color:#16a34a;font-weight:600;">Primo avvio — crea il tuo account admin</p>
         </div>
         <div id="login-error" class="login-error" style="display:none"></div>
         <form class="login-form" onsubmit="creaAccountIniziale(event)">
@@ -225,7 +225,7 @@ async function _renderGestioneUtenti() {
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;">
             <span>
                 <strong>${u.username}</strong>
-                <span style="font-size:11px;color:#94a3b8;margin-left:6px;">${u.ruolo === 'admin' ? '🔑 admin' : 'utente'}</span>
+                <span style="font-size:11px;color:#94a3b8;margin-left:6px;">${u.ruolo === 'admin' ? icon('key',12,'margin-right:3px') + ' admin' : 'utente'}</span>
             </span>
             ${u.username !== _utenteCorrente ? `
             <div style="display:flex;gap:6px;">
@@ -347,4 +347,3 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Registrazione funzioni globali login ──
 window._logoutUtente      = logoutUtente;
 window._apriGestioneUtenti = apriGestioneUtenti;
-
