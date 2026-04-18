@@ -1,3 +1,57 @@
+// ================================================================
+// icon() - Helper SVG Lucide per template string dinamici
+// ================================================================
+function icon(name, size, extraStyle) {
+    size = size || 14;
+    extraStyle = extraStyle || '';
+    var base = 'display:inline-block;vertical-align:-2px;flex-shrink:0;' + extraStyle;
+    var svgs = {
+        'users':           '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        'pencil':          '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+        'calendar':        '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>',
+        'archive-restore': '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h2"/><path d="M20 8v11a2 2 0 0 0-2 2h-2"/><path d="m9 15 3-3 3 3"/><path d="M12 12v9"/>',
+        'archive':         '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
+        'refresh-cw':      '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+        'wallet':          '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+        'file-text':       '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><line x1="10" x2="14" y1="13" y2="13"/><line x1="8" x2="16" y1="17" y2="17"/>',
+        'landmark':        '<line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/>',
+        'folder':          '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+        'folder-open':     '<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
+        'send':            '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+        'trash-2':         '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+        'receipt':         '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/>',
+        'check-circle':    '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+        'x-circle':        '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+        'alert-triangle':  '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+        'info':            '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+        'check':           '<path d="M20 6 9 17l-5-5"/>',
+        'x':               '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+        'arrow-up-right':  '<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',
+        'building-2':      '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
+        'hard-drive':      '<line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/>',
+        'lock':            '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+        'key':             '<path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/>',
+        'zap':             '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+        'loader-2':        '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
+        'bar-chart-2':     '<line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/>',
+        'clipboard-list':  '<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+        'upload':          '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+        'download':        '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+        'circle':          '<circle cx="12" cy="12" r="10"/>',
+        'plus':            '<path d="M5 12h14"/><path d="M12 5v14"/>',
+        'minus':           '<path d="M5 12h14"/>',
+        'save':            '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>',
+        'file-down':       '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/>',
+        'copy':            '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+        'eye':             '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+        'file-spreadsheet':'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/>',
+        'arrow-down-circle':'<circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/>',
+        'arrow-up-circle':  '<circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4"/><path d="M12 16V8"/>'
+    };
+    var paths = svgs[name] || '<circle cx="12" cy="12" r="10"/>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="' + base + '">' + paths + '</svg>';
+}
+
 // ==================== SCHEDA CLIENTE CDL - VERSIONE EEL + SQLITE ====================const isElectron = false;
 
 // ==================== TOAST E CONFIRM MODERNI ====================
@@ -14,14 +68,14 @@ function showToast(message, type = 'success', duration = 3000) {
     const toast = document.createElement('div');
     toast.className = 'toast ' + type;
     
-    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+    const icons = { success: icon('check-circle',20,'color:#1a7a4a'), error: icon('x-circle',20,'color:#c0392b'), warning: icon('alert-triangle',20,'color:#b45309'), info: icon('info',20,'color:#1e4d8c') };
     toast.innerHTML = `
         <span class="toast-icon">${icons[type] || icons.info}</span>
         <span class="toast-message">${message}</span>
         <button class="toast-close" onclick="this.parentElement.remove()">×</button>
     `;
     
-    container.appendChild(toast);
+    container.appendChild(toast); if(typeof lucide!=="undefined")lucide.createIcons();
     
     // Auto rimuovi
     setTimeout(() => {
@@ -30,12 +84,12 @@ function showToast(message, type = 'success', duration = 3000) {
     }, duration);
 }
 
-function showConfirm(title, message, onConfirm, confirmText = 'Elimina', icon = '🗑️') {
+function showConfirm(title, message, onConfirm, confirmText = 'Elimina', iconEmoji = '') {
     const overlay = document.createElement('div');
     overlay.className = 'confirm-overlay';
     overlay.innerHTML = `
         <div class="confirm-box">
-            <div class="confirm-icon">${icon}</div>
+            <div class="confirm-icon">${icon("trash-2",48)}</div>
             <div class="confirm-title">${title}</div>
             <div class="confirm-message">${message}</div>
             <div class="confirm-buttons">
@@ -187,7 +241,7 @@ function caricaClienti() {
     });
     
     if (clientiFiltrati.length === 0) {
-        grid.innerHTML = '<div class="empty-state"><span class="empty-icon">🏢</span><p>Nessun cliente' + (mostraArchiviati ? '' : ' attivo') + '</p><button class="btn-primary" onclick="apriModalNuovoCliente()" style="margin-top:16px;">+ Aggiungi</button></div>';
+        grid.innerHTML = '<div class="empty-state"><span class="empty-icon">' + icon('building-2',48,'color:#9aa3b2') + '</span><p>Nessun cliente' + (mostraArchiviati ? '' : ' attivo') + '</p><button class="btn-primary" onclick="apriModalNuovoCliente()" style="margin-top:16px;">+ Aggiungi</button></div>';
         return;
     }
     
@@ -533,8 +587,8 @@ function apriDettaglioCliente(id) {
     
     // Pulsante archivia/ripristina
     var archiviaBtn = cliente.archiviato ? 
-        '<button class="btn-link" style="font-size:11px;color:#16a34a;" onclick="ripristinaCliente(' + id + ')">📥 Ripristina</button>' :
-        '<button class="btn-link" style="font-size:11px;color:#f59e0b;" onclick="archiviaCliente(' + id + ')">📦 Archivia</button>';
+        '<button class="btn-link" style="font-size:11px;color:#16a34a;" onclick="ripristinaCliente(' + id + ')">' + icon('archive-restore', 13) + ' Ripristina</button>' :
+        '<button class="btn-link" style="font-size:11px;color:#f59e0b;" onclick="archiviaCliente(' + id + ')">' + icon('archive', 13) + ' Archivia</button>';
     
     document.getElementById('dettaglio-cliente-body').innerHTML = 
         '<div style="display:flex;justify-content:space-between;margin-bottom:16px;gap:16px;flex-wrap:wrap;">' +
@@ -546,14 +600,14 @@ function apriDettaglioCliente(id) {
         '<span><strong>Tel:</strong> ' + (cliente.telefono || '-') + '</span>' +
         '</div>' +
         '<div style="display:flex;gap:16px;font-size:12px;color:#64748b;margin-bottom:6px;">' +
-        '<span>📋 Paghe: ' + inizioPagheStr + ' → ' + finePagheStr + '</span>' +
-        '<span>📊 Contab: ' + inizioContabStr + ' → ' + fineContabStr + '</span>' +
+        '<span>' + icon('clipboard-list', 13) + ' Paghe: ' + inizioPagheStr + ' → ' + finePagheStr + '</span>' +
+        '<span>' + icon('bar-chart-2', 13) + ' Contab: ' + inizioContabStr + ' → ' + fineContabStr + '</span>' +
         '</div>' +
         '<div style="display:flex;gap:12px;">' +
-        '<button class="btn-link" style="font-size:11px;" onclick="apriModalModificaCliente(' + id + ')">✏️ Modifica</button>' +
-        '<button class="btn-link" style="font-size:11px;" onclick="apriModalModificaDateGestione(' + id + ')">📅 Date</button>' +
+        '<button class="btn-link" style="font-size:11px;" onclick="apriModalModificaCliente(' + id + ')">' + icon('pencil', 13) + ' Modifica</button>' +
+        '<button class="btn-link" style="font-size:11px;" onclick="apriModalModificaDateGestione(' + id + ')">' + icon('calendar', 13) + ' Date</button>' +
         archiviaBtn +
-        '<button class="btn-link" style="font-size:11px;color:#dc2626;" onclick="eliminaCliente(' + id + ')">🗑️ Elimina</button>' +
+        '<button class="btn-link" style="font-size:11px;color:#dc2626;" onclick="eliminaCliente(' + id + ')">' + icon('trash-2',13) + ' Elimina</button>' +
         '</div>' +
         '</div>' +
         // Controlli a destra
@@ -561,11 +615,11 @@ function apriDettaglioCliente(id) {
         '<select id="dettaglio-anno" class="form-select" style="width:100px;" onchange="aggiornaDettaglioCliente()">' + generaOpzioniAnni(anno) + '</select>' +
         '<button class="btn-primary" onclick="apriModalInserisciPratiche()" style="width:100%;">+ Pratiche</button>' +
         '<div style="display:flex;gap:6px;">' +
-        '<button class="btn-secondary" style="padding:8px 12px;font-size:12px;" onclick="apriModalPDFCliente(' + id + ')">📥 Estratto</button>' +
-        '<button class="btn-secondary" style="padding:8px 12px;font-size:12px;" onclick="apriModalFattura(' + id + ')">📄 Fattura</button>' +
-        '<button class="btn-secondary" style="padding:8px 12px;font-size:12px;" onclick="apriModalPrevisionale(' + id + ')">📊 Previsionale</button>' +
+        '<button class="btn-secondary" style="padding:8px 12px;font-size:12px;" onclick="apriModalPDFCliente(' + id + ')">' + icon('archive-restore', 13) + ' Estratto</button>' +
+        '<button class="btn-secondary" style="padding:8px 12px;font-size:12px;" onclick="apriModalFattura(' + id + ')">' + icon('file-text', 13) + ' Fattura</button>' +
+        '<button class="btn-secondary" style="padding:8px 12px;font-size:12px;" onclick="apriModalPrevisionale(' + id + ')">' + icon('bar-chart-2', 13) + ' Previsionale</button>' +
         '</div>' +
-        '<button class="btn-secondary" style="padding:8px 12px;font-size:12px;width:100%;" onclick="apriModalAbbuono(' + id + ')">💰 Arrotondamento</button>' +
+        '<button class="btn-secondary" style="padding:8px 12px;font-size:12px;width:100%;" onclick="apriModalAbbuono(' + id + ')">' + icon('wallet', 13) + ' Arrotondamento</button>' +
         '</div></div><div id="dettaglio-content"></div>';
     apriModal('modal-dettaglio-cliente');
     aggiornaDettaglioCliente();
@@ -592,14 +646,14 @@ function apriModalModificaDateGestione(clienteId) {
     
     var html = '<div class="modal-overlay show" id="modal-date-gestione">' +
         '<div class="modal-content" style="max-width:450px;">' +
-        '<div class="modal-header"><h2>📅 Date Gestione</h2><button class="modal-close" onclick="chiudiModal(\'modal-date-gestione\')">&times;</button></div>' +
+        '<div class="modal-header"><h2>' + icon('calendar', 13) + ' Date Gestione</h2><button class="modal-close" onclick="chiudiModal(\'modal-date-gestione\')">&times;</button></div>' +
         '<div class="modal-body">' +
-        '<h4 style="margin-bottom:12px;color:#3b82f6;">📋 Gestione Paghe</h4>' +
+        '<h4 style="margin-bottom:12px;color:#3b82f6;">' + icon('clipboard-list', 13) + ' Gestione Paghe</h4>' +
         '<div class="form-row">' +
         '<div class="form-group"><label>Data Inizio</label><input type="date" id="edit-inizio-paghe" class="form-input" value="' + (cliente.inizioPaghe || '') + '"></div>' +
         '<div class="form-group"><label>Data Fine</label><input type="date" id="edit-fine-paghe" class="form-input" value="' + (cliente.finePaghe || '') + '"></div>' +
         '</div>' +
-        '<h4 style="margin:20px 0 12px;color:#16a34a;">📊 Gestione Contabilità</h4>' +
+        '<h4 style="margin:20px 0 12px;color:#16a34a;">' + icon('bar-chart-2', 13) + ' Gestione Contabilità</h4>' +
         '<div class="form-row">' +
         '<div class="form-group"><label>Data Inizio</label><input type="date" id="edit-inizio-contabilita" class="form-input" value="' + (cliente.inizioContabilita || '') + '"></div>' +
         '<div class="form-group"><label>Data Fine</label><input type="date" id="edit-fine-contabilita" class="form-input" value="' + (cliente.fineContabilita || '') + '"></div>' +
@@ -634,7 +688,7 @@ function apriModalModificaCliente(clienteId) {
     
     var html = '<div class="modal-overlay show" id="modal-modifica-cliente">' +
         '<div class="modal-content" style="max-width:500px;">' +
-        '<div class="modal-header"><h2>✏️ Modifica Cliente</h2><button class="modal-close" onclick="chiudiModalModifica()">&times;</button></div>' +
+        '<div class="modal-header"><h2>' + icon('pencil', 13) + ' Modifica Cliente</h2><button class="modal-close" onclick="chiudiModalModifica()">&times;</button></div>' +
         '<div class="modal-body">' +
         '<div class="form-group"><label>Denominazione *</label><input type="text" id="edit-denominazione" class="form-input" value="' + (cliente.denominazione || '') + '"></div>' +
         '<div class="form-row">' +
@@ -790,11 +844,11 @@ function aggiornaDettaglioCliente() {
         '</div>';
     
     html += '<h3 style="margin:20px 0 12px;">Pratiche ' + anno + '</h3>' + generaPraticheMesiHtml(clienteCorrenteId, anno);
-    html += '<h3 style="margin:20px 0 12px;">💰 Arrotondamenti</h3>' + generaAbbuoniHtml(clienteCorrenteId);
+    html += '<h3 style="margin:20px 0 12px;">' + icon('wallet', 13) + ' Arrotondamenti</h3>' + generaAbbuoniHtml(clienteCorrenteId);
     html += '<h3 style="margin:20px 0 12px;">Pagamenti ' + anno + '</h3>' + generaPagamentiHtml(clienteCorrenteId, anno);
     
     // Box Annotazioni
-    html += '<h3 style="margin:20px 0 12px;">📝 Annotazioni</h3>';
+    html += '<h3 style="margin:20px 0 12px;">Annotazioni</h3>';
     html += '<div class="annotazioni-box">' +
         '<textarea id="cliente-annotazioni" class="form-textarea" rows="4" placeholder="Inserisci annotazioni, note, promemoria per questo cliente..." onchange="salvaAnnotazioni(' + cliente.id + ')">' + (cliente.annotazioni || '') + '</textarea>' +
         '</div>';
@@ -802,13 +856,13 @@ function aggiornaDettaglioCliente() {
     // Sezione Tariffario con pulsante cambia
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px;">' +
         '<h3 style="margin:0;">Tariffario</h3>' +
-        '<button class="btn-secondary" onclick="apriModalCambiaTariffario(' + cliente.id + ')">🔄 Cambia Tariffario</button>' +
+        '<button class="btn-secondary" onclick="apriModalCambiaTariffario(' + cliente.id + ')">' + icon('refresh-cw', 13) + ' Cambia Tariffario</button>' +
         '</div>';
     
     // Cronologia cambi tariffario
     if (cliente.storicoTariffari && cliente.storicoTariffari.length > 0) {
         html += '<div class="cronologia-tariffari">' +
-            '<div class="cronologia-header">📋 Cronologia Cambi Tariffario</div>';
+            '<div class="cronologia-header">Cronologia Cambi Tariffario</div>';
         for (var i = cliente.storicoTariffari.length - 1; i >= 0; i--) {
             var cambio = cliente.storicoTariffari[i];
             var dataCambio = new Date(cambio.data).toLocaleDateString('it-IT');
@@ -841,10 +895,10 @@ function apriModalCambiaTariffario(clienteId) {
         '<div class="form-group"><label>Nuovo Tariffario</label>' +
         '<select id="nuovo-tariffario" class="form-select">' + opt + '</select></div>' +
         '<div style="background:#fef3c7;border-radius:8px;padding:12px;margin-top:16px;">' +
-        '<p style="color:#92400e;font-size:13px;margin:0;">⚠️ <strong>Attenzione:</strong> I costi e le pratiche già inseriti manterranno i prezzi del tariffario precedente. Il nuovo tariffario verrà applicato solo ai nuovi mesi.</p>' +
+        '<p style="color:#92400e;font-size:13px;margin:0;">️ <strong>Attenzione:</strong> I costi e le pratiche già inseriti manterranno i prezzi del tariffario precedente. Il nuovo tariffario verrà applicato solo ai nuovi mesi.</p>' +
         '</div>';
     
-    document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = '🔄 Cambia Tariffario';
+    document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = 'Cambia Tariffario';
     document.getElementById('modal-pdf').querySelector('.modal-footer .btn-primary').textContent = 'Conferma Cambio';
     document.getElementById('modal-pdf').querySelector('.modal-footer .btn-primary').setAttribute('onclick', 'confermaCambioTariffario(' + clienteId + ')');
     apriModal('modal-pdf');
@@ -1026,7 +1080,7 @@ function generaPraticheMesiHtml(clienteId, anno) {
                 '<td><span style="color:#64748b;">' + cf.descrizione + '</span> - Qta: ' + cf.qta + ' × ' + formatoEuro(cf.prezzo) + '</td>' +
                 '<td style="text-align:right;font-weight:600;">' + formatoEuro(cf.qta * cf.prezzo) + '</td>' +
                 '<td style="text-align:center;">' +
-                '<button class="btn-icon btn-icon-danger" onclick="event.stopPropagation(); eliminaCostoFisso(' + clienteId + ',\'' + chiave + '\',' + i + ')" title="Elimina">🗑️</button>' +
+                '<button class="btn-icon btn-icon-danger" onclick="event.stopPropagation(); eliminaCostoFisso(' + clienteId + ',\'' + chiave + '\',' + i + ')" title="Elimina">' + icon('trash-2',14) + '</button>' +
                 '</td></tr>';
         }
         
@@ -1050,7 +1104,7 @@ function generaPraticheMesiHtml(clienteId, anno) {
                 '<td style="color:#64748b;">Quantità: ' + qta + ' × ' + formatoEuro(prezzo) + '</td>' +
                 '<td style="text-align:right;font-weight:600;">' + formatoEuro(prezzo * qta) + '</td>' +
                 '<td style="text-align:center;">' +
-                '<button class="btn-icon btn-icon-danger" onclick="event.stopPropagation(); eliminaPratica(' + clienteId + ',\'' + chiave + '\',\'' + tipo + '\')" title="Elimina">🗑️</button>' +
+                '<button class="btn-icon btn-icon-danger" onclick="event.stopPropagation(); eliminaPratica(' + clienteId + ',\'' + chiave + '\',\'' + tipo + '\')" title="Elimina">' + icon('trash-2',14) + '</button>' +
                 '</td></tr>';
         }
         
@@ -1065,7 +1119,7 @@ function generaPraticheMesiHtml(clienteId, anno) {
                 '<td><span style="color:#64748b;">' + dataRichiesta + '</span> - ' + r.descrizione + '</td>' +
                 '<td style="text-align:right;font-weight:600;">' + formatoEuro(r.costo) + '</td>' +
                 '<td style="text-align:center;">' +
-                '<button class="btn-icon btn-icon-danger" onclick="event.stopPropagation(); eliminaRichiesta(' + clienteId + ',\'' + chiave + '\',' + r.id + ')" title="Elimina">🗑️</button>' +
+                '<button class="btn-icon btn-icon-danger" onclick="event.stopPropagation(); eliminaRichiesta(' + clienteId + ',\'' + chiave + '\',' + r.id + ')" title="Elimina">' + icon('trash-2',14) + '</button>' +
                 '</td></tr>';
         }
         
@@ -1336,8 +1390,8 @@ function apriModalAbbuono(clienteId) {
         '<input type="date" id="abbuono-data" class="form-input" value="' + new Date().toISOString().split('T')[0] + '"></div>' +
         '<div class="form-group"><label>Tipo</label>' +
         '<select id="abbuono-tipo" class="form-select" onchange="aggiornaPreviewAbbuono(' + clienteId + ')">' +
-        '<option value="positivo">➖ Arrotondamento (diminuisce residuo)</option>' +
-        '<option value="negativo">➕ Addebito (aumenta residuo)</option>' +
+        '<option value="positivo">Arrotondamento (diminuisce residuo)</option>' +
+        '<option value="negativo">Addebito (aumenta residuo)</option>' +
         '</select></div>' +
         '<div class="form-group"><label>Importo (€)</label>' +
         '<input type="number" id="abbuono-importo" class="form-input" step="0.01" min="0" placeholder="Es. 1.60" onchange="aggiornaPreviewAbbuono(' + clienteId + ')"></div>' +
@@ -1346,7 +1400,7 @@ function apriModalAbbuono(clienteId) {
         '<div id="abbuono-preview" style="margin-top:16px;padding:12px;background:#f0fdf4;border-radius:8px;display:none;">' +
         '</div>';
     
-    document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = '💰 Nuovo Arrotondamento';
+    document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = 'Nuovo Arrotondamento';
     document.getElementById('modal-pdf').querySelector('.modal-footer .btn-primary').textContent = 'Salva Arrotondamento';
     document.getElementById('modal-pdf').querySelector('.modal-footer .btn-primary').setAttribute('onclick', 'salvaAbbuono(' + clienteId + ')');
     apriModal('modal-pdf');
@@ -1644,7 +1698,7 @@ function apriModalPrevisionale(clienteId) {
         '</div>';
     
     document.getElementById('modal-pdf-body').innerHTML = html;
-    document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = '📊 Previsionale';
+    document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = 'Previsionale';
     document.getElementById('modal-pdf').querySelector('.modal-footer .btn-primary').textContent = 'Genera Previsionale';
     document.getElementById('modal-pdf').querySelector('.modal-footer .btn-primary').setAttribute('onclick', 'generaPrevisionale()');
     apriModal('modal-pdf');
@@ -2050,7 +2104,7 @@ function generaPrevisionale() {
     var cartella = cliente.denominazione.replace(/[^a-zA-Z0-9 ]/g, '').trim();
     var percorso = 'schede clienti/' + cartella + '/PREVISIONALI/' + fileName;
     
-    mostraAnteprimaPDF(doc, fileName, percorso, 'previsionale', '📊 Anteprima Previsionale');
+    mostraAnteprimaPDF(doc, fileName, percorso, 'previsionale', icon('bar-chart-2',14) + ' Anteprima Previsionale');
     
     } catch (err) {
         alert('Errore generazione previsionale: ' + err.message);
@@ -2066,7 +2120,7 @@ function generaStoricoCostiHtml(clienteId) {
     var anno = parseInt(document.getElementById('dettaglio-anno').value) || new Date().getFullYear();
     var mesiNomi = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
     
-    var html = '<h3 style="margin:24px 0 12px;">📋 Costi Applicati ' + anno + '</h3>';
+    var html = '<h3 style="margin:24px 0 12px;">' + icon('clipboard-list', 13) + ' Costi Applicati ' + anno + '</h3>';
     var trovati = false;
     
     for (var m = 12; m >= 1; m--) {
@@ -2173,12 +2227,12 @@ function apriCostiMassivi() {
     
     var html = '<div class="modal-overlay show" id="modal-costi-massivi">' +
         '<div class="modal-content" style="max-width:600px;">' +
-        '<div class="modal-header"><h2>💰 Costi Massivi</h2><button class="modal-close" onclick="chiudiModal(\'modal-costi-massivi\')">&times;</button></div>' +
+        '<div class="modal-header"><h2>' + icon('wallet', 13) + ' Costi Massivi</h2><button class="modal-close" onclick="chiudiModal(\'modal-costi-massivi\')">&times;</button></div>' +
         '<div class="modal-body">' +
         
         // Sezione definizione costo
         '<div style="background:#f8fafc;padding:16px;border-radius:8px;margin-bottom:16px;">' +
-        '<h4 style="margin:0 0 12px;color:#1e293b;">📝 Definizione Costo</h4>' +
+        '<h4 style="margin:0 0 12px;color:#1e293b;">Definizione Costo</h4>' +
         '<div class="form-group"><label>Descrizione *</label><input type="text" id="cm-descrizione" class="form-input" placeholder="Es: Invio CU 2026, Autoliquidazione INAIL..."></div>' +
         '<div class="form-row">' +
         '<div class="form-group"><label>Importo € *</label><input type="number" id="cm-importo" class="form-input" step="0.01" min="0" placeholder="0,00"></div>' +
@@ -2206,7 +2260,7 @@ function apriCostiMassivi() {
         
         // Sezione selezione clienti - SOLO 3 OPZIONI
         '<div style="background:#f0f9ff;padding:16px;border-radius:8px;margin-bottom:16px;">' +
-        '<h4 style="margin:0 0 12px;color:#1e293b;">👥 Selezione Clienti</h4>' +
+        '<h4 style="margin:0 0 12px;color:#1e293b;">Selezione Clienti</h4>' +
         '<div class="form-group">' +
         '<label><input type="radio" name="cm-tipo-selezione" value="tutti" checked onchange="aggiornaSelezioneClientiMassivi()"> Tutti i clienti attivi (' + clientiAttivi.length + ')</label>' +
         '</div>' +
@@ -2230,7 +2284,7 @@ function apriCostiMassivi() {
         '</div>' +
         '<div class="modal-footer">' +
         '<button class="btn-secondary" onclick="chiudiModal(\'modal-costi-massivi\')">Annulla</button>' +
-        '<button class="btn-primary" onclick="applicaCostiMassivi()">✅ Applica Costo</button>' +
+        '<button class="btn-primary" onclick="applicaCostiMassivi()">Applica Costo</button>' +
         '</div></div></div>';
     
     document.body.insertAdjacentHTML('beforeend', html);
@@ -2371,7 +2425,7 @@ function apriModalInserisciPratiche() {
     var mese = (oggi.getMonth() + 1);
     var meseStr = mese < 10 ? '0' + mese : '' + mese;
     
-    var vociHtml = '<div class="form-group"><label style="color:#7c3aed;font-weight:600;">🟣 A Richiesta</label>' +
+    var vociHtml = '<div class="form-group"><label style="color:#7c3aed;font-weight:600;">A Richiesta</label>' +
         '<div id="richieste-container"></div>' +
         '<button type="button" class="btn-secondary" onclick="aggiungiRichiesta()" style="margin-top:8px;">+ Aggiungi pratica a richiesta</button></div>';
     
@@ -2410,7 +2464,7 @@ function aggiungiRichiesta() {
         '<input type="text" class="form-input richiesta-desc" placeholder="Descrizione..." style="flex:2;min-width:150px;">' +
         '<input type="number" class="form-input richiesta-costo" placeholder="€ Costo" style="width:90px;" min="0" step="0.01">' +
         '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#64748b;white-space:nowrap;"><input type="checkbox" class="richiesta-esente"> Esente IVA</label>' +
-        '<button type="button" class="btn-icon btn-icon-danger" onclick="rimuoviRichiesta(' + richiesteCounter + ')">🗑️</button>' +
+        '<button type="button" class="btn-icon btn-icon-danger" onclick="rimuoviRichiesta(' + richiesteCounter + ')">' + icon('trash-2',14) + '</button>' +
         '</div>';
     container.appendChild(div);
 }
@@ -2527,7 +2581,7 @@ function aggiornaMovimentiStudio() {
     }
     movs.sort(function(a, b) { return new Date(b.data) - new Date(a.data); });
     if (movs.length === 0) {
-        document.getElementById('movimenti-studio-container').innerHTML = '<div class="empty-state"><span class="empty-icon">📋</span><p>Nessun movimento</p></div>';
+        document.getElementById('movimenti-studio-container').innerHTML = '<div class="empty-state"><span class="empty-icon">' + icon('clipboard-list',48,'color:#9aa3b2') + '</span><p>Nessun movimento</p></div>';
         return;
     }
     var html = '<table class="movimenti-table"><thead><tr><th style="width:30px;"></th><th>Data</th><th>Tipo</th><th>Categoria</th><th>Nome</th><th>Note</th><th>Conto</th><th style="text-align:right;">Importo</th><th></th></tr></thead><tbody>';
@@ -2538,7 +2592,7 @@ function aggiornaMovimentiStudio() {
         var cls, tipoLabel;
         if (m.tipo === 'giroconto') {
             cls = m.girocontoDir === 'entrata' ? 'mov-giroconto-in' : 'mov-giroconto-out';
-            tipoLabel = m.girocontoDir === 'entrata' ? '🔄 Entrata' : '🔄 Uscita';
+            tipoLabel = m.girocontoDir === 'entrata' ? icon('refresh-cw',12) + ' Entrata' : icon('refresh-cw',12) + ' Uscita';
         } else {
             cls = m.tipo === 'entrata' ? 'mov-entrata' : 'mov-uscita';
             tipoLabel = m.tipo === 'entrata' ? 'Entrata' : 'Uscita';
@@ -2569,12 +2623,12 @@ function aggiornaMovimentiStudio() {
             
             if (isFatturato) {
                 // Fatturato - verde
-                iconaHtml = '✔';
+                iconaHtml = icon('check', 16, 'color:#1a7a4a');
                 titoloFatt = 'Fatturato - clicca per rimuovere';
                 cursorStyle = 'cursor:pointer;color:#22c55e;font-size:18px;';
             } else if (diffGiorni > 7) {
                 // Non fatturato e > 7 giorni - giallo/arancione (urgente)
-                iconaHtml = '⚠';
+                iconaHtml = '';
                 titoloFatt = 'DA FATTURARE URGENTE! Incasso di ' + diffGiorni + ' giorni fa';
                 cursorStyle = 'cursor:default;color:#f59e0b;font-size:18px;';
             } else {
@@ -2697,7 +2751,7 @@ function apriPreparaFatturazione() {
     html += '</div>';
     
     document.getElementById('modal-pdf-body').innerHTML = html;
-    document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = '🧾 Prepara Fatturazione';
+    document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = 'Fatturazione';
     document.getElementById('modal-pdf').querySelector('.modal-footer .btn-primary').textContent = 'Genera Documento';
     document.getElementById('modal-pdf').querySelector('.modal-footer .btn-primary').setAttribute('onclick', 'generaDocumentoFatturazione()');
     apriModal('modal-pdf');
@@ -2912,7 +2966,7 @@ async function generaDocumentoFatturazione() {
     var fileName = 'Fatturazione_' + dataFile + '.pdf';
     var percorso = 'FATTURAZIONE/' + fileName;
     
-    mostraAnteprimaPDF(doc, fileName, percorso, 'fatturazione', '🧾 Anteprima Documento Fatturazione');
+    mostraAnteprimaPDF(doc, fileName, percorso, 'fatturazione', icon('receipt',14) + ' Anteprima Fatturazione');
 }
 
 // ==================== REGISTRA MOVIMENTO ====================
@@ -3387,7 +3441,7 @@ async function eliminaSvEntrate(mgId, svId) {
 function caricaTariffariBase() {
     var container = document.getElementById('tariffari-grid');
     if (tariffariBase.length === 0) {
-        container.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><span class="empty-icon">📊</span><p>Nessun tariffario creato</p><button class="btn-primary" onclick="apriModalNuovoTariffario()" style="margin-top:16px;">+ Crea Tariffario</button></div>';
+        container.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><span class="empty-icon">' + icon('bar-chart-2',48,'color:#9aa3b2') + '</span><p>Nessun tariffario creato</p><button class="btn-primary" onclick="apriModalNuovoTariffario()" style="margin-top:16px;">+ Crea Tariffario</button></div>';
         return;
     }
     var html = '';
@@ -4600,7 +4654,7 @@ async function generaRendicontoPDF() {
     var fileName = 'Rendiconto_' + anno + '.pdf';
     var percorso = 'RENDICONTI/' + fileName;
     
-    mostraAnteprimaPDF(doc, fileName, percorso, 'rendiconto', '📊 Anteprima Rendiconto ' + anno);
+    mostraAnteprimaPDF(doc, fileName, percorso, 'rendiconto', icon('bar-chart-2',14) + ' Anteprima Rendiconto ' + anno);
 }
 
 // ==================== PDF ====================
@@ -4614,8 +4668,8 @@ function apriModalPDFCliente(clienteId) {
     
     document.getElementById('modal-pdf-body').innerHTML = 
         '<div class="form-group"><label>Formato</label><select id="pdf-formato" class="form-select">' +
-        '<option value="completo">📄 Estratto Completo (dettagliato, più pagine)</option>' +
-        '<option value="sintetico">📋 Estratto Sintetico (compatto, 1 pagina)</option>' +
+        '<option value="completo">' + icon('file-text',13) + ' Estratto Completo (dettagliato, più pagine)</option>' +
+        '<option value="sintetico">' + icon('clipboard-list',13) + ' Estratto Sintetico (compatto, 1 pagina)</option>' +
         '</select></div>' +
         '<div class="form-group"><label>Periodo</label><select id="pdf-tipo" class="form-select" onchange="aggiornaPdfOpt()">' +
         '<option value="anno">Intero Anno</option>' +
@@ -4629,7 +4683,7 @@ function apriModalPDFCliente(clienteId) {
         '<input type="checkbox" id="pdf-includi-tariffario" checked style="width: 18px; height: 18px;">' +
         '<span>Includi pagina tariffario nell\'estratto</span>' +
         '</label></div>';
-    document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = '📄 Scarica PDF Scheda Cliente';
+    document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = 'Scarica PDF Scheda Cliente';
     document.getElementById('modal-pdf').querySelector('.modal-footer .btn-primary').textContent = 'Genera PDF';
     document.getElementById('modal-pdf').querySelector('.modal-footer .btn-primary').setAttribute('onclick', 'generaPDFScelto()');
     apriModal('modal-pdf');
@@ -5344,7 +5398,7 @@ async function generaPDF() {
     var cartella = cliente.denominazione.replace(/[^a-zA-Z0-9 ]/g, '');
     var percorso = 'schede clienti/' + cartella + '/ESTRATTI CONTO/' + fileName;
     
-    mostraAnteprimaPDF(doc, fileName, percorso, 'estratto', '📄 Anteprima Estratto Conto', pdfClienteId);
+    mostraAnteprimaPDF(doc, fileName, percorso, 'estratto', icon('eye',14) + ' Anteprima Estratto Conto', pdfClienteId);
 }
 
 // ==================== ESTRATTO SINTETICO (2 PAGINE) ====================
@@ -6546,7 +6600,7 @@ async function generaPDFSintetico() {
     var cartella = cliente.denominazione.replace(/[^a-zA-Z0-9 ]/g, '');
     var percorso = 'schede clienti/' + cartella + '/ESTRATTI CONTO/' + fileName;
     
-    mostraAnteprimaPDF(doc, fileName, percorso, 'sintetico', '📋 Anteprima Estratto Sintetico', pdfClienteId);
+    mostraAnteprimaPDF(doc, fileName, percorso, 'sintetico', icon('clipboard-list',14) + ' Anteprima Estratto Sintetico', pdfClienteId);
 }
 
 function calcolaStatsPeriodo(cliente, rangeStart, rangeEnd) {
@@ -6799,7 +6853,7 @@ function generaTabellaVariabiliPaghe() {
                 html += '<td class="vp-col-vap"><input type="number" class="vp-input vp-input-vap" data-vap-id="' + vociVAP[v].id + '" data-vap-desc="' + vociVAP[v].descrizione + '" data-vap-prezzo="' + (infoVoce.prezzo || 0) + '" data-vap-esente="' + (infoVoce.esenteIva ? '1' : '0') + '" min="0" value="0"></td>';
             } else {
                 // Cliente NON ha questa voce → casella sbarrata
-                html += '<td class="vp-col-vap vp-cell-sbarrata"><span class="vp-sbarrato">✕</span></td>';
+                html += '<td class="vp-col-vap vp-cell-sbarrata"><span class="vp-sbarrato">&times;</span></td>';
             }
         }
         
@@ -7039,7 +7093,7 @@ function aggiornaAnteprimaCostiFissi() {
                 var voceGiaContabilizzata = isVoceContabilizzata(contabCliente, chiaveMese, voce.descrizione);
                 
                 var statoClass = voceGiaContabilizzata ? 'stato-contabilizzato' : 'stato-da-fare';
-                var statoText = voceGiaContabilizzata ? '✓ Già contabilizzato' : 'Da contabilizzare';
+                var statoText = voceGiaContabilizzata ? icon('check', 14, 'color:#1a7a4a') + ' Già contabilizzato' : 'Da contabilizzare';
                 
                 if (voceGiaContabilizzata) {
                     vociGiaContabilizzate++;
@@ -7347,7 +7401,7 @@ function aggiornaScadenzario() {
     // Tabella clienti scaduti
     var scadutiHtml = '';
     if (clientiScaduti.length === 0) {
-        scadutiHtml = '<p style="color:#64748b;text-align:center;padding:20px;">✅ Nessun pagamento scaduto</p>';
+        scadutiHtml = '<p style="color:#64748b;text-align:center;padding:20px;">Nessun pagamento scaduto</p>';
     } else {
         clientiScaduti.sort(function(a, b) { return b.giorniRitardo - a.giorniRitardo; });
         scadutiHtml = '<table class="scadenzario-table"><thead><tr><th>Cliente</th><th>Scaduto da</th><th>Importo</th><th>Azione</th></tr></thead><tbody>';
@@ -7358,7 +7412,7 @@ function aggiornaScadenzario() {
                 '<td><span class="cliente-link" onclick="apriDettaglioCliente(' + s.cliente.id + ')">' + s.cliente.denominazione + '</span></td>' +
                 '<td><span class="badge-scadenza ' + badgeClass + '">' + s.giorniRitardo + ' giorni</span></td>' +
                 '<td style="font-weight:600;color:#dc2626;">' + formatoEuro(s.residuo) + '</td>' +
-                '<td><button class="btn-sollecita" onclick="apriSollecito(' + s.cliente.id + ')">📨 Sollecita</button></td>' +
+                '<td><button class="btn-sollecita" onclick="apriSollecito(' + s.cliente.id + ')">' + icon('send', 13) + ' Sollecita</button></td>' +
                 '</tr>';
         }
         scadutiHtml += '</tbody></table>';
@@ -7616,7 +7670,7 @@ async function generaSollecitoPDF() {
     var cartella = cliente.denominazione.replace(/[^a-zA-Z0-9 ]/g, '');
     var percorso = 'schede clienti/' + cartella + '/SOLLECITI/' + fileName;
     
-    mostraAnteprimaPDF(doc, fileName, percorso, 'sollecito', '📨 Anteprima Sollecito');
+    mostraAnteprimaPDF(doc, fileName, percorso, 'sollecito', icon('send',14) + ' Anteprima Sollecito');
 }
 
 // ==================== FATTURAZIONE ====================
@@ -7648,7 +7702,7 @@ function apriModalFattura(clienteId) {
         '</div></div>' +
         '<div id="fattura-suggerimento"></div>' +
         '<div class="form-group" style="margin-top:16px;padding:16px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">' +
-        '<label style="font-size:14px;font-weight:600;color:#166534;">💰 Importo Fattura (personalizzabile)</label>' +
+        '<label style="font-size:14px;font-weight:600;color:#166534;">' + icon('wallet',14,'color:#166534;margin-right:5px') + ' Importo Fattura (personalizzabile)</label>' +
         '<div class="form-row" style="margin-top:12px;">' +
         '<div class="form-group" style="margin-bottom:0;">' +
         '<label style="font-size:12px;">Imponibile €</label>' +
@@ -7697,9 +7751,9 @@ function aggiornaAnteprimaFattura() {
     
     // Mostra suggerimento basato sulle competenze calcolate
     var suggerimentoHtml = '<div style="background:#f8fafc;padding:12px;border-radius:8px;margin-bottom:16px;">' +
-        '<p style="font-size:12px;color:#64748b;margin-bottom:8px;">📊 Competenze calcolate per il periodo:</p>' +
+        '<p style="font-size:12px;color:#64748b;margin-bottom:8px;">' + icon('bar-chart-2',12,'margin-right:4px;vertical-align:-2px') + ' Competenze calcolate per il periodo:</p>' +
         '<p style="font-size:13px;"><strong>Imponibile:</strong> ' + formatoEuro(stats.totaleImponibile) + ' | <strong>Esente:</strong> ' + formatoEuro(stats.totaleEsente) + ' | <strong>Totale (con IVA):</strong> ' + formatoEuro(totale) + '</p>' +
-        '<button type="button" class="btn-secondary" style="margin-top:8px;padding:6px 12px;font-size:12px;" onclick="usaImportoSuggerito()">📥 Usa questi importi</button>' +
+        '<button type="button" class="btn-secondary" style="margin-top:8px;padding:6px 12px;font-size:12px;" onclick="usaImportoSuggerito()">' + icon('archive-restore', 13) + ' Usa questi importi</button>' +
         '</div>';
     
     document.getElementById('fattura-suggerimento').innerHTML = suggerimentoHtml;
@@ -7781,7 +7835,7 @@ function aggiornaStoricoFatture(clienteId) {
     for (var i = 0; i < fatture.length; i++) {
         var f = fatture[i];
         html += '<tr><td>' + f.numero + '</td><td>' + new Date(f.data).toLocaleDateString('it-IT') + '</td><td>' + f.periodo + '</td><td>' + formatoEuro(f.totale) + '</td>' +
-            '<td><button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="annullaFattura(' + f.id + ')">✕ Annulla</button></td></tr>';
+            '<td><button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="annullaFattura(' + f.id + ')">' + icon('x',13) + ' Annulla</button></td></tr>';
     }
     html += '</tbody></table>';
     
@@ -7960,7 +8014,7 @@ async function generaFatturaPDF() {
     // Salva dati fattura temporanei per conferma
     anteprimaDatiFattura = datiNuovaFattura;
     
-    mostraAnteprimaPDF(doc, fileName, percorso, 'fattura', '📄 Anteprima Fattura Proforma');
+    mostraAnteprimaPDF(doc, fileName, percorso, 'fattura', icon('file-text',14) + ' Anteprima Fattura Proforma');
 }
 
 // ==================== RICERCA GLOBALE ====================
@@ -7994,7 +8048,7 @@ function eseguiRicercaGlobale() {
             (c.email && c.email.toLowerCase().includes(query))) {
             risultati.push({
                 tipo: 'cliente',
-                icon: '🏢',
+                icon: icon('building-2',20,'color:#64748b'),
                 titolo: c.denominazione,
                 desc: c.codiceFiscale || c.email || '',
                 id: c.id,
@@ -8011,7 +8065,7 @@ function eseguiRicercaGlobale() {
         if (f.numero.toLowerCase().includes(query) || nomeCliente.toLowerCase().includes(query)) {
             risultati.push({
                 tipo: 'fattura',
-                icon: '📄',
+                icon: icon('file-text',16,'color:#64748b'),
                 titolo: 'Fattura ' + f.numero,
                 desc: nomeCliente + ' - ' + formatoEuro(f.totale),
                 id: f.clienteId
@@ -8026,7 +8080,7 @@ function eseguiRicercaGlobale() {
             (m.fornitore && m.fornitore.toLowerCase().includes(query))) {
             risultati.push({
                 tipo: 'movimento',
-                icon: m.tipo === 'entrata' ? '💰' : '📤',
+                icon: m.tipo === 'entrata' ? icon('wallet', 14) : icon('upload', 14),
                 titolo: m.descrizione || m.fornitore || 'Movimento',
                 desc: formatoEuro(m.importo) + ' - ' + new Date(m.data).toLocaleDateString('it-IT'),
                 id: m.id
@@ -8109,7 +8163,7 @@ function caricaSezionePassword() {
     
     if (impostazioniStudio.passwordHash) {
         // Password già impostata
-        html = '<p style="color:#22c55e;margin-bottom:16px;">✅ Password attiva</p>' +
+        html = '<p style="color:#22c55e;margin-bottom:16px;">Password attiva</p>' +
             '<div class="form-group">' +
             '<label>Nuova Password (lascia vuoto per mantenere)</label>' +
             '<input type="password" id="nuova-password" class="form-input" placeholder="Nuova password">' +
@@ -8118,7 +8172,7 @@ function caricaSezionePassword() {
             '<label>Conferma Nuova Password</label>' +
             '<input type="password" id="conferma-password" class="form-input" placeholder="Conferma password">' +
             '</div>' +
-            '<button class="btn-secondary" onclick="rimuoviPassword()" style="margin-top:8px;">🗑️ Rimuovi Password</button>';
+            '<button class="btn-secondary" onclick="rimuoviPassword()" style="margin-top:8px;">' + icon('trash-2',13) + ' Rimuovi Password</button>';
     } else {
         // Nessuna password
         html = '<p style="color:#64748b;margin-bottom:16px;">Nessuna password impostata. L\'app è accessibile a tutti.</p>' +
@@ -8176,7 +8230,7 @@ function aggiornaInfoPercorso() {
                     '<strong style="color:#1e293b;font-size:13px;">' + result.path + '</strong>' +
                     '</div>';
             } else {
-                container.innerHTML = '<p style="color:#f59e0b;">⚠️ Impossibile ottenere il percorso</p>';
+                container.innerHTML = '<p style="color:#f59e0b;">️ Impossibile ottenere il percorso</p>';
             }
         });
     } else {
@@ -8256,7 +8310,7 @@ function eseguiBackup() {
                     // Salva data ultimo backup
                     impostazioniStudio.ultimoBackup = dataOra.toISOString();
                     aggiornaInfoBackup();
-                    showToast('Backup completato!\n\nFile salvato in:\nWOLWARE/' + percorso + '\n\n📊 Contenuto:\n• ' + clienti.length + ' clienti\n• ' + pagamenti.length + ' pagamenti\n• ' + movimentiStudio.length + ' movimenti\n• ' + fattureEmesse.length + ' fatture');
+                    showToast('Backup completato!\n\nFile salvato in:\nWOLWARE/' + percorso + '\n\nContenuto:\n• ' + clienti.length + ' clienti\n• ' + pagamenti.length + ' pagamenti\n• ' + movimentiStudio.length + ' movimenti\n• ' + fattureEmesse.length + ' fatture');
                 } else {
                     // Fallback download
                     downloadBackup(json, nomeFile);
@@ -8285,7 +8339,7 @@ function downloadBackup(json, nomeFile) {
     impostazioniStudio.ultimoBackup = new Date().toISOString();
     aggiornaInfoBackup();
     
-    showToast('Backup scaricato!\n\nConserva il file in un posto sicuro.\n\n📊 Contenuto:\n• ' + clienti.length + ' clienti\n• ' + pagamenti.length + ' pagamenti\n• ' + movimentiStudio.length + ' movimenti\n• ' + fattureEmesse.length + ' fatture');
+    showToast('Backup scaricato!\n\nConserva il file in un posto sicuro.\n\nContenuto:\n• ' + clienti.length + ' clienti\n• ' + pagamenti.length + ' pagamenti\n• ' + movimentiStudio.length + ' movimenti\n• ' + fattureEmesse.length + ' fatture');
 }
 
 function aggiornaInfoBackup() {
@@ -8294,11 +8348,11 @@ function aggiornaInfoBackup() {
     
     if (impostazioniStudio.ultimoBackup) {
         var data = new Date(impostazioniStudio.ultimoBackup);
-        container.innerHTML = '<p style="color:#22c55e;font-size:13px;">✅ Ultimo backup: <strong>' + 
+        container.innerHTML = '<p style="color:#22c55e;font-size:13px;">Ultimo backup: <strong>' + 
             data.toLocaleDateString('it-IT') + '</strong> alle <strong>' + 
             data.toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'}) + '</strong></p>';
     } else {
-        container.innerHTML = '<p style="color:#f59e0b;font-size:13px;">⚠️ Nessun backup effettuato</p>';
+        container.innerHTML = '<p style="color:#f59e0b;font-size:13px;">️ Nessun backup effettuato</p>';
     }
 }
 
@@ -8325,16 +8379,16 @@ function caricaFileBackup(event) {
             var stats = backup.statistiche || {};
             var dataBackup = backup.dataLeggibile || 'Data sconosciuta';
             
-            var msg = '📦 ANTEPRIMA BACKUP\n\n' +
-                '📅 Data: ' + dataBackup + '\n' +
-                '📋 Versione: ' + backup.versione + '\n\n' +
-                '📊 Contenuto:\n' +
+            var msg = 'ANTEPRIMA BACKUP\n\n' +
+                'Data: ' + dataBackup + '\n' +
+                'Versione: ' + backup.versione + '\n\n' +
+                'Contenuto:\n' +
                 '• ' + (stats.numClienti || backup.dati.clienti?.length || 0) + ' clienti\n' +
                 '• ' + (stats.numPagamenti || backup.dati.pagamenti?.length || 0) + ' pagamenti\n' +
                 '• ' + (stats.numMovimenti || backup.dati.movimentiStudio?.length || 0) + ' movimenti\n' +
                 '• ' + (stats.numFatture || backup.dati.fattureEmesse?.length || 0) + ' fatture\n' +
                 '• ' + (stats.numTariffari || backup.dati.tariffariBase?.length || 0) + ' tariffari\n\n' +
-                '⚠️ ATTENZIONE: Questa operazione SOVRASCRIVERÀ tutti i dati attuali!\n\n' +
+                '️ ATTENZIONE: Questa operazione SOVRASCRIVERÀ tutti i dati attuali!\n\n' +
                 'Vuoi procedere con il ripristino?';
             
             if (confirm(msg)) {
@@ -8354,7 +8408,7 @@ async function eseguiRipristino(backup) {
     try {
         var dati = backup.dati;
         
-        if (!confirm('⚠️ ATTENZIONE!\n\nIl ripristino sovrascriverà TUTTI i dati attuali su Supabase.\n\nSei sicuro di voler procedere?')) {
+        if (!confirm('️ ATTENZIONE!\n\nIl ripristino sovrascriverà TUTTI i dati attuali su Supabase.\n\nSei sicuro di voler procedere?')) {
             return;
         }
         
@@ -8693,7 +8747,7 @@ async function caricaDatiApp() {
         ultimiEstrattiConto = dati.ultimiEstrattiConto || {};
         
         datiCaricati = true;
-        console.log('✅ Dati caricati dal DB locale:', { clienti: clienti.length, pagamenti: pagamenti.length });
+        console.log('Dati caricati dal DB locale:', { clienti: clienti.length, pagamenti: pagamenti.length });
         
         // Rimuovi loading overlay
         document.body.removeChild(loadingDiv);
@@ -8707,8 +8761,8 @@ async function caricaDatiApp() {
         }, 100);
         
     } catch (error) {
-        console.error('❌ Errore caricamento dati:', error);
-        loadingDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;background:#f8fafc;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;"><div style="font-size:48px;margin-bottom:20px;">❌</div><h2 style="color:#dc2626;margin:0;">Errore di connessione</h2><p style="color:#64748b;margin-top:8px;">Impossibile connettersi al database</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#3b82f6;color:white;border:none;border-radius:8px;cursor:pointer;font-size:16px;">🔄 Riprova</button></div>';
+        console.error('Errore caricamento dati:', error);
+        loadingDiv.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;background:#f8fafc;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;"><div style="font-size:48px;margin-bottom:20px;"></div><h2 style="color:#dc2626;margin:0;">Errore di connessione</h2><p style="color:#64748b;margin-top:8px;">Impossibile connettersi al database</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#3b82f6;color:white;border:none;border-radius:8px;cursor:pointer;font-size:16px;">' + icon('refresh-cw', 13) + ' Riprova</button></div>';
     }
 }
 
@@ -8786,7 +8840,7 @@ function anteprimaImportClienti() {
             var json = XLSX.utils.sheet_to_json(sheet);
             
             if (json.length === 0) {
-                anteprima.innerHTML = '<p style="color:#dc2626;">⚠️ Il file è vuoto o non ha il formato corretto</p>';
+                anteprima.innerHTML = '<p style="color:#dc2626;">️ Il file è vuoto o non ha il formato corretto</p>';
                 btnImport.disabled = true;
                 return;
             }
@@ -8833,11 +8887,11 @@ function anteprimaImportClienti() {
             
             // Mostra anteprima
             var html = '<div style="background:#f8fafc;border-radius:8px;padding:16px;">';
-            html += '<p style="margin:0 0 10px 0;"><strong>✅ ' + clientiDaImportare.length + ' clienti pronti per l\'import</strong></p>';
+            html += '<p style="margin:0 0 10px 0;"><strong>' + clientiDaImportare.length + ' clienti pronti per l\'import</strong></p>';
             
             if (errori.length > 0) {
                 html += '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px;margin-bottom:10px;">';
-                html += '<p style="margin:0 0 5px 0;color:#dc2626;font-weight:bold;">⚠️ ' + errori.length + ' righe ignorate:</p>';
+                html += '<p style="margin:0 0 5px 0;color:#dc2626;font-weight:bold;">️ ' + errori.length + ' righe ignorate:</p>';
                 html += '<ul style="margin:0;padding-left:20px;color:#991b1b;font-size:12px;">';
                 for (var e = 0; e < Math.min(errori.length, 5); e++) {
                     html += '<li>' + errori[e] + '</li>';
@@ -8865,7 +8919,7 @@ function anteprimaImportClienti() {
             
         } catch (err) {
             console.error('Errore lettura file:', err);
-            anteprima.innerHTML = '<p style="color:#dc2626;">⚠️ Errore nella lettura del file: ' + err.message + '</p>';
+            anteprima.innerHTML = '<p style="color:#dc2626;">️ Errore nella lettura del file: ' + err.message + '</p>';
             btnImport.disabled = true;
         }
     };
@@ -9148,4 +9202,3 @@ if (typeof window._registerAppFunctions === "function") {
 // Assicura che chiudiModal e apriModal siano globali
 if (typeof chiudiModal === "function") window.chiudiModal = chiudiModal;
 if (typeof apriModal === "function") window.apriModal = apriModal;
-
