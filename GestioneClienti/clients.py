@@ -98,7 +98,7 @@ def db_salva_cliente(cliente: dict) -> dict | None:
 @eel.expose
 def db_elimina_cliente(cid: int) -> bool:
     with get_conn() as conn:
-        conn.execute("DELETE FROM clienti WHERE id=?", (cid,))
+        conn.execute("DELETE FROM clienti WHERE id=?", (int(cid),))
     return True
 
 

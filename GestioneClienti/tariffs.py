@@ -44,5 +44,5 @@ def db_salva_tariffario_base(tariffario: dict) -> dict | None:
 @eel.expose
 def db_elimina_tariffario_base(tid: int) -> bool:
     with get_conn() as conn:
-        conn.execute("DELETE FROM tariffaribase WHERE id=?", (tid,))
+        conn.execute("DELETE FROM tariffaribase WHERE id=?", (int(tid),))
     return True

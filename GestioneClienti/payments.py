@@ -62,5 +62,5 @@ def db_salva_pagamento(pagamento: dict) -> dict | None:
 @eel.expose
 def db_elimina_pagamento(pid: int) -> bool:
     with get_conn() as conn:
-        conn.execute("DELETE FROM pagamenti WHERE id=?", (pid,))
+        conn.execute("DELETE FROM pagamenti WHERE id=?", (int(pid),))
     return True
