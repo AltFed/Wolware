@@ -143,13 +143,14 @@ html, body {
 #sidebar.collapsed ~ .main-content {
     margin-left: 0 !important;
 }
-/* Tasto toggle flottante quando sidebar chiusa */
-#sidebar-reopen-btn {
+
+
+
+/* Tasto toggle integrato nella topbar del main content */
+#main-sidebar-toggle {
     display: none;
-    position: fixed;
-    top: 14px;
-    left: 14px;
-    z-index: 200;
+    align-items: center;
+    justify-content: center;
     background: #1a2640;
     border: none;
     color: rgba(255,255,255,0.85);
@@ -157,14 +158,79 @@ html, body {
     height: 36px;
     border-radius: 8px;
     cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.18s;
+    margin-right: 12px;
+}
+#main-sidebar-toggle:hover { background: #243352; }
+#sidebar.collapsed ~ .main-content #main-sidebar-toggle {
+    display: flex;
+}
+/* Quando sidebar aperta, il toggle nel main è nascosto */
+#sidebar:not(.collapsed) ~ .main-content #main-sidebar-toggle {
+    display: none;
+}
+/* page-header con toggle */
+.page-header {
+    align-items: center;
+}
+
+
+/* Topbar con toggle quando sidebar chiusa */
+#main-topbar {
+    display: none;
+    align-items: center;
+    padding: 12px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #eaecf0;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+#sidebar.collapsed ~ .main-content #main-topbar {
+    display: flex;
+}
+#main-topbar-toggle {
+    background: #1a2640;
+    border: none;
+    color: rgba(255,255,255,0.9);
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    flex-shrink: 0;
     transition: background 0.18s;
 }
-#sidebar-reopen-btn:hover { background: #243352; }
-#sidebar-reopen-btn svg { display: block; }
-.sidebar.collapsed ~ * #sidebar-reopen-btn { display: flex; }
+#main-topbar-toggle:hover { background: #243352; }
+
+
+.sidebar-header h1 {
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* Fix testo sidebar header */
+.sidebar-header {
+    overflow: hidden;
+    min-width: 0;
+}
+.sidebar-header h1 {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 15px !important;
+    max-width: 180px;
+}
+.sidebar-logo-text {
+    min-width: 0;
+    overflow: hidden;
+}
 
 </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -2145,14 +2211,17 @@ body {
         <button class="logout-btn" onclick="logoutUtente()">Esci</button>
       </div>
 
-    </nav>
-    <!-- Tasto riapertura sidebar quando chiusa -->
-    <button id="sidebar-reopen-btn" onclick="toggleSidebar()" title="Apri menu" aria-label="Apri menu" style="display:none;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>  
+    </nav>  
 
         <!-- Main Content -->   
-        <main class="main-content"> 
+        <main class="main-content">
+    <div id="main-topbar">
+      <button id="main-topbar-toggle" onclick="toggleSidebar()" title="Apri menu" aria-label="Apri menu">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div> 
 
             <!-- Pagina Clienti (HOME) -->  
             <div class="page active" id="page-clienti"> 
@@ -2915,12 +2984,9 @@ body {
   function applyState(collapsed, animate) {
     var sb = document.getElementById('sidebar');
     var mc = document.querySelector('.main-content');
-    var reopenBtn = document.getElementById('sidebar-reopen-btn');
     if (!sb) return;
     if (!animate) { sb.style.transition = 'none'; if(mc) mc.style.transition = 'none'; sb.offsetHeight; }
     sb.classList.toggle('collapsed', collapsed);
-    // Mostra/nascondi tasto flottante riapertura
-    if (reopenBtn) reopenBtn.style.display = collapsed ? 'flex' : 'none';
     if (!animate) setTimeout(function(){ sb.style.transition = ''; if(mc) mc.style.transition = ''; }, 50);
   }
   window.toggleSidebar = function(){
