@@ -171,6 +171,13 @@ let abbuoniClienti = {};
 let datiCaricati = false;
 var ultimiEstrattiConto = {};
 
+var TIPOLOGIE_MACROGRUPPI = [
+    'Costi Fissi Mensili',
+    'Costi Fissi Annuali',
+    'Costi Variabili Mensili',
+    'Costi Variabili Annuali'
+];
+
 var macrogruppiDefault = [
     { id: 1, nome: 'Costi Fissi Mensili', voci: [
         { id: 1001, descrizione: 'Cedolini', prezzo: '', mesi: [0], esenteIva: false }
@@ -3531,10 +3538,23 @@ function renderMacrogruppiModal(macrogruppi) {
     var mesiLabels = ['T', 'G', 'F', 'M', 'A', 'M', 'G', 'L', 'A', 'S', 'O', 'N', 'D'];
     var mesiTitles = ['Tutti', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
     var html = '';
+    
+    // Barra aggiungi macrogruppo
+    var optTipologie = TIPOLOGIE_MACROGRUPPI.map(function(t) {
+    return '<option value="' + t + '">' + t + '</option>';
+        }).join('');
+        html += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;padding:12px;background:#f3f0ec;border-radius:8px;flex-wrap:wrap;">' +
+    '<span style="font-size:13px;font-weight:600;">Aggiungi macrogruppo:</span>' +
+    '<select id="select-nuova-tipologia" class="form-select" style="flex:1;min-width:180px;">' + optTipologie + '</select>' +
+    '<button class="btn-secondary" onclick="aggiungiMacrogruppoModal()">+ Aggiungi</button>' +
+    '</div>';
+
     for (var i = 0; i < macrogruppi.length; i++) {
         var mg = macrogruppi[i];
-        html += '<div class="macrogruppo-card" data-mg-id="' + mg.id + '">' +
-            '<div class="macrogruppo-header"><span class="macrogruppo-nome">' + mg.nome.toUpperCase() + '</span></div>' +
+        html += '<div class="macrogruppo-header" style="display:flex;justify-content:space-between;align-items:center;">' +
+'<span class="macrogruppo-nome">' + mg.nome.toUpperCase() + '</span>' +
+'<button class="btn-danger" style="padding:3px 10px;font-size:11px;" onclick="rimuoviMacrogruppoModal(' + mg.id + ')">✕ Rimuovi</button>' +
+'</div>' +
             '<div class="macrogruppo-body">' +
             '<div class="aggiungi-voce-row" style="flex-wrap:wrap;">' +
             '<div style="display:flex;gap:12px;width:100%;margin-bottom:8px;align-items:center;">' +
@@ -3579,7 +3599,22 @@ function renderMacrogruppiModal(macrogruppi) {
     container.innerHTML = html;
     container.dataset.macrogruppi = JSON.stringify(macrogruppi);
 }
+function aggiungiMacrogruppoModal() {
+    var tipologia = document.getElementById('select-nuova-tipologia').value;
+    if (!tipologia) return;
+    var container = document.getElementById('modal-tariffario-container');
+    var macrogruppi = JSON.parse(container.dataset.macrogruppi || '[]');
+    macrogruppi.push({ id: Date.now(), nome: tipologia, voci: [] });
+    renderMacrogruppiModal(macrogruppi);
+}
 
+function rimuoviMacrogruppoModal(mgId) {
+    if (!confirm('Rimuovere questo macrogruppo e tutte le sue voci?')) return;
+    var container = document.getElementById('modal-tariffario-container');
+    var macrogruppi = JSON.parse(container.dataset.macrogruppi || '[]');
+    macrogruppi = macrogruppi.filter(function(mg) { return mg.id !== mgId; });
+    renderMacrogruppiModal(macrogruppi);
+}
 function toggleEsenteVoce(mgId, voceId, checked) {
     var macrogruppi = JSON.parse(document.getElementById('modal-tariffario-container').dataset.macrogruppi);
     for (var i = 0; i < macrogruppi.length; i++) {
