@@ -2237,7 +2237,7 @@ body {
                     <span class="nav-icon"><i data-lucide="wallet"></i></span>    
                     <span>Prima Nota Studio</span>  
                 </li>   
-                <li class="nav-item" data-page="rendiconto"  onclick="navigateTo('rendiconto')">
+                <li class="nav-item" data-page="rendiconto" data-tooltip="Rendiconto" onclick="navigateTo('rendiconto')">
                     <span class="nav-icon"><i data-lucide="trending-up"></i></span>    
                     <span>Rendiconto</span> 
                 </li>   
@@ -2294,7 +2294,7 @@ body {
             <!-- Pagina Prima Nota Studio -->   
             <div class="page" id="page-prima-nota-studio">  
                 <div class="page-header">   
-                    <h1 class="page-title">Prima Nota Studi o</h1>
+                    <h1 class="page-title">Prima Nota Studio</h1>
                     <div class="header-controls">   
                         <button class="btn-secondary" onclick="apriGestioneBanche()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;flex-shrink:0;margin-right:5px;"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>Banche</button>
                         <button class="btn-secondary" onclick="apriGestioneUscite()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;flex-shrink:0;margin-right:5px;"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>Uscite</button>
@@ -3123,34 +3123,42 @@ window.apriRicercaGlobale = function() {
 </script>
 
 
+
+
+
 <script>
-(function(){
+// Tooltip sidebar - inizializzato dopo DOMContentLoaded E dopo lucide
+function initSidebarTooltips() {
     var tip = document.getElementById('sidebar-tooltip');
     var sidebar = document.getElementById('sidebar');
+    if (!tip || !sidebar) return;
 
     function showTip(e) {
-        if (!sidebar || !sidebar.classList.contains('collapsed')) return;
+        if (!sidebar.classList.contains('collapsed')) return;
         var item = e.currentTarget;
         var label = item.getAttribute('data-tooltip');
         if (!label) return;
-        var rect = item.getBoundingClientRect();
         tip.textContent = label;
         tip.style.display = 'block';
-        tip.style.top = (rect.top + rect.height/2 - tip.offsetHeight/2) + 'px';
-        tip.style.left = (rect.right + 8) + 'px';
+        var rect = item.getBoundingClientRect();
+        tip.style.top = (rect.top + (rect.height - tip.offsetHeight) / 2) + 'px';
+        tip.style.left = (rect.right + 10) + 'px';
     }
-    function hideTip() {
-        tip.style.display = 'none';
-    }
+    function hideTip() { tip.style.display = 'none'; }
 
-    document.addEventListener('DOMContentLoaded', function(){
-        document.querySelectorAll('.nav-item[data-tooltip]').forEach(function(item){
-            item.addEventListener('mouseenter', showTip);
-            item.addEventListener('mouseleave', hideTip);
-            item.addEventListener('click', hideTip);
-        });
+    document.querySelectorAll('.nav-item').forEach(function(item) {
+        item.addEventListener('mouseenter', showTip);
+        item.addEventListener('mouseleave', hideTip);
+        item.addEventListener('click', hideTip);
     });
-})();
+}
+
+// Avvia appena il DOM è pronto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSidebarTooltips);
+} else {
+    initSidebarTooltips();
+}
 </script>
 
 </body>
