@@ -15,3 +15,4 @@ __pycache__/
 # File di sistema Windows/Mac
 .DS_Store
 Thumbs.db
+GestioneClienti/accounts.json
