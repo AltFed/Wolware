@@ -122,6 +122,50 @@ html, body {
     height: 0;
 }
 
+
+/* Disabilita overlay ricerca globale - usiamo sidebar search */
+.ricerca-globale-overlay,
+#ricerca-globale-overlay {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+
+/* Sidebar collapsed = chiusura COMPLETA */
+.sidebar.collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden;
+    box-shadow: none;
+}
+.sidebar.collapsed ~ .main-content,
+#sidebar.collapsed ~ .main-content {
+    margin-left: 0 !important;
+}
+/* Tasto toggle flottante quando sidebar chiusa */
+#sidebar-reopen-btn {
+    display: none;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 200;
+    background: #1a2640;
+    border: none;
+    color: rgba(255,255,255,0.85);
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    transition: background 0.18s;
+}
+#sidebar-reopen-btn:hover { background: #243352; }
+#sidebar-reopen-btn svg { display: block; }
+.sidebar.collapsed ~ * #sidebar-reopen-btn { display: flex; }
+
 </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -2101,7 +2145,11 @@ body {
         <button class="logout-btn" onclick="logoutUtente()">Esci</button>
       </div>
 
-    </nav>  
+    </nav>
+    <!-- Tasto riapertura sidebar quando chiusa -->
+    <button id="sidebar-reopen-btn" onclick="toggleSidebar()" title="Apri menu" aria-label="Apri menu" style="display:none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>  
 
         <!-- Main Content -->   
         <main class="main-content"> 
@@ -2867,9 +2915,12 @@ body {
   function applyState(collapsed, animate) {
     var sb = document.getElementById('sidebar');
     var mc = document.querySelector('.main-content');
+    var reopenBtn = document.getElementById('sidebar-reopen-btn');
     if (!sb) return;
     if (!animate) { sb.style.transition = 'none'; if(mc) mc.style.transition = 'none'; sb.offsetHeight; }
     sb.classList.toggle('collapsed', collapsed);
+    // Mostra/nascondi tasto flottante riapertura
+    if (reopenBtn) reopenBtn.style.display = collapsed ? 'flex' : 'none';
     if (!animate) setTimeout(function(){ sb.style.transition = ''; if(mc) mc.style.transition = ''; }, 50);
   }
   window.toggleSidebar = function(){
@@ -2940,14 +2991,25 @@ document.addEventListener('click', function(e) {
     if (!e.target.closest('.sidebar-search-wrapper')) sidebarSearchClose();
 });
 
-// Ctrl+F focalizza l'input in sidebar invece di aprire overlay
+// Ctrl+F focalizza sempre il sidebar search - blocca qualsiasi altro handler
 document.addEventListener('keydown', function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
+        e.stopImmediatePropagation();
         var inp = document.getElementById('sidebar-search-input');
-        if (inp) inp.focus();
+        if (inp) { inp.focus(); inp.select(); }
+        return false;
     }
-});
+}, true); // capture: true per intercettare PRIMA degli altri handler
+</script>
+
+
+<script>
+// Override apriRicercaGlobale - reindirizza alla sidebar search
+window.apriRicercaGlobale = function() {
+    var inp = document.getElementById('sidebar-search-input');
+    if (inp) { inp.focus(); inp.select(); }
+};
 </script>
 
 </body>
