@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scheda Cliente CDL</title>
-    <link rel="stylesheet" href="styles_new.css">
+    <link rel="stylesheet" href="css/styles.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.nav-icon i[data-lucide],.nav-icon svg{width:17px;height:17px;display:block}.btn-icon-sidebar i[data-lucide],.btn-icon-sidebar svg{width:17px;height:17px}</style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -164,65 +164,46 @@
     <div class="app-container"> 
         <!-- Sidebar -->    
         <nav class="sidebar" id="sidebar">  
-            <div class="sidebar-header">
-        <div class="sidebar-logo-text">
-          <h1>Scheda Cliente</h1>
-          <span class="version">v3.0 Web</span>
-        </div>
-        <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Comprimi sidebar" aria-label="Toggle sidebar">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-      </div>
-      <!-- Search box in sidebar -->
-      <div class="sidebar-search-wrapper">
-        <div class="sidebar-search-box" onclick="apriRicercaGlobale()" title="Cerca (Ctrl+F)">
-          <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <span class="search-text">Cerca clienti, movimenti…</span>
-          <span class="search-shortcut">Ctrl+F</span>
-        </div>
-      </div>  
+            <div class="sidebar-header">    
+                <h1>Scheda Cliente</h1>  
+                <span class="version">v3.0 Web</span>   
+            </div>  
             <ul class="nav-menu">   
-                <li class="nav-item active" data-page="clienti" data-tooltip="Clienti" onclick="navigateTo('clienti')">
+                <li class="nav-item active" data-page="clienti" onclick="navigateTo('clienti')">
                     <span class="nav-icon"><i data-lucide="building-2"></i></span>    
                     <span>Clienti</span>    
                 </li>   
-                <li class="nav-item" data-page="prima-nota-studio" data-tooltip="Prima Nota" onclick="navigateTo('prima-nota-studio')">
+                <li class="nav-item" data-page="prima-nota-studio" onclick="navigateTo('prima-nota-studio')">
                     <span class="nav-icon"><i data-lucide="wallet"></i></span>    
                     <span>Prima Nota Studio</span>  
                 </li>   
-                <li class="nav-item" data-page="rendiconto" data-tooltip="Rendiconto" onclick="navigateTo('rendiconto')">
+                <li class="nav-item" data-page="rendiconto"  onclick="navigateTo('rendiconto')">
                     <span class="nav-icon"><i data-lucide="trending-up"></i></span>    
                     <span>Rendiconto</span> 
                 </li>   
-                <li class="nav-item" data-page="tariffario-base" data-tooltip="Tariffari" onclick="navigateTo('tariffario-base')">
+                <li class="nav-item" data-page="tariffario-base" onclick="navigateTo('tariffario-base')">
                     <span class="nav-icon"><i data-lucide="bar-chart-2"></i></span>    
                     <span>Database Tariffari</span> 
                 </li>   
-                <li class="nav-item" data-page="impostazioni" data-tooltip="Impostazioni" onclick="navigateTo('impostazioni')">
+                <li class="nav-item" data-page="impostazioni" onclick="navigateTo('impostazioni')">
                     <span class="nav-icon"><i data-lucide="settings"></i></span>    
                     <span>Impostazioni</span>   
                 </li>   
                 <!-- Visibile solo se admin — controllato d a JS dopo login -->
                 <li class="nav-item" id="nav-gestione-utenti" style="display:none"
-                    data-page="gestione-utenti" data-tooltip="Utenti" onclick="apriGestioneUtenti()">
+                    data-page="gestione-utenti" onclick="apriGestioneUtenti()">
                     <span class="nav-icon"><i data-lucide="users"></i></span>    
                     <span>Utenti</span> 
                 </li>   
             </ul>   
-            <div class="user-info">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:0.55"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-        <span class="user-username" id="user-email-display"></span>
-        <button class="logout-btn" onclick="logoutUtente()">Esci</button>
-      </div>
-      <div class="sidebar-footer">
-        <div class="sidebar-footer-inner">
-          <button class="btn-icon-sidebar" onclick="apriRicercaGlobale()" title="Cerca (Ctrl+F)" aria-label="Ricerca">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <span class="sidebar-search-label">Ricerca globale</span>
-        </div>
-      </div>
-    </nav>  
+            <div class="user-info"> 
+                <span class="user-username" id="user-email-display"></span>
+                <button class="logout-btn" onclick="logoutUtente()">Esci</button>
+            </div>  
+            <div class="sidebar-footer">    
+                <button class="btn-icon-sidebar" onclick="apriRicercaGlobale()" title="Cerca (Ctrl+F)"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></button>
+            </div>  
+        </nav>  
 
         <!-- Main Content -->   
         <main class="main-content"> 
@@ -983,30 +964,5 @@
     </div>
 
 <script>if(typeof lucide!=="undefined")lucide.createIcons();</script>
-<script>
-(function(){
-  function applyState(collapsed, animate) {
-    var sb = document.getElementById('sidebar');
-    if (!sb) return;
-    if (!animate) {
-      sb.style.transition = 'none';
-      sb.offsetHeight; // force reflow
-    }
-    sb.classList.toggle('collapsed', collapsed);
-    if (!animate) setTimeout(function(){ sb.style.transition = ''; }, 0);
-  }
-  window.toggleSidebar = function(){
-    var sb = document.getElementById('sidebar');
-    var willCollapse = !sb.classList.contains('collapsed');
-    applyState(willCollapse, true);
-    try { sessionStorage.setItem('sc', willCollapse ? '1' : '0'); } catch(e){}
-  };
-  document.addEventListener('DOMContentLoaded', function(){
-    var saved = '0';
-    try { saved = sessionStorage.getItem('sc') || '0'; } catch(e){}
-    applyState(saved === '1', false);
-  });
-})();
-</script>
 </body>
 </html>
