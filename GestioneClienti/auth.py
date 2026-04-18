@@ -7,26 +7,46 @@ auth.py
 """
 import eel
 import hashlib
+import secrets
 import json
 import os
+import shutil
+import logging
 
+logging.basicConfig(
+filename = "logging_errore_auth.log", # Gli errori di autenticazione vengono loggati qui
+level = logging.WARNING, # Logga solo warning e errori
+format = "%(asctime)s - %(levelname)s - %(message)s"
+)
+
+# Variabili di stato della sessione (Globali da sistemare)
 _sessione_attiva: bool = False
 _utente_corrente: str | None = None
 
-def _hash(pwd: str) -> str:
-    return hashlib.sha256(pwd.encode("utf-8")).hexdigest()
+def _hash_password(password: str, salt: str = None) -> str:
+    # Usa SHA-256 con salt per hash della password
+    if salt is None:
+        salt = secrets.token_hex(16) # Genera un salt casuale 
+        pw_hash = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000).hex()
+    return f"{salt}:{pw_hash}" # Salva salt e hash insieme
+
+def _verifica_password(password: str, stored_hash: str) -> bool:
+    if ":" not in stored_hash:
+        return stored_hash == hashlib.sha256(password.encode("utf-8")).hexdigest() # Supporto legacy senza salt
+    salt, _ = stored_hash.split(":")
+    return stored_hash == _hash_password(password, salt)
 
 _ACCOUNTS_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "accounts.json"
 )
 
+_ACCOUNTS_BAK_FILE = _ACCOUNTS_FILE + ".bak" # Backup automatico degli utenti in caso di file corrotto
+
 DEFAULT_ACCOUNTS = [
-    {"username": "admin", "passwordHash": _hash("admin"), "ruolo": "admin"}
+
+    {"username": "admin", "passwordHash": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", "ruolo": "admin"}
+
 ]
-
-
-
-
 
 def _carica_accounts() -> list:
     if not os.path.exists(_ACCOUNTS_FILE):
@@ -41,13 +61,28 @@ def _carica_accounts() -> list:
             accounts.insert(0, DEFAULT_ACCOUNTS[0])
             _salva_accounts(accounts)
         return accounts
-    except Exception:
-        return DEFAULT_ACCOUNTS
-
+    except json.JSONDecodeError as e:
+        logging.error(f"Errore critico di decodifica JSON in accounts.json: {e}")
+        # Prova a ripristinare dal backup
+        if os.path.exists(_ACCOUNTS_BAK_FILE):
+            try:
+                with open(_ACCOUNTS_BAK_FILE, "r", encoding="utf-8") as f:
+                    accounts_backup = json.load(f)
+                # Se il backup è leggibile, lo usiamo per sovrascrivere il file rotto
+                logging.info("Ripristino dal backup completato in automatico.")
+                _salva_accounts(accounts_backup) # Ripristina la situazioene precedente
+                return accounts_backup
+            except Exception as backup_error:
+                logging.critical(f"Anche il file di backup è corrotto: {backup_error}")
+                raise e # Se anche il backup è corrotto, l'unica soluzione è stop
+        else:
+            logging.critical("Fallimento totale: Nessun file di backup disponibile per il ripristino.")
+            raise e # Se il file è corrotto e non c'è backup, non possiamo continuare
 
 def _salva_accounts(accounts: list) -> None:
     with open(_ACCOUNTS_FILE, "w", encoding="utf-8") as f:
         json.dump(accounts, f, indent=2, ensure_ascii=False)
+    shutil.copy(_ACCOUNTS_FILE, _ACCOUNTS_BAK_FILE) # Crea un backup dopo ogni salvataggio
 
 
 def _is_admin(username: str) -> bool:
@@ -67,7 +102,7 @@ def auth_login(username: str, password: str) -> dict:
     user_lower = (username or "").strip().lower()
     for acc in accounts:
         if acc["username"].lower() == user_lower:
-            if acc["passwordHash"] == _hash(password):
+            if _verifica_password(password, acc["passwordHash"]):
                 _sessione_attiva = True
                 _utente_corrente = acc["username"]
                 return {
@@ -118,7 +153,7 @@ def auth_crea_account(username: str, password: str, ruolo: str = "user") -> dict
         return {"success": False, "error": "Username già esistente"}
     accounts.append({
         "username": username,
-        "passwordHash": _hash(password),
+        "passwordHash": _hash_password(password),
         "ruolo": ruolo if ruolo in ("admin", "user") else "user"
     })
     _salva_accounts(accounts)
@@ -149,9 +184,9 @@ def auth_cambia_password(username: str, vecchia_pwd: str, nuova_pwd: str) -> dic
     for acc in accounts:
         if acc["username"] == username:
             # Admin può cambiare password altrui senza vecchia_pwd
-            if not _is_admin(_utente_corrente) and acc["passwordHash"] != _hash(vecchia_pwd):
+            if not _is_admin(_utente_corrente) and not _verifica_password(vecchia_pwd, acc["passwordHash"]):
                 return {"success": False, "error": "Password attuale errata"}
-            acc["passwordHash"] = _hash(nuova_pwd)
+            acc["passwordHash"] = _hash_password(nuova_pwd)
             _salva_accounts(accounts)
             return {"success": True}
     return {"success": False, "error": "Utente non trovato"}
