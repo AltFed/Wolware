@@ -42,6 +42,86 @@ html, body {
     min-height: unset !important;
 }
 
+
+/* ── SIDEBAR SEARCH INPUT ── */
+.sidebar-search-wrapper {
+    padding: 10px 12px 6px;
+    flex-shrink: 0;
+    position: relative;
+}
+.sidebar-search-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 8px 10px;
+    transition: background 0.18s, border-color 0.18s;
+}
+.sidebar-search-input-wrap:focus-within {
+    background: rgba(255,255,255,0.13);
+    border-color: rgba(74,158,255,0.5);
+}
+.sidebar-search-ico {
+    flex-shrink: 0;
+    color: rgba(255,255,255,0.45);
+}
+.sidebar-search-field {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 12.5px;
+    font-family: inherit;
+    min-width: 0;
+}
+.sidebar-search-field::placeholder {
+    color: rgba(255,255,255,0.35);
+}
+.sidebar-search-kbd {
+    font-size: 10px;
+    color: rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.07);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.sidebar-search-dropdown {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: calc(100% - 4px);
+    background: #1e3250;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+    z-index: 9999;
+    max-height: 320px;
+    overflow-y: auto;
+}
+.sidebar-search-dropdown .sritem {
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    transition: background 0.14s;
+}
+.sidebar-search-dropdown .sritem:last-child { border-bottom: none; }
+.sidebar-search-dropdown .sritem:hover { background: rgba(74,158,255,0.15); }
+.sidebar-search-dropdown .sritem-title { font-size: 13px; font-weight: 600; color: #fff; }
+.sidebar-search-dropdown .sritem-sub { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+.sidebar-search-dropdown .sr-empty { padding: 16px; text-align: center; color: rgba(255,255,255,0.4); font-size: 12px; }
+
+/* Quando collapsed nascondi l'input */
+.sidebar.collapsed .sidebar-search-wrapper {
+    padding: 0;
+    overflow: hidden;
+    height: 0;
+}
+
 </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -1971,12 +2051,21 @@ body {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
       </div>
-      <div class="sidebar-search-wrapper">
-        <div class="sidebar-search-box" onclick="apriRicercaGlobale()" title="Cerca (Ctrl+F)">
-          <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <span class="search-text">Cerca clienti, movimenti…</span>
-          <span class="search-shortcut">Ctrl+F</span>
+      <div class="sidebar-search-wrapper" style="position:relative;">
+        <div class="sidebar-search-input-wrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-search-ico"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input
+            type="text"
+            id="sidebar-search-input"
+            class="sidebar-search-field"
+            placeholder="Cerca clienti, movimenti…"
+            autocomplete="off"
+            oninput="sidebarSearch(this.value)"
+            onkeydown="if(event.key==='Escape'){this.value='';sidebarSearchClose();}"
+          />
+          <span class="sidebar-search-kbd">Ctrl+F</span>
         </div>
+        <div id="sidebar-search-dropdown" class="sidebar-search-dropdown" style="display:none;"></div>
       </div>  
             <ul class="nav-menu">   
                 <li class="nav-item active" data-page="clienti" data-tooltip="Clienti" onclick="navigateTo('clienti')">
@@ -2796,5 +2885,70 @@ body {
   });
 })();
 </script>
+
+<script>
+function sidebarSearch(q) {
+    var dd = document.getElementById('sidebar-search-dropdown');
+    var query = (q || '').toLowerCase().trim();
+    if (query.length < 2) { dd.style.display = 'none'; dd.innerHTML = ''; return; }
+
+    // Usa i dati già presenti in memoria tramite le funzioni app.js
+    var risultati = [];
+    // Cerca clienti
+    try {
+        var clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
+        clienti.forEach(function(c) {
+            if (c.denominazione && c.denominazione.toLowerCase().indexOf(query) >= 0) {
+                risultati.push({ tipo: 'Cliente', titolo: c.denominazione, sub: (c.cf || '') + (c.email ? ' · ' + c.email : ''), id: c.id, azione: 'cliente' });
+            }
+            if (c.cf && c.cf.toLowerCase().indexOf(query) >= 0 && !(c.denominazione && c.denominazione.toLowerCase().indexOf(query) >= 0)) {
+                risultati.push({ tipo: 'Cliente', titolo: c.denominazione, sub: 'C.F.: ' + c.cf, id: c.id, azione: 'cliente' });
+            }
+        });
+    } catch(e) {}
+
+    if (risultati.length === 0) {
+        dd.innerHTML = '<div class="sr-empty">Nessun risultato per "' + q + '"</div>';
+    } else {
+        dd.innerHTML = risultati.slice(0, 10).map(function(r) {
+            return '<div class="sritem" onclick="sidebarSearchGo('' + r.id + '','' + r.azione + '')">' +
+                '<div class="sritem-title">' + r.titolo + '</div>' +
+                '<div class="sritem-sub">' + r.tipo + (r.sub ? ' · ' + r.sub : '') + '</div>' +
+                '</div>';
+        }).join('');
+    }
+    dd.style.display = 'block';
+}
+
+function sidebarSearchClose() {
+    var dd = document.getElementById('sidebar-search-dropdown');
+    if (dd) { dd.style.display = 'none'; dd.innerHTML = ''; }
+}
+
+function sidebarSearchGo(id, azione) {
+    sidebarSearchClose();
+    var inp = document.getElementById('sidebar-search-input');
+    if (inp) inp.value = '';
+    if (azione === 'cliente') {
+        navigateTo('clienti');
+        setTimeout(function() { apriDettaglioCliente(id); }, 200);
+    }
+}
+
+// Chiudi dropdown cliccando fuori
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.sidebar-search-wrapper')) sidebarSearchClose();
+});
+
+// Ctrl+F focalizza l'input in sidebar invece di aprire overlay
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        var inp = document.getElementById('sidebar-search-input');
+        if (inp) inp.focus();
+    }
+});
+</script>
+
 </body>
 </html>
