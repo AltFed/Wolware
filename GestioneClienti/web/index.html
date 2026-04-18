@@ -6,7 +6,43 @@
     <title>Scheda Cliente CDL</title>
     
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.nav-icon i[data-lucide],.nav-icon svg{width:17px;height:17px;display:block}.btn-icon-sidebar i[data-lucide],.btn-icon-sidebar svg{width:17px;height:17px}</style>
+    <style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.nav-icon i[data-lucide],.nav-icon svg{width:17px;height:17px;display:block}.btn-icon-sidebar i[data-lucide],.btn-icon-sidebar svg{width:17px;height:17px}
+/* Sidebar footer senza search - solo bordo */
+.sidebar-footer {
+    display: none;
+}
+/* Sidebar header senza version badge */
+.sidebar-logo-text {
+    gap: 0;
+}
+
+
+/* ═══ FULLSCREEN FIX ═══ */
+html, body {
+    height: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+.app-container {
+    height: 100vh !important;
+    width: 100vw !important;
+    min-height: unset !important;
+    overflow: hidden !important;
+}
+.main-content {
+    height: 100vh !important;
+    min-height: unset !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+}
+.sidebar {
+    height: 100vh !important;
+    min-height: unset !important;
+}
+
+</style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         /* Stili Login */   
@@ -1929,7 +1965,7 @@ body {
             <div class="sidebar-header">
         <div class="sidebar-logo-text">
           <h1>Scheda Cliente</h1>
-          <span class="version">v3.0 Web</span>
+          
         </div>
         <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Comprimi sidebar" aria-label="Toggle sidebar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -1975,14 +2011,7 @@ body {
         <span class="user-username" id="user-email-display"></span>
         <button class="logout-btn" onclick="logoutUtente()">Esci</button>
       </div>
-      <div class="sidebar-footer">
-        <div class="sidebar-footer-inner">
-          <button class="btn-icon-sidebar" onclick="apriRicercaGlobale()" title="Cerca (Ctrl+F)" aria-label="Ricerca">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <span class="sidebar-search-label">Ricerca globale</span>
-        </div>
-      </div>
+
     </nav>  
 
         <!-- Main Content -->   
