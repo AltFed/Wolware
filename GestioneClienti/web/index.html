@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scheda Cliente CDL</title>
-    <link rel="stylesheet" href="styles_new.css">
+    
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.nav-icon i[data-lucide],.nav-icon svg{width:17px;height:17px;display:block}.btn-icon-sidebar i[data-lucide],.btn-icon-sidebar svg{width:17px;height:17px}
 /* Sidebar footer senza search - solo bordo */
@@ -2206,44 +2206,52 @@ body {
             <div class="sidebar-header">
         <div class="sidebar-logo-text">
           <h1>Scheda Cliente</h1>
-          <span class="version">v3.0 Web</span>
+          
         </div>
         <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Comprimi sidebar" aria-label="Toggle sidebar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
       </div>
-      <!-- Search box in sidebar -->
-      <div class="sidebar-search-wrapper">
-        <div class="sidebar-search-box" onclick="apriRicercaGlobale()" title="Cerca (Ctrl+F)">
-          <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <span class="search-text">Cerca clienti, movimenti…</span>
-          <span class="search-shortcut">Ctrl+F</span>
+      <div class="sidebar-search-wrapper" style="position:relative;">
+        <div class="sidebar-search-input-wrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-search-ico"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input
+            type="text"
+            id="sidebar-search-input"
+            class="sidebar-search-field"
+            placeholder="Cerca clienti, movimenti…"
+            autocomplete="off"
+            oninput="sidebarSearch(this.value)"
+            onkeydown="if(event.key==='Escape'){this.value='';sidebarSearchClose();}"
+          />
+          <span class="sidebar-search-kbd">Ctrl+F</span>
         </div>
+        <div id="sidebar-search-dropdown" class="sidebar-search-dropdown" style="display:none;"></div>
       </div>  
             <ul class="nav-menu">   
-                <li class="nav-item active" data-page="clienti" onclick="navigateTo('clienti')">
+                <li class="nav-item active" data-page="clienti" data-tooltip="Clienti" onclick="navigateTo('clienti')">
                     <span class="nav-icon"><i data-lucide="building-2"></i></span>    
                     <span>Clienti</span>    
                 </li>   
-                <li class="nav-item" data-page="prima-nota-studio" onclick="navigateTo('prima-nota-studio')">
+                <li class="nav-item" data-page="prima-nota-studio" data-tooltip="Prima Nota" onclick="navigateTo('prima-nota-studio')">
                     <span class="nav-icon"><i data-lucide="wallet"></i></span>    
                     <span>Prima Nota Studio</span>  
                 </li>   
-                <li class="nav-item" data-page="rendiconto"  onclick="navigateTo('rendiconto')">
+                <li class="nav-item" data-page="rendiconto" data-tooltip="Rendiconto" onclick="navigateTo('rendiconto')">
                     <span class="nav-icon"><i data-lucide="trending-up"></i></span>    
                     <span>Rendiconto</span> 
                 </li>   
-                <li class="nav-item" data-page="tariffario-base" onclick="navigateTo('tariffario-base')">
+                <li class="nav-item" data-page="tariffario-base" data-tooltip="Tariffari" onclick="navigateTo('tariffario-base')">
                     <span class="nav-icon"><i data-lucide="bar-chart-2"></i></span>    
                     <span>Database Tariffari</span> 
                 </li>   
-                <li class="nav-item" data-page="impostazioni" onclick="navigateTo('impostazioni')">
+                <li class="nav-item" data-page="impostazioni" data-tooltip="Impostazioni" onclick="navigateTo('impostazioni')">
                     <span class="nav-icon"><i data-lucide="settings"></i></span>    
                     <span>Impostazioni</span>   
                 </li>   
                 <!-- Visibile solo se admin — controllato d a JS dopo login -->
                 <li class="nav-item" id="nav-gestione-utenti" style="display:none"
-                    data-page="gestione-utenti" onclick="apriGestioneUtenti()">
+                    data-page="gestione-utenti" data-tooltip="Utenti" onclick="apriGestioneUtenti()">
                     <span class="nav-icon"><i data-lucide="users"></i></span>    
                     <span>Utenti</span> 
                 </li>   
@@ -2253,14 +2261,7 @@ body {
         <span class="user-username" id="user-email-display"></span>
         <button class="logout-btn" onclick="logoutUtente()">Esci</button>
       </div>
-      <div class="sidebar-footer">
-        <div class="sidebar-footer-inner">
-          <button class="btn-icon-sidebar" onclick="apriRicercaGlobale()" title="Cerca (Ctrl+F)" aria-label="Ricerca">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          </button>
-          <span class="sidebar-search-label">Ricerca globale</span>
-        </div>
-      </div>
+
     </nav>  
 
         <!-- Main Content -->   
@@ -3027,13 +3028,11 @@ body {
 (function(){
   function applyState(collapsed, animate) {
     var sb = document.getElementById('sidebar');
+    var mc = document.querySelector('.main-content');
     if (!sb) return;
-    if (!animate) {
-      sb.style.transition = 'none';
-      sb.offsetHeight; // force reflow
-    }
+    if (!animate) { sb.style.transition = 'none'; if(mc) mc.style.transition = 'none'; sb.offsetHeight; }
     sb.classList.toggle('collapsed', collapsed);
-    if (!animate) setTimeout(function(){ sb.style.transition = ''; }, 0);
+    if (!animate) setTimeout(function(){ sb.style.transition = ''; if(mc) mc.style.transition = ''; }, 50);
   }
   window.toggleSidebar = function(){
     var sb = document.getElementById('sidebar');
@@ -3048,5 +3047,120 @@ body {
   });
 })();
 </script>
+
+<script>
+function sidebarSearch(q) {
+    var dd = document.getElementById('sidebar-search-dropdown');
+    var query = (q || '').toLowerCase().trim();
+    if (query.length < 2) { dd.style.display = 'none'; dd.innerHTML = ''; return; }
+
+    // Usa i dati già presenti in memoria tramite le funzioni app.js
+    var risultati = [];
+    // Cerca clienti
+    try {
+        var clienti = JSON.parse(localStorage.getItem('clienti') || '[]');
+        clienti.forEach(function(c) {
+            if (c.denominazione && c.denominazione.toLowerCase().indexOf(query) >= 0) {
+                risultati.push({ tipo: 'Cliente', titolo: c.denominazione, sub: (c.cf || '') + (c.email ? ' · ' + c.email : ''), id: c.id, azione: 'cliente' });
+            }
+            if (c.cf && c.cf.toLowerCase().indexOf(query) >= 0 && !(c.denominazione && c.denominazione.toLowerCase().indexOf(query) >= 0)) {
+                risultati.push({ tipo: 'Cliente', titolo: c.denominazione, sub: 'C.F.: ' + c.cf, id: c.id, azione: 'cliente' });
+            }
+        });
+    } catch(e) {}
+
+    if (risultati.length === 0) {
+        dd.innerHTML = '<div class="sr-empty">Nessun risultato per "' + q + '"</div>';
+    } else {
+        dd.innerHTML = risultati.slice(0, 10).map(function(r) {
+            return '<div class="sritem" onclick="sidebarSearchGo('' + r.id + '','' + r.azione + '')">' +
+                '<div class="sritem-title">' + r.titolo + '</div>' +
+                '<div class="sritem-sub">' + r.tipo + (r.sub ? ' · ' + r.sub : '') + '</div>' +
+                '</div>';
+        }).join('');
+    }
+    dd.style.display = 'block';
+}
+
+function sidebarSearchClose() {
+    var dd = document.getElementById('sidebar-search-dropdown');
+    if (dd) { dd.style.display = 'none'; dd.innerHTML = ''; }
+}
+
+function sidebarSearchGo(id, azione) {
+    sidebarSearchClose();
+    var inp = document.getElementById('sidebar-search-input');
+    if (inp) inp.value = '';
+    if (azione === 'cliente') {
+        navigateTo('clienti');
+        setTimeout(function() { apriDettaglioCliente(id); }, 200);
+    }
+}
+
+// Chiudi dropdown cliccando fuori
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.sidebar-search-wrapper')) sidebarSearchClose();
+});
+
+// Ctrl+F focalizza sempre il sidebar search - blocca qualsiasi altro handler
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        var inp = document.getElementById('sidebar-search-input');
+        if (inp) { inp.focus(); inp.select(); }
+        return false;
+    }
+}, true); // capture: true per intercettare PRIMA degli altri handler
+</script>
+
+
+<script>
+// Override apriRicercaGlobale - reindirizza alla sidebar search
+window.apriRicercaGlobale = function() {
+    var inp = document.getElementById('sidebar-search-input');
+    if (inp) { inp.focus(); inp.select(); }
+};
+</script>
+
+
+
+
+
+<script>
+// Tooltip sidebar - inizializzato dopo DOMContentLoaded E dopo lucide
+function initSidebarTooltips() {
+    var tip = document.getElementById('sidebar-tooltip');
+    var sidebar = document.getElementById('sidebar');
+    if (!tip || !sidebar) return;
+
+    function showTip(e) {
+        if (!sidebar.classList.contains('collapsed')) return;
+        var item = e.currentTarget;
+        var label = item.getAttribute('data-tooltip');
+        if (!label) return;
+        tip.textContent = label;
+        tip.style.display = 'block';
+        var rect = item.getBoundingClientRect();
+        tip.style.top = (rect.top + (rect.height - tip.offsetHeight) / 2) + 'px';
+        tip.style.left = (rect.right + 10) + 'px';
+    }
+    function hideTip() { tip.style.display = 'none'; }
+
+    document.querySelectorAll('.nav-item').forEach(function(item) {
+        item.addEventListener('mouseenter', showTip);
+        item.addEventListener('mouseleave', hideTip);
+        item.addEventListener('click', hideTip);
+    });
+}
+
+// Avvia appena il DOM è pronto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSidebarTooltips);
+} else {
+    initSidebarTooltips();
+}
+</script>
+
 </body>
 </html>
