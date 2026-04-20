@@ -3073,10 +3073,10 @@ function sidebarSearch(q) {
         dd.innerHTML = '<div class="sr-empty">Nessun risultato per "' + q + '"</div>';
     } else {
         dd.innerHTML = risultati.slice(0, 10).map(function(r) {
-            return '<div class="sritem" onclick="sidebarSearchGo('' + r.id + '','' + r.azione + '')">' +
-                '<div class="sritem-title">' + r.titolo + '</div>' +
-                '<div class="sritem-sub">' + r.tipo + (r.sub ? ' · ' + r.sub : '') + '</div>' +
-                '</div>';
+            return `<div class="sritem" onclick="sidebarSearchGo('${r.id}', '${r.azione}')">
+            <div class="sritem-title">${r.titolo}</div>
+            <div class="sritem-sub">${r.tipo}${r.sub ? ' - ' + r.sub : ''}</div>
+        </div>`;
         }).join('');
     }
     dd.style.display = 'block';
