@@ -3579,11 +3579,16 @@ function renderMacrogruppiModal(macrogruppi) {
         }
         html += '</div></div>';
     }
+    html += '<div style="text-align:center;margin-top:12px;">' +
+        '<button type="button" class="btn-secondary" onclick="aggiungiMacrogruppoModal()" style="width:100%;">&#43; Aggiungi Macrogruppo</button></div>';
     container.innerHTML = html;
     container.dataset.macrogruppi = JSON.stringify(macrogruppi);
 }
 
 function toggleEsenteVoce(mgId, voceId, checked) {
+    mgId = typeof mgId === 'string' ? parseFloat(mgId) : mgId;
+    voceId = typeof voceId === 'string' ? parseFloat(voceId) : voceId;
+
     var macrogruppi = JSON.parse(document.getElementById('modal-tariffario-container').dataset.macrogruppi);
     for (var i = 0; i < macrogruppi.length; i++) {
         if (macrogruppi[i].id === mgId) {
@@ -3600,6 +3605,9 @@ function toggleEsenteVoce(mgId, voceId, checked) {
 }
 
 function toggleAnnoPrecVoce(mgId, voceId, checked) {
+    mgId = typeof mgId === 'string' ? parseFloat(mgId) : mgId;
+    voceId = typeof voceId === 'string' ? parseFloat(voceId) : voceId;
+
     var macrogruppi = JSON.parse(document.getElementById('modal-tariffario-container').dataset.macrogruppi);
     for (var i = 0; i < macrogruppi.length; i++) {
         if (macrogruppi[i].id === mgId) {
@@ -3616,6 +3624,8 @@ function toggleAnnoPrecVoce(mgId, voceId, checked) {
 }
 
 function toggleMeseNuovo(mgId, meseIdx) {
+    mgId = typeof mgId === 'string' ? parseFloat(mgId) : mgId;
+
     var btn = document.querySelector('[data-new-mese="' + mgId + '-' + meseIdx + '"]');
     if (!btn) return;
     btn.classList.toggle('selected');
@@ -3646,6 +3656,9 @@ function toggleMeseNuovo(mgId, meseIdx) {
 }
 
 function toggleMeseVoce(mgId, voceId, meseIdx) {
+    mgId = typeof mgId === 'string' ? parseFloat(mgId) : mgId;
+    voceId = typeof voceId === 'string' ? parseFloat(voceId) : voceId;
+
     var macrogruppi = JSON.parse(document.getElementById('modal-tariffario-container').dataset.macrogruppi);
     
     for (var i = 0; i < macrogruppi.length; i++) {
@@ -3690,6 +3703,8 @@ function toggleMeseVoce(mgId, voceId, meseIdx) {
 }
 
 function aggiungiVoceModal(mgId) {
+    mgId = typeof mgId === 'string' ? parseFloat(mgId) : mgId;
+
     var macrogruppi = JSON.parse(document.getElementById('modal-tariffario-container').dataset.macrogruppi);
     var descInput = document.querySelector('[data-new-desc="' + mgId + '"]');
     var prezzoInput = document.querySelector('[data-new-prezzo="' + mgId + '"]');
@@ -3718,6 +3733,9 @@ function aggiungiVoceModal(mgId) {
 }
 
 function eliminaVoceModal(mgId, voceId) {
+    mgId = typeof mgId === 'string' ? parseFloat(mgId) : mgId;
+    voceId = typeof voceId === 'string' ? parseFloat(voceId) : voceId;
+
     var macrogruppi = JSON.parse(document.getElementById('modal-tariffario-container').dataset.macrogruppi);
     for (var i = 0; i < macrogruppi.length; i++) {
         if (macrogruppi[i].id === mgId) {
@@ -3727,6 +3745,42 @@ function eliminaVoceModal(mgId, voceId) {
     }
     renderMacrogruppiModal(macrogruppi);
 }
+
+// ── GESTIONE MACROGRUPPI NEL MODAL TARIFFARIO ────────────────────────────────
+function aggiungiMacrogruppoModal() {
+    var macrogruppi = JSON.parse(document.getElementById('modal-tariffario-container').dataset.macrogruppi);
+    macrogruppi.push({ id: Date.now(), nome: 'Nuovo Macrogruppo', voci: [] });
+    renderMacrogruppiModal(macrogruppi);
+    setTimeout(function() {
+        var inputs = document.querySelectorAll('[onchange*="rinominaMacrogruppoModal"]');
+        if (inputs.length > 0) inputs[inputs.length - 1].select();
+    }, 50);
+}
+
+function rinominaMacrogruppoModal(mgId, nuovoNome) {
+    mgId = typeof mgId === 'string' ? parseFloat(mgId) : mgId;
+    var macrogruppi = JSON.parse(document.getElementById('modal-tariffario-container').dataset.macrogruppi);
+    for (var i = 0; i < macrogruppi.length; i++) {
+        if (macrogruppi[i].id === mgId) { macrogruppi[i].nome = nuovoNome; break; }
+    }
+    document.getElementById('modal-tariffario-container').dataset.macrogruppi = JSON.stringify(macrogruppi);
+}
+
+function eliminaMacrogruppoModal(mgId) {
+    mgId = typeof mgId === 'string' ? parseFloat(mgId) : mgId;
+    var macrogruppi = JSON.parse(document.getElementById('modal-tariffario-container').dataset.macrogruppi);
+    var mg = macrogruppi.find(function(m) { return m.id === mgId; });
+    var nomeVoci = mg && mg.voci && mg.voci.length > 0 ? mg.voci.length : 0;
+    var msg = nomeVoci > 0
+        ? 'Eliminare il macrogruppo "' + (mg ? mg.nome : '') + '" con ' + nomeVoci + ' voci?'
+        : 'Eliminare il macrogruppo?';
+    showConfirm('Elimina Macrogruppo', msg, function() {
+        var mg2 = JSON.parse(document.getElementById('modal-tariffario-container').dataset.macrogruppi);
+        renderMacrogruppiModal(mg2.filter(function(m) { return m.id !== mgId; }));
+    }, 'Elimina');
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 async function salvaTariffario() {
     var nome = document.getElementById('tariffario-nome').value.trim();
@@ -6774,7 +6828,8 @@ function generaTabellaVariabiliPaghe() {
     for (var t = 0; t < tariffariBase.length; t++) {
         var tariffario = tariffariBase[t];
         for (var mg = 0; mg < tariffario.macrogruppi.length; mg++) {
-            if (tariffario.macrogruppi[mg].id === 6) { // Costi Variabili Annuali Paghe
+            var _mgNome = tariffario.macrogruppi[mg].nome || '';
+            if (_mgNome.toLowerCase().includes('variabil') || tariffario.macrogruppi[mg].id === 6) { // Costi Variabili Annuali Paghe
                 var voci = tariffario.macrogruppi[mg].voci || [];
                 for (var v = 0; v < voci.length; v++) {
                     var voce = voci[v];
@@ -6809,7 +6864,8 @@ function generaTabellaVariabiliPaghe() {
         for (var v = 0; v < tariffarioCliente.length; v++) {
             var voce = tariffarioCliente[v];
             // Cerca voci con categoriaId === 6 (Costi Variabili Annuali Paghe)
-            if (voce.categoriaId === 6 && voce.descrizione === descrizioneVoce) {
+            var _catNome = (voce.categoriaNome || '').toLowerCase();
+            if ((voce.categoriaId === 6 || _catNome.includes('variabil')) && voce.descrizione === descrizioneVoce) {
                 // Verifica che il mese sia abilitato
                 var mesiVoce = voce.mesi || [];
                 var meseAbilitato = mesiVoce.indexOf(0) >= 0 || mesiVoce.indexOf(meseSelez) >= 0;
