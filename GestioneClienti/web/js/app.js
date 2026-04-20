@@ -3534,8 +3534,11 @@ function renderMacrogruppiModal(macrogruppi) {
     for (var i = 0; i < macrogruppi.length; i++) {
         var mg = macrogruppi[i];
         html += '<div class="macrogruppo-card" data-mg-id="' + mg.id + '">' +
-            '<div class="macrogruppo-header"><span class="macrogruppo-nome">' + mg.nome.toUpperCase() + '</span></div>' +
-            '<div class="macrogruppo-body">' +
+            '<div class="macrogruppo-header">' +
+            '<div class="macrogruppo-nome"><input type="text" value="' + mg.nome + '" style="background:rgba(255,255,255,0.12);border:none;border-bottom:1.5px solid rgba(255,255,255,0.3);padding:4px 8px;border-radius:4px;font-weight:700;text-transform:uppercase;color:white;font-size:12px;letter-spacing:0.7px;width:200px;" onchange="rinominaMacrogruppoModal(' + mg.id + ', this.value)" /></div>' +
+            '<button class="btn-elimina" style="background:rgba(220,38,38,0.25);border-color:rgba(220,38,38,0.4);color:#fca5a5;" onclick="eliminaMacrogruppoModal(' + mg.id + ')" title="Elimina macrogruppo">&times;</button>' +
+            '</div>' +
+            '<div class="macrogruppo-body">'+
             '<div class="aggiungi-voce-row" style="flex-wrap:wrap;">' +
             '<div style="display:flex;gap:12px;width:100%;margin-bottom:8px;align-items:center;">' +
             '<input type="text" class="form-input voce-desc" placeholder="Descrizione voce..." data-new-desc="' + mg.id + '">' +
