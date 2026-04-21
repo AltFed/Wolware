@@ -211,102 +211,194 @@
 
   <!-- MODALE DITTA -->
   <div class="modal-overlay" id="modalDitta">
-    <div class="modal">
+    <div class="modal modal-xl">
       <div class="modal-header">
         <h2 class="modal-title" id="modalDittaTitle">Nuova Ditta</h2>
-        <button class="modal-close" data-close="modalDitta">✕</button>
+        <button class="modal-close" data-close="modalDitta">&#x2715;</button>
       </div>
-      <div class="modal-body">
-        <form id="formDitta" autocomplete="off">
-          <input type="hidden" id="dittaId" />
+      <div class="modal-body modal-body-tabs">
+
+        <!-- TAB NAV -->
+        <div class="modal-tabs">
+          <button class="modal-tab active" data-mtab="anagrafica">Anagrafica</button>
+          <button class="modal-tab" data-mtab="inail">INAIL</button>
+          <button class="modal-tab" data-mtab="inps">INPS</button>
+          <button class="modal-tab" data-mtab="contatti">Contatti</button>
+          <button class="modal-tab" data-mtab="tariffario">Tariffario</button>
+        </div>
+
+        <input type="hidden" id="dittaId" />
+        <div id="formDittaError" class="form-error" style="display:none"></div>
+
+        <!-- TAB 1: ANAGRAFICA -->
+        <div class="modal-tab-panel active" id="mtab-anagrafica">
           <div class="form-section">
-            <div class="form-section-title">Dati Aziendali</div>
+            <div class="form-section-title">Identificazione</div>
             <div class="form-grid">
               <div class="form-field col-span-2">
-                <label>Ragione Sociale <span class="required">*</span></label>
-                <input type="text" id="ragione_sociale" placeholder="es. Rossi &amp; C. SRL" required />
-              </div>
-              <div class="form-field">
-                <label>Partita IVA</label>
-                <input type="text" id="partita_iva" placeholder="IT12345678901" maxlength="13"/>
+                <label>Denominazione <span class="required">*</span></label>
+                <input type="text" id="ragione_sociale" placeholder="es. Rossi &amp; C. SRL" />
               </div>
               <div class="form-field">
                 <label>Codice Fiscale</label>
                 <input type="text" id="codice_fiscale" placeholder="RSSMRA80A01H703X" maxlength="16"/>
               </div>
               <div class="form-field">
-                <label>Forma Giuridica</label>
-                <select id="forma_giuridica">
-                  <option value="">Seleziona...</option>
-                  <option>SRL</option><option>SPA</option><option>SNC</option><option>SAS</option>
-                  <option>Ditta Individuale</option><option>Professionista</option><option>Associazione</option><option>Altra</option>
-                </select>
-              </div>
-              <div class="form-field">
-                <label>Settore ATECO</label>
-                <input type="text" id="settore_ateco" placeholder="es. Commercio al dettaglio"/>
-              </div>
-              <div class="form-field">
-                <label>Codice ATECO</label>
-                <input type="text" id="codice_ateco" placeholder="es. 47.11"/>
+                <label>Partita IVA</label>
+                <input type="text" id="partita_iva" placeholder="IT12345678901" maxlength="13"/>
               </div>
             </div>
           </div>
+
           <div class="form-section">
-            <div class="form-section-title">Sede</div>
+            <div class="form-section-title">Sede Legale</div>
             <div class="form-grid">
               <div class="form-field col-span-2">
-                <label>Indirizzo</label>
+                <label>Indirizzo Sede Legale</label>
                 <input type="text" id="indirizzo" placeholder="Via Roma, 1"/>
-              </div>
-              <div class="form-field">
-                <label>Città</label>
-                <input type="text" id="citta" placeholder="Napoli"/>
               </div>
               <div class="form-field">
                 <label>CAP</label>
                 <input type="text" id="cap" placeholder="80100" maxlength="5"/>
               </div>
               <div class="form-field">
-                <label>Provincia</label>
+                <label>Comune</label>
+                <input type="text" id="citta" placeholder="Napoli"/>
+              </div>
+              <div class="form-field">
+                <label>Prov.</label>
                 <input type="text" id="provincia" placeholder="NA" maxlength="2"/>
+              </div>
+              <div class="form-field">
+                <label>Cod. Catastale</label>
+                <input type="text" id="cod_catastale" placeholder="F839" maxlength="4"/>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title-row">
+              <span class="form-section-title">Sedi Lavorative</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnAddSede">+ Aggiungi Sede</button>
+            </div>
+            <div id="sediCarousel">
+              <div class="sede-empty">Nessuna sede lavorativa. Clicca "Aggiungi Sede" per inserirne una.</div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">Amministratore</div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label>Nominativo Amministratore</label>
+                <input type="text" id="amministratore" placeholder="Mario Rossi"/>
+              </div>
+              <div class="form-field">
+                <label>C.F. Amministratore</label>
+                <input type="text" id="cf_amministratore" placeholder="RSSMRA80A01H703X" maxlength="16"/>
+              </div>
+              <div class="form-field">
+                <label>Telefono Amministratore</label>
+                <input type="tel" id="tel_amministratore" placeholder="+39 338 0000000"/>
+              </div>
+              <div class="form-field">
+                <label>Email Amministratore</label>
+                <input type="email" id="email_amministratore" placeholder="admin@azienda.it"/>
               </div>
             </div>
           </div>
           <div class="form-section">
-            <div class="form-section-title">Contatti</div>
+            <div class="form-section-title">Data Inizio Rapporto</div>
             <div class="form-grid">
               <div class="form-field">
-                <label>Referente</label>
-                <input type="text" id="referente" placeholder="Mario Rossi"/>
+                <label>Data inizio</label>
+                <input type="date" id="data_inizio_rapporto"/>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: INAIL -->
+        <div class="modal-tab-panel" id="mtab-inail">
+          <div class="list-section-header">
+            <span class="form-section-title" style="margin:0">Gestioni INAIL</span>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnAddInail">+ Nuova Gestione INAIL</button>
+          </div>
+          <div id="inailList">
+            <div class="list-empty-msg">Nessuna gestione INAIL inserita.</div>
+          </div>
+        </div>
+
+        <!-- TAB 3: INPS -->
+        <div class="modal-tab-panel" id="mtab-inps">
+          <div class="list-section-header">
+            <span class="form-section-title" style="margin:0">Gestioni INPS</span>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnAddInps">+ Nuova Gestione INPS</button>
+          </div>
+          <div id="inpsList">
+            <div class="list-empty-msg">Nessuna gestione INPS inserita.</div>
+          </div>
+        </div>
+
+        <!-- TAB 4: CONTATTI -->
+        <div class="modal-tab-panel" id="mtab-contatti">
+          <div class="form-section">
+            <div class="form-section-title">Recapiti Aziendali</div>
+            <div class="form-grid">
               <div class="form-field">
-                <label>Telefono</label>
-                <input type="tel" id="telefono" placeholder="+39 081 0000000"/>
-              </div>
-              <div class="form-field">
-                <label>Email</label>
+                <label>Email Aziendale</label>
                 <input type="email" id="email" placeholder="info@azienda.it"/>
               </div>
               <div class="form-field">
                 <label>PEC</label>
                 <input type="email" id="pec" placeholder="azienda@pec.it"/>
               </div>
-              <div class="form-field">
-                <label>Inizio Rapporto</label>
-                <input type="date" id="data_inizio_rapporto"/>
+              <div class="form-field col-span-2">
+                <label>Telefono</label>
+                <input type="tel" id="telefono" placeholder="+39 081 0000000"/>
               </div>
             </div>
           </div>
           <div class="form-section">
-            <div class="form-section-title">Note</div>
-            <div class="form-field">
-              <textarea id="note_ditta" rows="3" placeholder="Note aggiuntive..."></textarea>
+            <div class="form-section-title-row">
+              <span class="form-section-title">Per Conoscenza (CC)</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnAddCC">+ Aggiungi Contatto</button>
+            </div>
+            <div id="ccList">
+              <div class="list-empty-msg">Nessun contatto CC aggiunto.</div>
             </div>
           </div>
-          <div id="formDittaError" class="form-error" style="display:none"></div>
-        </form>
-      </div>
+        </div>
+
+        <!-- TAB 5: TARIFFARIO -->
+        <div class="modal-tab-panel" id="mtab-tariffario">
+          <div class="form-section">
+            <div class="tariff-toggle-row">
+              <div>
+                <div style="font-weight:600;font-size:var(--text-sm)">Cedolino Onnicomprensivo</div>
+                <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:2px">Se attivo, il costo del cedolino include assunzioni, variazioni e cessazioni</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="cedolino_onnicomprensivo"/>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="list-section-header">
+              <span class="form-section-title" style="margin:0">Voci Tariffario</span>
+              <div style="display:flex;gap:var(--space-2)">
+                <button type="button" class="btn btn-ghost btn-sm" id="btnTariffBase">Tariffario Base</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnAddTariff">+ Aggiungi Voce</button>
+              </div>
+            </div>
+            <div id="tariffList">
+              <div class="list-empty-msg">Nessuna voce. Clicca "Tariffario Base" per caricare le voci predefinite.</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /modal-body -->
       <div class="modal-footer">
         <button class="btn btn-ghost" data-close="modalDitta">Annulla</button>
         <button class="btn btn-primary" id="btnSaveDitta">

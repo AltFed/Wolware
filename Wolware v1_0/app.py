@@ -31,14 +31,35 @@ def init_db():
         citta TEXT,
         cap TEXT,
         provincia TEXT,
+        cod_catastale TEXT,
+        amministratore TEXT,
+        cf_amministratore TEXT,
+        tel_amministratore TEXT,
+        email_amministratore TEXT,
         telefono TEXT,
         email TEXT,
         pec TEXT,
         referente TEXT,
+        cedolino_onnicomprensivo INTEGER DEFAULT 0,
+        sedi_json TEXT,
+        inail_json TEXT,
+        inps_json TEXT,
+        cc_json TEXT,
+        tariff_json TEXT,
         data_inizio_rapporto TEXT,
         note TEXT,
         created_at TEXT DEFAULT (datetime('now'))
     )''')
+    # Migrate: add new columns if upgrading from old schema
+    existing = [row[1] for row in c.execute("PRAGMA table_info(ditte)").fetchall()]
+    for col, typedef in [
+        ('cod_catastale','TEXT'), ('amministratore','TEXT'), ('cf_amministratore','TEXT'),
+        ('tel_amministratore','TEXT'), ('email_amministratore','TEXT'),
+        ('cedolino_onnicomprensivo','INTEGER DEFAULT 0'), ('sedi_json','TEXT'),
+        ('inail_json','TEXT'), ('inps_json','TEXT'), ('cc_json','TEXT'), ('tariff_json','TEXT'),
+    ]:
+        if col not in existing:
+            c.execute(f'ALTER TABLE ditte ADD COLUMN {col} {typedef}')
     c.execute('''CREATE TABLE IF NOT EXISTS pratiche (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         ditta_id INTEGER,
@@ -83,16 +104,23 @@ def create_ditta():
     conn = get_db()
     try:
         conn.execute('''INSERT INTO ditte
-            (ragione_sociale,partita_iva,codice_fiscale,forma_giuridica,settore_ateco,
-             codice_ateco,indirizzo,citta,cap,provincia,telefono,email,pec,referente,
-             data_inizio_rapporto,note)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (
+            (ragione_sociale,partita_iva,codice_fiscale,forma_giuridica,
+             settore_ateco,codice_ateco,indirizzo,citta,cap,provincia,cod_catastale,
+             amministratore,cf_amministratore,tel_amministratore,email_amministratore,
+             telefono,email,pec,referente,cedolino_onnicomprensivo,
+             sedi_json,inail_json,inps_json,cc_json,tariff_json,data_inizio_rapporto,note)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (
             data.get('ragione_sociale'), data.get('partita_iva'),
             data.get('codice_fiscale'), data.get('forma_giuridica'),
             data.get('settore_ateco'), data.get('codice_ateco'),
             data.get('indirizzo'), data.get('citta'), data.get('cap'),
-            data.get('provincia'), data.get('telefono'), data.get('email'),
-            data.get('pec'), data.get('referente'),
+            data.get('provincia'), data.get('cod_catastale'),
+            data.get('amministratore'), data.get('cf_amministratore'),
+            data.get('tel_amministratore'), data.get('email_amministratore'),
+            data.get('telefono'), data.get('email'), data.get('pec'),
+            data.get('referente'), data.get('cedolino_onnicomprensivo', 0),
+            data.get('sedi_json'), data.get('inail_json'), data.get('inps_json'),
+            data.get('cc_json'), data.get('tariff_json'),
             data.get('data_inizio_rapporto'), data.get('note')))
         conn.commit()
         new_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -118,14 +146,22 @@ def update_ditta(id):
     conn = get_db()
     conn.execute('''UPDATE ditte SET ragione_sociale=?,partita_iva=?,codice_fiscale=?,
         forma_giuridica=?,settore_ateco=?,codice_ateco=?,indirizzo=?,citta=?,cap=?,
-        provincia=?,telefono=?,email=?,pec=?,referente=?,data_inizio_rapporto=?,note=?
+        provincia=?,cod_catastale=?,amministratore=?,cf_amministratore=?,
+        tel_amministratore=?,email_amministratore=?,telefono=?,email=?,pec=?,referente=?,
+        cedolino_onnicomprensivo=?,sedi_json=?,inail_json=?,inps_json=?,cc_json=?,
+        tariff_json=?,data_inizio_rapporto=?,note=?
         WHERE id=?''', (
         data.get('ragione_sociale'), data.get('partita_iva'),
         data.get('codice_fiscale'), data.get('forma_giuridica'),
         data.get('settore_ateco'), data.get('codice_ateco'),
         data.get('indirizzo'), data.get('citta'), data.get('cap'),
-        data.get('provincia'), data.get('telefono'), data.get('email'),
-        data.get('pec'), data.get('referente'),
+        data.get('provincia'), data.get('cod_catastale'),
+        data.get('amministratore'), data.get('cf_amministratore'),
+        data.get('tel_amministratore'), data.get('email_amministratore'),
+        data.get('telefono'), data.get('email'), data.get('pec'),
+        data.get('referente'), data.get('cedolino_onnicomprensivo', 0),
+        data.get('sedi_json'), data.get('inail_json'), data.get('inps_json'),
+        data.get('cc_json'), data.get('tariff_json'),
         data.get('data_inizio_rapporto'), data.get('note'), id))
     conn.commit()
     d = conn.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()

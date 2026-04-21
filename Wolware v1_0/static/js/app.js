@@ -205,136 +205,322 @@ function filterDitte(){
   renderDitte(f);
 }
 
-/* FORM DITTA */
-function resetDittaForm(){
-  document.getElementById('dittaId').value='';
-  ['ragione_sociale','partita_iva','codice_fiscale','settore_ateco','codice_ateco',
-   'indirizzo','citta','cap','provincia','telefono','email','pec','referente','data_inizio_rapporto','note_ditta'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.value='';
+
+/* ══════════════════════════════════════════════════════════
+   MODAL DITTA — TABS
+══════════════════════════════════════════════════════════ */
+document.querySelectorAll('.modal-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const panel = tab.dataset.mtab;
+    document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.modal-tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('mtab-' + panel).classList.add('active');
   });
-  document.getElementById('forma_giuridica').value='';
-  document.getElementById('formDittaError').style.display='none';
-  document.getElementById('modalDittaTitle').textContent='Nuova Ditta';
-}
-function openDittaModal(){resetDittaForm();openModal('modalDitta');}
-async function editDitta(id){
-  try{
-    const d=await api(`/api/ditte/${id}`);
-    resetDittaForm();
-    document.getElementById('dittaId').value=d.id;
-    document.getElementById('modalDittaTitle').textContent='Modifica Ditta';
-    ['ragione_sociale','partita_iva','codice_fiscale','forma_giuridica','settore_ateco','codice_ateco',
-     'indirizzo','citta','cap','provincia','telefono','email','pec','referente','data_inizio_rapporto'].forEach(f=>{
-      const el=document.getElementById(f);if(el&&d[f])el.value=d[f];
-    });
-    document.getElementById('note_ditta').value=d.note||'';
-    openModal('modalDitta');
-  }catch(e){toast('Errore nel caricamento ditta','error');}
-}
-document.getElementById('btnSaveDitta').addEventListener('click',async()=>{
-  const errEl=document.getElementById('formDittaError');errEl.style.display='none';
-  const data={
-    ragione_sociale:document.getElementById('ragione_sociale').value.trim(),
-    partita_iva:document.getElementById('partita_iva').value.trim(),
-    codice_fiscale:document.getElementById('codice_fiscale').value.trim(),
-    forma_giuridica:document.getElementById('forma_giuridica').value,
-    settore_ateco:document.getElementById('settore_ateco').value.trim(),
-    codice_ateco:document.getElementById('codice_ateco').value.trim(),
-    indirizzo:document.getElementById('indirizzo').value.trim(),
-    citta:document.getElementById('citta').value.trim(),
-    cap:document.getElementById('cap').value.trim(),
-    provincia:document.getElementById('provincia').value.trim().toUpperCase(),
-    telefono:document.getElementById('telefono').value.trim(),
-    email:document.getElementById('email').value.trim(),
-    pec:document.getElementById('pec').value.trim(),
-    referente:document.getElementById('referente').value.trim(),
-    data_inizio_rapporto:document.getElementById('data_inizio_rapporto').value,
-    note:document.getElementById('note_ditta').value.trim()
-  };
-  if(!data.ragione_sociale){errEl.textContent='La Ragione Sociale è obbligatoria.';errEl.style.display='block';return;}
-  try{
-    const id=document.getElementById('dittaId').value;
-    if(id){await api(`/api/ditte/${id}`,'PUT',data);toast('Ditta aggiornata con successo');}
-    else{await api('/api/ditte','POST',data);toast('Ditta creata con successo');}
-    closeModal('modalDitta');loadDitte();loadStats();
-  }catch(e){errEl.textContent=e.message;errEl.style.display='block';}
 });
-async function deleteDitta(id){
-  if(!confirm('Sei sicuro di voler eliminare questa ditta?'))return;
-  try{await api(`/api/ditte/${id}`,'DELETE');toast('Ditta eliminata');loadDitte();loadStats();}
-  catch(e){toast('Errore nell\'eliminazione','error');}
+function resetModalTabs() {
+  document.querySelectorAll('.modal-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  document.querySelectorAll('.modal-tab-panel').forEach((p,i) => p.classList.toggle('active', i===0));
 }
 
-/* FORM PRATICA */
-async function populateDitteSelect(){
-  try{
-    const ditte=await api('/api/ditte');
-    const sel=document.getElementById('pratica_ditta_id');
-    sel.innerHTML='<option value="">-- Seleziona ditta --</option>'+ditte.map(d=>`<option value="${d.id}">${d.ragione_sociale}</option>`).join('');
-  }catch(e){console.error(e);}
+/* ══════════════════════════════════════════════════════════
+   SEDI LAVORATIVE — Carousel
+══════════════════════════════════════════════════════════ */
+let sedi = [];
+let sedeIdx = 0;
+
+function renderSedi() {
+  const container = document.getElementById('sediCarousel');
+  if (!sedi.length) {
+    container.innerHTML = '<div class="sede-empty">Nessuna sede lavorativa. Clicca "Aggiungi Sede" per inserirne una.</div>';
+    return;
+  }
+  const s = sedi[sedeIdx];
+  container.innerHTML = `
+    <div class="sede-card">
+      <div class="sede-card-header">
+        <span style="font-weight:600;font-size:var(--text-sm)">Sede ${sedeIdx+1}</span>
+        <button type="button" class="btn btn-icon btn-ghost" style="color:var(--color-error)" onclick="removeSede(${sedeIdx})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+      <div class="form-grid">
+        <div class="form-field col-span-2">
+          <label>Nome / Descrizione Sede</label>
+          <input type="text" value="${s.nome||''}" oninput="sedi[${sedeIdx}].nome=this.value" placeholder="es. Magazzino, Filiale Nord..."/>
+        </div>
+        <div class="form-field col-span-2">
+          <label>Indirizzo</label>
+          <input type="text" value="${s.indirizzo||''}" oninput="sedi[${sedeIdx}].indirizzo=this.value" placeholder="Via ..."/>
+        </div>
+        <div class="form-field">
+          <label>CAP</label>
+          <input type="text" maxlength="5" value="${s.cap||''}" oninput="sedi[${sedeIdx}].cap=this.value" placeholder="80100"/>
+        </div>
+        <div class="form-field">
+          <label>Comune</label>
+          <input type="text" value="${s.citta||''}" oninput="sedi[${sedeIdx}].citta=this.value" placeholder="Napoli"/>
+        </div>
+        <div class="form-field">
+          <label>Prov.</label>
+          <input type="text" maxlength="2" value="${s.prov||''}" oninput="sedi[${sedeIdx}].prov=this.value" placeholder="NA"/>
+        </div>
+        <div class="form-field">
+          <label>Cod. Catastale</label>
+          <input type="text" maxlength="4" value="${s.catastale||''}" oninput="sedi[${sedeIdx}].catastale=this.value" placeholder="F839"/>
+        </div>
+      </div>
+      <div class="sede-nav">
+        <button type="button" class="sede-nav-btn" onclick="navSede(-1)" ${sedeIdx===0?'disabled':''}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="sede-counter">${sedeIdx+1} / ${sedi.length}</span>
+        <button type="button" class="sede-nav-btn" onclick="navSede(1)" ${sedeIdx===sedi.length-1?'disabled':''}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>`;
 }
-function resetPraticaForm(){
-  document.getElementById('praticaId').value='';
-  document.getElementById('tipo_pratica').value='';
-  document.getElementById('pratica_ditta_id').value='';
-  document.getElementById('descrizione_pratica').value='';
-  document.getElementById('stato_pratica').value='Aperta';
-  document.getElementById('priorita_pratica').value='Normale';
-  document.getElementById('data_apertura').value=new Date().toISOString().split('T')[0];
-  document.getElementById('data_scadenza').value='';
-  document.getElementById('note_pratica').value='';
-  document.getElementById('formPraticaError').style.display='none';
-  document.getElementById('modalPraticaTitle').textContent='Nuova Pratica';
+function navSede(dir) {
+  sedeIdx = Math.max(0, Math.min(sedi.length-1, sedeIdx+dir));
+  renderSedi();
 }
-async function openPraticaModal(tipo){
-  resetPraticaForm();await populateDitteSelect();
-  document.getElementById('tipo_pratica').value=tipo;
-  document.getElementById('modalPraticaTitle').textContent=`Nuova Pratica: ${tipo}`;
-  openModal('modalPratica');
+function removeSede(i) {
+  sedi.splice(i, 1);
+  sedeIdx = Math.max(0, sedeIdx-1);
+  renderSedi();
 }
-async function editPratica(id){
-  resetPraticaForm();await populateDitteSelect();
-  const pratica=allPratiche.find(p=>p.id===id);if(!pratica)return;
-  document.getElementById('praticaId').value=pratica.id;
-  document.getElementById('modalPraticaTitle').textContent='Modifica Pratica';
-  document.getElementById('tipo_pratica').value=pratica.tipo_pratica;
-  document.getElementById('pratica_ditta_id').value=pratica.ditta_id||'';
-  document.getElementById('descrizione_pratica').value=pratica.descrizione||'';
-  document.getElementById('stato_pratica').value=pratica.stato;
-  document.getElementById('priorita_pratica').value=pratica.priorita;
-  document.getElementById('data_apertura').value=pratica.data_apertura||'';
-  document.getElementById('data_scadenza').value=pratica.data_scadenza||'';
-  document.getElementById('note_pratica').value=pratica.note||'';
-  openModal('modalPratica');
-}
-document.getElementById('btnSavePratica').addEventListener('click',async()=>{
-  const errEl=document.getElementById('formPraticaError');errEl.style.display='none';
-  const data={
-    tipo_pratica:document.getElementById('tipo_pratica').value,
-    ditta_id:document.getElementById('pratica_ditta_id').value||null,
-    descrizione:document.getElementById('descrizione_pratica').value.trim(),
-    stato:document.getElementById('stato_pratica').value,
-    priorita:document.getElementById('priorita_pratica').value,
-    data_apertura:document.getElementById('data_apertura').value,
-    data_scadenza:document.getElementById('data_scadenza').value||null,
-    note:document.getElementById('note_pratica').value.trim()
-  };
-  if(!data.tipo_pratica){errEl.textContent='Il tipo pratica è obbligatorio.';errEl.style.display='block';return;}
-  try{
-    const id=document.getElementById('praticaId').value;
-    if(id){await api(`/api/pratiche/${id}`,'PUT',data);toast('Pratica aggiornata con successo');}
-    else{await api('/api/pratiche','POST',data);toast('Pratica creata con successo');}
-    closeModal('modalPratica');loadPratiche();loadStats();loadHomePratiche();
-  }catch(e){errEl.textContent=e.message;errEl.style.display='block';}
+document.getElementById('btnAddSede').addEventListener('click', () => {
+  sedi.push({nome:'',indirizzo:'',cap:'',citta:'',prov:'',catastale:''});
+  sedeIdx = sedi.length-1;
+  renderSedi();
 });
-async function deletePratica(id){
-  if(!confirm('Sei sicuro di voler eliminare questa pratica?'))return;
-  try{
-    await api(`/api/pratiche/${id}`,'DELETE');toast('Pratica eliminata');
-    allPratiche=allPratiche.filter(p=>p.id!==id);renderPratiche(allPratiche);
-    loadStats();loadHomePratiche();
-  }catch(e){toast('Errore nell\'eliminazione','error');}
+
+/* ══════════════════════════════════════════════════════════
+   INAIL
+══════════════════════════════════════════════════════════ */
+let inailList = [];
+function renderInail() {
+  const el = document.getElementById('inailList');
+  if (!inailList.length) { el.innerHTML='<div class="list-empty-msg">Nessuna gestione INAIL inserita.</div>'; return; }
+  el.innerHTML = inailList.map((g,i) => `
+    <div class="list-item">
+      <div class="list-item-header">
+        <span class="list-item-title">Gestione INAIL #${i+1}</span>
+        <button type="button" class="btn btn-icon btn-ghost" style="color:var(--color-error)" onclick="removeInail(${i})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+      <div class="list-item-grid">
+        <div class="list-item-field"><label>Codice PAT</label>
+          <input value="${g.pat||''}" oninput="inailList[${i}].pat=this.value" placeholder="PAT000000000"/></div>
+        <div class="list-item-field"><label>Sede INAIL</label>
+          <input value="${g.sede||''}" oninput="inailList[${i}].sede=this.value" placeholder="es. Napoli"/></div>
+        <div class="list-item-field"><label>Codice ATECO</label>
+          <input value="${g.ateco||''}" oninput="inailList[${i}].ateco=this.value" placeholder="es. 47.11"/></div>
+        <div class="list-item-field"><label>Sede Lavorativa</label>
+          <input value="${g.sedeLav||''}" oninput="inailList[${i}].sedeLav=this.value" placeholder="es. Via Roma 1"/></div>
+        <div class="list-item-field full"><label>Note</label>
+          <input value="${g.note||''}" oninput="inailList[${i}].note=this.value" placeholder="Note aggiuntive..."/></div>
+      </div>
+    </div>`).join('');
 }
+function removeInail(i) { inailList.splice(i,1); renderInail(); }
+document.getElementById('btnAddInail').addEventListener('click', () => {
+  inailList.push({pat:'',sede:'',ateco:'',sedeLav:'',note:''});
+  renderInail();
+});
+
+/* ══════════════════════════════════════════════════════════
+   INPS
+══════════════════════════════════════════════════════════ */
+let inpsList = [];
+function renderInps() {
+  const el = document.getElementById('inpsList');
+  if (!inpsList.length) { el.innerHTML='<div class="list-empty-msg">Nessuna gestione INPS inserita.</div>'; return; }
+  el.innerHTML = inpsList.map((g,i) => `
+    <div class="list-item">
+      <div class="list-item-header">
+        <span class="list-item-title">Gestione INPS #${i+1}</span>
+        <button type="button" class="btn btn-icon btn-ghost" style="color:var(--color-error)" onclick="removeInps(${i})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>
+      <div class="list-item-grid">
+        <div class="list-item-field"><label>Matricola INPS</label>
+          <input value="${g.matricola||''}" oninput="inpsList[${i}].matricola=this.value" placeholder="1234567890"/></div>
+        <div class="list-item-field"><label>Sede INPS</label>
+          <input value="${g.sede||''}" oninput="inpsList[${i}].sede=this.value" placeholder="es. Napoli"/></div>
+        <div class="list-item-field"><label>CCNL</label>
+          <input value="${g.ccnl||''}" oninput="inpsList[${i}].ccnl=this.value" placeholder="es. Commercio"/></div>
+        <div class="list-item-field"><label>Codice ATECO</label>
+          <input value="${g.ateco||''}" oninput="inpsList[${i}].ateco=this.value" placeholder="es. 47.11"/></div>
+        <div class="list-item-field full"><label>Note</label>
+          <input value="${g.note||''}" oninput="inpsList[${i}].note=this.value" placeholder="Note aggiuntive..."/></div>
+      </div>
+    </div>`).join('');
+}
+function removeInps(i) { inpsList.splice(i,1); renderInps(); }
+document.getElementById('btnAddInps').addEventListener('click', () => {
+  inpsList.push({matricola:'',sede:'',ccnl:'',ateco:'',note:''});
+  renderInps();
+});
+
+/* ══════════════════════════════════════════════════════════
+   CONTATTI CC
+══════════════════════════════════════════════════════════ */
+let ccList = [];
+function renderCC() {
+  const el = document.getElementById('ccList');
+  if (!ccList.length) { el.innerHTML='<div class="list-empty-msg">Nessun contatto CC aggiunto.</div>'; return; }
+  el.innerHTML = ccList.map((c,i) => `
+    <div class="list-item" style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.4"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      <input type="email" style="flex:1;padding:0 var(--space-2);height:30px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm);color:var(--color-text)"
+        value="${c.email||''}" oninput="ccList[${i}].email=this.value" placeholder="email@esempio.it"/>
+      <input type="text" style="width:160px;padding:0 var(--space-2);height:30px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm);color:var(--color-text)"
+        value="${c.nome||''}" oninput="ccList[${i}].nome=this.value" placeholder="Nome (opzionale)"/>
+      <button type="button" class="btn btn-icon btn-ghost" style="color:var(--color-error);flex-shrink:0" onclick="removeCC(${i})">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button>
+    </div>`).join('');
+}
+function removeCC(i) { ccList.splice(i,1); renderCC(); }
+document.getElementById('btnAddCC').addEventListener('click', () => {
+  ccList.push({email:'',nome:''});
+  renderCC();
+});
+
+/* ══════════════════════════════════════════════════════════
+   TARIFFARIO
+══════════════════════════════════════════════════════════ */
+let tariffItems = [];
+const TARIFF_BASE = [
+  {desc:'Costo Cedolino', prezzo:''},
+  {desc:'Assunzione', prezzo:''},
+  {desc:'Variazione', prezzo:''},
+  {desc:'Cessazione', prezzo:''},
+];
+function renderTariff() {
+  const el = document.getElementById('tariffList');
+  if (!tariffItems.length) {
+    el.innerHTML='<div class="list-empty-msg">Nessuna voce. Clicca "Tariffario Base" per caricare le voci predefinite.</div>'; return;
+  }
+  el.innerHTML = `<table class="tariff-table">
+    <thead><tr><th>Descrizione</th><th>Prezzo (€)</th><th></th></tr></thead>
+    <tbody>${tariffItems.map((v,i)=>`<tr>
+      <td><input value="${v.desc||''}" oninput="tariffItems[${i}].desc=this.value" placeholder="Descrizione voce"/></td>
+      <td class="tariff-row-price"><input type="number" step="0.01" min="0" value="${v.prezzo||''}" oninput="tariffItems[${i}].prezzo=this.value" placeholder="0.00"/></td>
+      <td><button type="button" class="btn btn-icon btn-ghost" style="color:var(--color-error)" onclick="removeTariff(${i})">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+function removeTariff(i) { tariffItems.splice(i,1); renderTariff(); }
+document.getElementById('btnTariffBase').addEventListener('click', () => {
+  tariffItems = TARIFF_BASE.map(v => ({...v})); renderTariff();
+});
+document.getElementById('btnAddTariff').addEventListener('click', () => {
+  tariffItems.push({desc:'',prezzo:''}); renderTariff();
+});
+
+/* ══════════════════════════════════════════════════════════
+   RESET + OPEN + EDIT + SAVE  (sovrascrive le funzioni precedenti)
+══════════════════════════════════════════════════════════ */
+function resetDittaForm() {
+  document.getElementById('dittaId').value = '';
+  document.getElementById('ragione_sociale').value = '';
+  document.getElementById('codice_fiscale').value = '';
+  document.getElementById('partita_iva').value = '';
+  document.getElementById('indirizzo').value = '';
+  document.getElementById('cap').value = '';
+  document.getElementById('citta').value = '';
+  document.getElementById('provincia').value = '';
+  document.getElementById('cod_catastale').value = '';
+  document.getElementById('amministratore').value = '';
+  document.getElementById('cf_amministratore').value = '';
+  document.getElementById('tel_amministratore').value = '';
+  document.getElementById('email_amministratore').value = '';
+  document.getElementById('data_inizio_rapporto').value = '';
+  document.getElementById('email').value = '';
+  document.getElementById('pec').value = '';
+  document.getElementById('telefono').value = '';
+  document.getElementById('cedolino_onnicomprensivo').checked = false;
+  sedi = []; sedeIdx = 0; inailList = []; inpsList = []; ccList = []; tariffItems = [];
+  renderSedi(); renderInail(); renderInps(); renderCC(); renderTariff();
+  document.getElementById('formDittaError').style.display = 'none';
+  document.getElementById('modalDittaTitle').textContent = 'Nuova Ditta';
+  resetModalTabs();
+}
+function openDittaModal() { resetDittaForm(); openModal('modalDitta'); }
+
+async function editDitta(id) {
+  resetDittaForm();
+  document.getElementById('modalDittaTitle').textContent = 'Modifica Ditta';
+  try {
+    const d = await api(`/api/ditte/${id}`);
+    document.getElementById('dittaId').value = d.id;
+    ['ragione_sociale','codice_fiscale','partita_iva','indirizzo','cap','citta',
+     'provincia','cod_catastale','amministratore','cf_amministratore',
+     'tel_amministratore','email_amministratore','data_inizio_rapporto',
+     'email','pec','telefono'].forEach(f => {
+      const el = document.getElementById(f);
+      if (el && d[f]) el.value = d[f];
+    });
+    document.getElementById('cedolino_onnicomprensivo').checked = !!d.cedolino_onnicomprensivo;
+    if (d.sedi_json) { try { sedi = JSON.parse(d.sedi_json); sedeIdx=0; } catch(e){} }
+    if (d.inail_json) { try { inailList = JSON.parse(d.inail_json); } catch(e){} }
+    if (d.inps_json)  { try { inpsList = JSON.parse(d.inps_json);  } catch(e){} }
+    if (d.cc_json)    { try { ccList = JSON.parse(d.cc_json);       } catch(e){} }
+    if (d.tariff_json){ try { tariffItems = JSON.parse(d.tariff_json); } catch(e){} }
+    renderSedi(); renderInail(); renderInps(); renderCC(); renderTariff();
+    openModal('modalDitta');
+  } catch(e) { toast('Errore nel caricamento ditta', 'error'); }
+}
+
+document.getElementById('btnSaveDitta').addEventListener('click', async () => {
+  const errEl = document.getElementById('formDittaError');
+  errEl.style.display = 'none';
+  if (!document.getElementById('ragione_sociale').value.trim()) {
+    errEl.textContent = 'La Denominazione è obbligatoria.';
+    errEl.style.display = 'block';
+    resetModalTabs();
+    return;
+  }
+  const data = {
+    ragione_sociale: document.getElementById('ragione_sociale').value.trim(),
+    codice_fiscale: document.getElementById('codice_fiscale').value.trim(),
+    partita_iva: document.getElementById('partita_iva').value.trim(),
+    indirizzo: document.getElementById('indirizzo').value.trim(),
+    cap: document.getElementById('cap').value.trim(),
+    citta: document.getElementById('citta').value.trim(),
+    provincia: document.getElementById('provincia').value.trim().toUpperCase(),
+    cod_catastale: document.getElementById('cod_catastale').value.trim().toUpperCase(),
+    amministratore: document.getElementById('amministratore').value.trim(),
+    cf_amministratore: document.getElementById('cf_amministratore').value.trim(),
+    tel_amministratore: document.getElementById('tel_amministratore').value.trim(),
+    email_amministratore: document.getElementById('email_amministratore').value.trim(),
+    data_inizio_rapporto: document.getElementById('data_inizio_rapporto').value,
+    email: document.getElementById('email').value.trim(),
+    pec: document.getElementById('pec').value.trim(),
+    telefono: document.getElementById('telefono').value.trim(),
+    cedolino_onnicomprensivo: document.getElementById('cedolino_onnicomprensivo').checked ? 1 : 0,
+    sedi_json: JSON.stringify(sedi),
+    inail_json: JSON.stringify(inailList),
+    inps_json: JSON.stringify(inpsList),
+    cc_json: JSON.stringify(ccList),
+    tariff_json: JSON.stringify(tariffItems),
+  };
+  try {
+    const id = document.getElementById('dittaId').value;
+    if (id) { await api(`/api/ditte/${id}`, 'PUT', data); toast('Ditta aggiornata'); }
+    else     { await api('/api/ditte', 'POST', data); toast('Ditta creata'); }
+    closeModal('modalDitta');
+    loadDitte(); loadStats();
+  } catch(e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+});
+
 
 /* BINDINGS */
 document.getElementById('btnNuovaDitta').addEventListener('click',openDittaModal);

@@ -261,3 +261,86 @@ table{border-collapse:collapse;width:100%}
   .form-grid{grid-template-columns:1fr}
   .col-span-2{grid-column:span 1}
 }
+
+
+/* ── MODAL EXTENDED ─────────────────────────────────────────── */
+.modal-xl{max-width:780px;width:100%}
+.modal-body-tabs{padding:0;display:flex;flex-direction:column}
+.modal-tabs{display:flex;gap:0;border-bottom:1px solid var(--color-border);
+  padding:0 var(--space-4);flex-shrink:0;background:var(--color-surface-2)}
+.modal-tab{padding:var(--space-3) var(--space-4);font-size:var(--text-sm);font-weight:500;
+  color:var(--color-text-muted);border-bottom:2px solid transparent;
+  transition:color var(--transition),border-color var(--transition);white-space:nowrap}
+.modal-tab:hover{color:var(--color-text)}
+.modal-tab.active{color:var(--color-primary);border-bottom-color:var(--color-primary);font-weight:600}
+.modal-tab-panel{display:none;padding:var(--space-5) var(--space-6);overflow-y:auto;flex:1}
+.modal-tab-panel.active{display:block}
+
+/* form section title row (title + button inline) */
+.form-section-title-row{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:var(--space-3);padding-bottom:var(--space-2);border-bottom:1px solid var(--color-divider)}
+.form-section-title-row .form-section-title{margin:0;padding:0;border:none}
+
+/* list section header */
+.list-section-header{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:var(--space-3)}
+.list-empty-msg{font-size:var(--text-sm);color:var(--color-text-faint);
+  padding:var(--space-6) var(--space-4);text-align:center;
+  border:1px dashed var(--color-border);border-radius:var(--radius-md)}
+
+/* Carousel sedi */
+.sede-card{background:var(--color-surface-2);border:1px solid var(--color-border);
+  border-radius:var(--radius-lg);padding:var(--space-4);position:relative}
+.sede-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)}
+.sede-nav{display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-3);justify-content:center}
+.sede-nav-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-full);border:1px solid var(--color-border);
+  color:var(--color-text-muted);transition:background var(--transition),color var(--transition)}
+.sede-nav-btn:hover:not(:disabled){background:var(--color-primary-light);color:var(--color-primary)}
+.sede-nav-btn:disabled{opacity:0.3;cursor:not-allowed}
+.sede-counter{font-size:var(--text-xs);color:var(--color-text-muted);min-width:60px;text-align:center}
+.sede-empty{font-size:var(--text-sm);color:var(--color-text-faint);padding:var(--space-6) var(--space-4);
+  text-align:center;border:1px dashed var(--color-border);border-radius:var(--radius-md)}
+
+/* INAIL / INPS / CC list items */
+.list-item{background:var(--color-surface-2);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-2);
+  position:relative}
+.list-item-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2)}
+.list-item-title{font-weight:600;font-size:var(--text-sm)}
+.list-item-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2) var(--space-3)}
+.list-item-field{display:flex;flex-direction:column;gap:2px}
+.list-item-field label{font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted)}
+.list-item-field input{padding:0 var(--space-2);height:30px;background:var(--color-surface);
+  border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-xs);
+  color:var(--color-text)}
+.list-item-field input:focus{outline:none;border-color:var(--color-primary);
+  box-shadow:0 0 0 2px color-mix(in oklab,var(--color-primary) 15%,transparent)}
+.list-item-field.full{grid-column:span 2}
+
+/* Toggle switch */
+.tariff-toggle-row{display:flex;align-items:center;justify-content:space-between;
+  padding:var(--space-3) var(--space-4);background:var(--color-surface-2);
+  border:1px solid var(--color-border);border-radius:var(--radius-md)}
+.toggle-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--color-border);
+  border-radius:var(--radius-full);transition:background var(--transition)}
+.toggle-slider:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;
+  background:#fff;border-radius:50%;transition:transform var(--transition)}
+.toggle-switch input:checked + .toggle-slider{background:var(--color-primary)}
+.toggle-switch input:checked + .toggle-slider:before{transform:translateX(20px)}
+
+/* Tariff table */
+.tariff-table{width:100%;margin-top:var(--space-2)}
+.tariff-table th{padding:var(--space-2) var(--space-3);text-align:left;font-size:var(--text-xs);
+  font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.05em;
+  background:var(--color-surface-2);border-bottom:1px solid var(--color-border)}
+.tariff-table td{padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--color-divider)}
+.tariff-table input{width:100%;padding:0 var(--space-2);height:28px;
+  background:transparent;border:1px solid transparent;border-radius:var(--radius-sm);
+  font-size:var(--text-sm);color:var(--color-text)}
+.tariff-table input:focus{outline:none;background:var(--color-surface);
+  border-color:var(--color-border)}
+.tariff-table td:last-child{width:40px;text-align:center}
+.tariff-row-price{width:120px}
