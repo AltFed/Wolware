@@ -525,6 +525,20 @@ document.getElementById('btnSaveDitta').addEventListener('click', async () => {
 /* BINDINGS */
 document.getElementById('btnNuovaDitta').addEventListener('click',openDittaModal);
 document.getElementById('btnNuovaDitta2').addEventListener('click',openDittaModal);
+function openPraticaModal(tipo) {
+  if (tipo === 'Assunzione') { openAssunzioneModal(); return; }
+  const wip = ['Cessazione','Trasformazione Contratto','Proroga Contratto',
+    'Elaborazione Buste Paga','Variazione Retributiva','Conguaglio Fiscale',
+    'Comunicazione INPS','Comunicazione INAIL','Gestione CIG','Variazione INAIL',
+    'Modello 770','CU - Certificazione Unica','Autoliquidazione INAIL','Altra Pratica'];
+  document.getElementById('pratica_tipo').value = tipo;
+  document.getElementById('modalPraticaTitle').textContent = 'Nuova Pratica — ' + tipo;
+  const wipEl = document.getElementById('praticaWipNotice');
+  if (wipEl) wipEl.style.display = wip.includes(tipo) ? 'flex' : 'none';
+  loadDitteSelect('pratica_ditta_id');
+  openModal('modalPratica');
+}
+
 setupDropdown('btnNuovaPratica','dropdownPratica',openPraticaModal);
 setupDropdown('btnNuovaPratica2','dropdownPratica2',openPraticaModal);
 
