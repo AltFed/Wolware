@@ -851,7 +851,8 @@ function aggiornaDettaglioCliente() {
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px;">' +
         '<h3 style="margin:0;">Tariffario</h3>' +
         '<button class="btn-secondary" onclick="apriModalCambiaTariffario(' + cliente.id + ')">' + icon('refresh-cw', 13) + ' Cambia Tariffario</button>' +
-        '</div>';
+'<button class="btn-secondary" onclick="sincronizzaTariffarioCliente(' + cliente.id + ')">' + icon('zap', 13) + ' Sincronizza da base</button>' +
+'</div>';
     
     // Cronologia cambi tariffario
     if (cliente.storicoTariffari && cliente.storicoTariffari.length > 0) {
@@ -889,7 +890,7 @@ function apriModalCambiaTariffario(clienteId) {
         '<div class="form-group"><label>Nuovo Tariffario</label>' +
         '<select id="nuovo-tariffario" class="form-select">' + opt + '</select></div>' +
         '<div style="background:#fef3c7;border-radius:8px;padding:12px;margin-top:16px;">' +
-        '<p style="color:#92400e;font-size:13px;margin:0;">️ <strong>Attenzione:</strong> I costi e le pratiche già inseriti manterranno i prezzi del tariffario precedente. Il nuovo tariffario verrà applicato solo ai nuovi mesi.</p>' +
+        '<p style="color:#92400e;font-size:13px;margin:0;">️ <strong>Attenzione:</strong> I costi e le pratiche già inseriti manterranno i prezzi del tariffario precedente. Il nuovo tariffario verrà applicato solo ai nuovi mesi. Inoltre il nuovo tariffario sostituirà tutte le voci del cliente. Usa "Sincronizza da base" per aggiungere solo le voci mancanti senza perdere le personalizzazioni.</p>' +
         '</div>';
     
     document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = 'Cambia Tariffario';
@@ -943,7 +944,41 @@ async function confermaCambioTariffario(clienteId) {
     showToast('Tariffario cambiato! Da: ' + cliente.storicoTariffari[cliente.storicoTariffari.length - 1].da + ' → ' + nuovoTariffario.nome, 'success', 4000);
     aggiornaDettaglioCliente();
 }
+async function sincronizzaTariffarioCliente(clienteId) {
+    var cliente = clienti.find(c => c.id === clienteId);
+    var base = tariffariBase.find(t => t.id === cliente.tariffarioBaseId);
+    if (!base) return;
 
+    var vociEsistenti = cliente.tariffario.map(v => v.descrizione.toLowerCase());
+    var vociNuove = [];
+
+    // Scorre il tariffario base e aggiunge solo le voci mancanti
+    for (var mg of base.macrogruppi) {
+        for (var v of mg.voci) {
+            if (!vociEsistenti.includes(v.descrizione.toLowerCase())) {
+                vociNuove.push({
+                    id: Date.now() + Math.random(),
+                    descrizione: v.descrizione,
+                    prezzo: v.prezzo,
+                    categoriaId: mg.id,
+                    categoriaNome: mg.nome,
+                    mesi: v.mesi ? v.mesi.slice() : [],
+                    esenteIva: v.esenteIva || false
+                });
+            }
+        }
+    }
+
+    if (vociNuove.length === 0) {
+        showToast('Nessuna voce nuova da sincronizzare', 'info');
+        return;
+    }
+
+    cliente.tariffario = cliente.tariffario.concat(vociNuove);
+    await dbSalvaCliente(cliente);
+    showToast(`Aggiunte ${vociNuove.length} voci nuove dal tariffario base`, 'success');
+    aggiornaDettaglioCliente();
+}
 async function salvaAnnotazioni(clienteId) {
     var annotazioni = document.getElementById('cliente-annotazioni').value;
     for (var i = 0; i < clienti.length; i++) {
