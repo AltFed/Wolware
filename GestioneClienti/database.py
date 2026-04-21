@@ -70,7 +70,8 @@ CREATE TABLE IF NOT EXISTS clienti (
     archiviato          INTEGER DEFAULT 0,
     storicotariffari    TEXT,   -- JSON array
     prezziPratiche      TEXT,   -- JSON oggetto
-    updated_at          TEXT    DEFAULT (datetime('now'))
+    updated_at          TEXT    DEFAULT (datetime('now')),
+    costiStorico        TEXT    -- JSON array { data, descrizione, importo }
 );
 
 -- Pagamenti

@@ -11,28 +11,34 @@ from database import get_conn, to_json, from_json
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _row_to_cliente(r) -> dict:
+def _row_to_cliente(r):
+    d = dict(r)
+    # Deserializza i campi JSON
+    d['tariffario']       = json.loads(d['tariffario'] or '[]')
+    d['storicotariffari'] = json.loads(d['storicotariffari'] or '[]')
+    d['prezziPratiche']   = json.loads(d['prezziPratiche'] or '{}')
+    # Normalizza il nome della chiave verso il JS (camelCase)
     return {
-        "id":                   r["id"],
-        "denominazione":        r["denominazione"],
-        "codiceFiscale":        r["codicefiscale"],
-        "email":                r["email"],
-        "telefono":             r["telefono"],
-        "indirizzo":            r["indirizzo"],
-        "tariffario":           from_json(r["tariffario"]) or [],
-        "tariffarioBaseId":     r["tariffariobaseid"],
-        "tariffarioNome":       r["tariffarionome"],
-        "cadenzaPagamenti":     r["cadenzapagamenti"],
-        "residuoIniziale":      float(r["residuoiniziale"] or 0),
-        "inizioPaghe":          r["iniziopaghe"],
-        "finePaghe":            r["finepaghe"],
-        "inizioContabilita":    r["iniziocontabilita"],
-        "fineContabilita":      r["finecontabilita"],
-        "annotazioni":          r["annotazioni"],
-        "archiviato":           bool(r["archiviato"]),
-        "storicoTariffari":     from_json(r["storicotariffari"]) or [],
-        "prezziPratiche":       from_json(r["prezziPratiche"]) or {},
-        "costiStorico":         {},   # caricato separatamente da praticheclienti
+        'id':                d['id'],
+        'denominazione':     d['denominazione'],
+        'codiceFiscale':     d['codicefiscale'],
+        'email':             d['email'],
+        'telefono':          d['telefono'],
+        'indirizzo':         d['indirizzo'],
+        'tariffario':        d['tariffario'],        # array voci
+        'tariffarioBaseId':  d['tariffariobaseid'],
+        'tariffarioNome':    d['tariffarionome'],
+        'cadenzaPagamenti':  d['cadenzapagamenti'],
+        'residuoIniziale':   d['residuoiniziale'] or 0,
+        'inizioPaghe':       d['iniziopaghe'],
+        'finePaghe':         d['finepaghe'],
+        'inizioContabilita': d['iniziocontabilita'],
+        'fineContabilita':   d['finecontabilita'],
+        'annotazioni':       d['annotazioni'],
+        'archiviato':        bool(d['archiviato']),
+        'storicoTariffari':  d['storicotariffari'],  # array cambi tariffario
+        'prezziPratiche':    d['prezziPratiche'],    # oggetto prezzi override
+        'updated_at':        d['updated_at'],
     }
 
 
@@ -68,6 +74,7 @@ def db_salva_cliente(cliente: dict) -> dict | None:
         1 if cliente.get("archiviato") else 0,
         to_json(cliente.get("storicoTariffari")),
         to_json(cliente.get("prezziPratiche")),
+        to_json(cliente.get("costiStorico")),   # ← aggiunto
     )
     cid = cliente.get("id")
     with get_conn() as conn:
@@ -78,21 +85,29 @@ def db_salva_cliente(cliente: dict) -> dict | None:
                     indirizzo=?, tariffario=?, tariffariobaseid=?, tariffarionome=?,
                     cadenzapagamenti=?, residuoiniziale=?, iniziopaghe=?,
                     finepaghe=?, iniziocontabilita=?, finecontabilita=?,
-                    annotazioni=?, archiviato=?, storicotariffari=?, prezziPratiche=?,
+                    annotazioni=?, archiviato=?, storicotariffari=?,
+                    prezziPratiche=?, costiStorico=?,
                     updated_at=datetime('now')
                 WHERE id=?
             """, record + (cid,))
-            return {"id": cid}
+            new_id = cid
         else:
             cur = conn.execute("""
                 INSERT INTO clienti
                     (denominazione, codicefiscale, email, telefono, indirizzo,
                      tariffario, tariffariobaseid, tariffarionome, cadenzapagamenti,
                      residuoiniziale, iniziopaghe, finepaghe, iniziocontabilita,
-                     finecontabilita, annotazioni, archiviato, storicotariffari, prezziPratiche)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                     finecontabilita, annotazioni, archiviato, storicotariffari,
+                     prezziPratiche, costiStorico)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, record)
-            return {"id": cur.lastrowid}
+            new_id = cur.lastrowid
+
+        # Rilegge la riga appena scritta e restituisce il cliente completo
+        row = conn.execute(
+            "SELECT * FROM clienti WHERE id=?", (new_id,)
+        ).fetchone()
+        return _row_to_cliente(row)
 
 
 @eel.expose
