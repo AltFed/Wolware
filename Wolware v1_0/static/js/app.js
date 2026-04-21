@@ -539,6 +539,200 @@ function openPraticaModal(tipo) {
   openModal('modalPratica');
 }
 
+
+/* ══════════════════════════════════════════════════════════
+   MODAL ASSUNZIONE
+══════════════════════════════════════════════════════════ */
+document.querySelectorAll('.modal-tab[data-atab]').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.modal-tab[data-atab]').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('[id^="atab-"]').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    const panel = document.getElementById('atab-' + tab.dataset.atab);
+    if (panel) panel.classList.add('active');
+  });
+});
+function resetAssunzioneTabs() {
+  document.querySelectorAll('.modal-tab[data-atab]').forEach((t,i) => t.classList.toggle('active', i===0));
+  document.querySelectorAll('[id^="atab-"]').forEach((p,i) => p.classList.toggle('active', i===0));
+}
+
+/* Toggle buttons */
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('active');
+    if (btn.dataset.key === 'obbligatoria')
+      document.getElementById('ass_obbligatoria_section').style.display = btn.classList.contains('active') ? 'block' : 'none';
+    if (btn.dataset.key === 'netto')
+      document.getElementById('ass_netto_wrapper').style.display = btn.classList.contains('active') ? 'block' : 'none';
+  });
+});
+
+/* Toggle straniero */
+document.getElementById('ass_straniero').addEventListener('change', function() {
+  document.getElementById('ass_permesso_section').style.display = this.checked ? 'block' : 'none';
+});
+
+/* Tipologia contratto → mostra data fine */
+const TIPI_TERMINE = ['TD','TD_SOS','TD_PIATT','TD_SOS_PIATT','APP_QUAL','APP_PROF','APP_AF','INT_DET','TIR','LSU','FL','BWE'];
+document.getElementById('ass_tipologia_contratto').addEventListener('change', function() {
+  document.getElementById('ass_data_fine_wrapper').style.display = TIPI_TERMINE.includes(this.value) ? 'block' : 'none';
+});
+
+/* Tipologia orario → mostra retrib PT */
+document.getElementById('ass_tipo_orario').addEventListener('change', function() {
+  document.getElementById('ass_retrib_pt_wrapper').style.display = ['PTO','PTV','PTM'].includes(this.value) ? 'block' : 'none';
+});
+
+/* Cod istruzione → descrizione */
+const ISTR_MAP = {
+  '10':'Nessun titolo','20':'Licenza Elementare','30':'Licenza Media',
+  '40':'Diploma Professionale','50':'Diploma Superiore','60':'Laurea Triennale',
+  '70':'Laurea Magistrale','80':'Master / Specializzazione','90':'Dottorato'
+};
+document.getElementById('ass_cod_istruzione').addEventListener('change', function() {
+  document.getElementById('ass_livello_istruzione').value = ISTR_MAP[this.value] || '';
+});
+
+/* Azienda select → auto-fill campi */
+document.getElementById('ass_ditta_id').addEventListener('change', async function() {
+  const id = this.value;
+  if (!id) { clearAziendaFields(); return; }
+  try {
+    const d = await api('/api/ditte/' + id);
+    document.getElementById('ass_cf_azienda').value = d.codice_fiscale || '';
+    document.getElementById('ass_pec_azienda').value = d.pec || '';
+    document.getElementById('ass_indirizzo_legale').value = d.indirizzo || '';
+    document.getElementById('ass_cap_legale').value = d.cap || '';
+    document.getElementById('ass_comune_legale').value = d.citta || '';
+    document.getElementById('ass_prov_legale').value = d.provincia || '';
+    document.getElementById('ass_catastale_legale').value = d.cod_catastale || '';
+    /* INPS */
+    const inpsSel = document.getElementById('ass_matricola_inps');
+    inpsSel.innerHTML = '<option value="">-- Seleziona --</option>';
+    let inpsList = [];
+    try { inpsList = d.inps_json ? JSON.parse(d.inps_json) : []; } catch(e) {}
+    inpsList.forEach((g,i) => {
+      const o = document.createElement('option');
+      o.value = i;
+      o.textContent = g.matricola ? g.matricola + (g.ccnl ? ' — ' + g.ccnl : '') : 'INPS #' + (i+1);
+      o.dataset.ateco = g.ateco || ''; o.dataset.ccnl = g.ccnl || '';
+      inpsSel.appendChild(o);
+    });
+    /* INAIL */
+    const inailSel = document.getElementById('ass_pat_inail');
+    inailSel.innerHTML = '<option value="">-- Seleziona --</option>';
+    let inailList = [];
+    try { inailList = d.inail_json ? JSON.parse(d.inail_json) : []; } catch(e) {}
+    inailList.forEach((g,i) => {
+      const o = document.createElement('option');
+      o.value = i;
+      o.textContent = g.pat ? g.pat + (g.sede ? ' — ' + g.sede : '') : 'INAIL #' + (i+1);
+      inailSel.appendChild(o);
+    });
+    /* Sedi lavorative */
+    const sedeSel = document.getElementById('ass_sede_lav_select');
+    sedeSel.innerHTML = '<option value="">Sede Legale (default)</option>';
+    let sediList = [];
+    try { sediList = d.sedi_json ? JSON.parse(d.sedi_json) : []; } catch(e) {}
+    sediList.forEach((s,i) => {
+      const o = document.createElement('option');
+      o.value = i;
+      o.textContent = s.nome || 'Sede ' + (i+1);
+      o.dataset.indirizzo = s.indirizzo||''; o.dataset.cap = s.cap||'';
+      o.dataset.citta = s.citta||''; o.dataset.prov = s.prov||'';
+      o.dataset.catastale = s.catastale||'';
+      sedeSel.appendChild(o);
+    });
+  } catch(e) { console.error(e); }
+});
+
+/* INPS select → autofill ATECO e CCNL */
+document.getElementById('ass_matricola_inps').addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  document.getElementById('ass_cod_ateco').value = opt.dataset ? (opt.dataset.ateco || '') : '';
+  document.getElementById('ass_ccnl').value = opt.dataset ? (opt.dataset.ccnl || '') : '';
+});
+
+/* Sede lavorativa → autofill */
+document.getElementById('ass_sede_lav_select').addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  if (!opt.dataset) return;
+  document.getElementById('ass_indirizzo_lav').value = opt.dataset.indirizzo || '';
+  document.getElementById('ass_cap_lav').value = opt.dataset.cap || '';
+  document.getElementById('ass_comune_lav').value = opt.dataset.citta || '';
+  document.getElementById('ass_prov_lav').value = opt.dataset.prov || '';
+  document.getElementById('ass_catastale_lav').value = opt.dataset.catastale || '';
+});
+
+function clearAziendaFields() {
+  ['ass_cf_azienda','ass_pec_azienda','ass_indirizzo_legale','ass_cap_legale',
+   'ass_comune_legale','ass_prov_legale','ass_catastale_legale','ass_cod_ateco','ass_ccnl'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('ass_matricola_inps').innerHTML = '<option value="">-- Seleziona prima l\'azienda --</option>';
+  document.getElementById('ass_pat_inail').innerHTML = '<option value="">-- Seleziona prima l\'azienda --</option>';
+  document.getElementById('ass_sede_lav_select').innerHTML = '<option value="">Sede Legale (default)</option>';
+}
+
+function resetAssunzioneForm() {
+  document.querySelectorAll('#modalAssunzione input:not([type=checkbox])').forEach(el => el.value = '');
+  document.querySelectorAll('#modalAssunzione select').forEach(el => el.selectedIndex = 0);
+  document.querySelectorAll('#modalAssunzione textarea').forEach(el => el.value = '');
+  document.querySelectorAll('#modalAssunzione input[type=checkbox]').forEach(el => el.checked = false);
+  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  ['ass_permesso_section','ass_obbligatoria_section','ass_netto_wrapper',
+   'ass_data_fine_wrapper','ass_retrib_pt_wrapper'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  clearAziendaFields();
+  const errEl = document.getElementById('formAssunzioneError');
+  if (errEl) errEl.style.display = 'none';
+  document.getElementById('modalAssunzioneTitle').textContent = 'Nuova Assunzione';
+  document.getElementById('btnAssumiBtn').style.display = 'none';
+  resetAssunzioneTabs();
+}
+
+async function populateAziendaSelect() {
+  try {
+    const ditte = await api('/api/ditte');
+    const sel = document.getElementById('ass_ditta_id');
+    sel.innerHTML = '<option value="">-- Seleziona azienda --</option>';
+    ditte.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.id; o.textContent = d.ragione_sociale;
+      sel.appendChild(o);
+    });
+  } catch(e) {}
+}
+
+function openAssunzioneModal() {
+  resetAssunzioneForm();
+  populateAziendaSelect();
+  openModal('modalAssunzione');
+}
+
+/* Validazione live → mostra bottone Assumi */
+document.getElementById('modalAssunzione').addEventListener('input', () => {
+  const ok = document.getElementById('ass_ditta_id').value &&
+    document.getElementById('ass_nome').value.trim() &&
+    document.getElementById('ass_cognome').value.trim() &&
+    document.getElementById('ass_cf').value.trim().length === 16 &&
+    document.getElementById('ass_data_inizio').value &&
+    document.getElementById('ass_tipologia_contratto').value;
+  document.getElementById('btnAssumiBtn').style.display = ok ? 'inline-flex' : 'none';
+});
+
+document.getElementById('btnSalvaBozzaAssunzione').addEventListener('click', () => {
+  toast('Bozza salvata', 'success');
+});
+document.getElementById('btnDuplicaAssunzione').addEventListener('click', () => {
+  toast('Duplica — work in progress', 'info');
+});
+document.getElementById('btnAssumiBtn').addEventListener('click', () => {
+  toast('Assunzione avviata — work in progress', 'success');
+});
+
 setupDropdown('btnNuovaPratica','dropdownPratica',openPraticaModal);
 setupDropdown('btnNuovaPratica2','dropdownPratica2',openPraticaModal);
 
