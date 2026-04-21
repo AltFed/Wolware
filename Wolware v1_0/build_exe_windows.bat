@@ -1,9 +1,8 @@
 @echo off
-REM ============================================================
-REM  Wolware — Build eseguibile standalone per Windows
-REM ============================================================
+REM  Wolware — Build Windows (senza pywebview, compatibile Python 3.14)
+
 echo Installazione dipendenze...
-pip install flask pywebview pyinstaller -q
+pip install flask pyinstaller -q
 
 echo.
 echo Build in corso...
@@ -15,10 +14,8 @@ pyinstaller ^
   --add-data "templates;templates" ^
   --add-data "static;static" ^
   --hidden-import "flask" ^
-  --hidden-import "webview" ^
-  --hidden-import "webview.platforms.winforms" ^
+  --hidden-import "sqlite3" ^
   main.py
 
-echo.
 echo Build completata! Trovi l'app in dist\Wolware\
 pause
