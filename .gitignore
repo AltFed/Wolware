@@ -2,7 +2,7 @@
 wolware/
 venv/
 env/
-
+old/
 # File di database locale (MOLTO IMPORTANTE)
 *.db
 *.sqlite3
