@@ -1,0 +1,226 @@
+Pulsante ditta -> nuovo cliente
+mi servono le specifiche 
+
+Tab 1 — Anagrafica
+Contiene i dati identificativi e di sede della ditta:
+
+Denominazione — ragione sociale
+
+Codice Fiscale
+
+Indirizzo Sede Legale (campo a riga intera)
+
+CAP, Comune, Prov., Cod. Catastale (sede legale)
+
+Sedi Lavorative — gestite tramite un carousel con frecce avanti/indietro; ogni sede ha: nome sede, indirizzo, CAP, Comune, Prov., Cod. Catastale. Si possono aggiungere più sedi con il pulsante "Aggiungi Sede Lavorativa"
+
+Amministratore e Codice Fiscale Amministratore
+
+Telefono Amministratore e Email Amministratore
+
+Tab 2 — Gestione INAIL
+Gestione delle posizioni assicurative INAIL:
+
+Lista vuota all'apertura con messaggio "Nessuna gestione INAIL inserita"
+
+Pulsante "Nuova Gestione INAIL" per aggiungere posizioni (PAT, sede lavorativa, codice ATECO, ecc.)
+
+È possibile aggiungerne multiple
+
+Tab 3 — Gestione INPS
+Gestione delle posizioni previdenziali INPS:
+
+Lista vuota con messaggio "Nessuna gestione INPS inserita"
+
+Pulsante "Nuova Gestione INPS" per aggiungere matricole INPS con relativi dati (CCNL, codice ATECO, ecc.)
+
+Tab 4 — Contatti
+Sezione dedicata ai recapiti della ditta:
+
+Email aziendale
+
+PEC
+
+Telefono
+
+Per Conoscenza (CC) — sezione separata per aggiungere indirizzi email da mettere in copia conoscenza nelle comunicazioni; gestita tramite pulsante "Aggiungi Contatto"
+
+Tab 5 — Tariffario
+Gestione del tariffario dei compensi dello studio per quella ditta:
+
+Toggle "Cedolino Onnicomprensivo" — se attivo, il costo del cedolino include assunzioni, variazioni e cessazioni
+
+Tabella voci con colonne Descrizione e Prezzo
+
+Pulsante "Tariffario Base" — carica automaticamente le voci predefinite (Costo Cedolino, Assunzione, Variazione, Cessazione)
+
+Pulsante "Aggiungi Voce" — per inserire voci personalizzate
+
+
+Pulsanti del Footer
+In fondo al modal sono presenti due azioni:
+
+Annulla — chiude il modal senza salvare
+
+Salva — salva la ditta nel localStorage e aggiorna l'elenco ditte e il select aziende nel form assunzioni
+
+Comportamento all'apertura
+Ogni volta che si clicca "Nuova Ditta", il form viene resettato completamente: sedi, tariffario, gestioni INAIL/INPS e contatti CC vengono svuotati, il toggle onnicomprensivo viene reimpostato su false, e il titolo del modal viene impostato su "Nuova Ditta". Se invece si clicca Modifica su una ditta esistente, il titolo cambia in "Modifica Ditta" e i campi vengono precompilati con i dati salvati.
+--------------------------------------------
+
+A QUESTO PUNTO HO CREATO DITTA E GLI HO ASSOCIATO UN TARIFFARIO. QUESTO E' BASE CHE VIENE EREDITATO POSSIBILE MODIFICARLO SOLO PER LA DITTA, E IN CASO AGGIORNARLO PRENDENDO DAL PADRE MA MANTENENDO LE MODIFICHE .
+
+---------------------------------------------
+
+POI POSSO FARE LE PRATICHE AS, VAR, CES, TRASFORMAZIONI
+
+--------------------------------------------- 
+AS GIA HO TUTTE LE SPECS: 
+I risultati web non sono pertinenti — le specifiche si trovano direttamente nei file allegati, già analizzati nel turno precedente. Elaboro la risposta completa basandomi sul codice HTML e JS già estratto.
+
+Cliccando "Nuova Pratica" → Assunzione si apre il modal "Nuova Assunzione", organizzato in 3 tab con i seguenti campi:
+
+Tab 1 — Sezione Azienda
+Dati dell'azienda presso cui avviene l'assunzione:
+
+Azienda (obbligatorio) — select dinamico con le ditte registrate; al cambio si auto-compilano i campi sottostanti
+
+Toggle Pubblica Amministrazione — attiva logiche specifiche per enti pubblici
+
+Codice Fiscale Azienda (readonly, auto-compilato)
+
+Matricola INPS (obbligatorio) — select con le gestioni INPS della ditta
+
+PAT INAIL (obbligatorio) — select con le gestioni INAIL della ditta
+
+Codice ATECO (readonly, auto-compilato da INPS)
+
+CCNL Applicato (readonly, auto-compilato da INPS)
+
+Indirizzo Sede Legale (readonly) + CAP, Comune, Prov., Cod. Catastale
+
+Sede Lavorativa — select per scegliere una sede alternativa alla legale; se selezionata si compilano: Indirizzo, CAP, Comune, Prov., Cod. Catastale (modificabili)
+
+PEC (readonly, auto-compilata)
+
+Tab 2 — Sezione Lavoratore
+Dati anagrafici del dipendente da assumere:
+
+Nome (obbligatorio) e Cognome (obbligatorio)
+
+Codice Fiscale (obbligatorio)
+
+Data di Nascita
+
+Sesso — select (M/F)
+
+Comune/Stato di Nascita — con autocomplete API + Cod. Catastale (auto-compilato)
+
+Toggle Lavoratore Straniero — se attivato mostra la sezione Permesso di Soggiorno con:
+
+N° Permesso di Soggiorno, Motivo Rilascio, Rilasciato da
+
+Data Rilascio, Data Scadenza
+
+Checkbox "In Rinnovo"
+
+Comune di Residenza — con autocomplete API + Cod. Catastale e CAP
+
+Indirizzo di residenza
+
+Livello di Istruzione — doppio campo sincronizzato: Cod. Istruzione (10–90) e Livello Istruzione (descrizione testuale, es. Laurea, Licenza Media, ecc.)
+
+Tab 3 — Dati Contrattuali
+Tutti i dettagli del contratto di lavoro:
+
+Date e tipologia:
+
+Data Inizio Contratto (obbligatorio)
+
+Data Fine Contratto (visibile solo per contratti a termine)
+
+Tipologia Contrattuale (obbligatorio) — ampio elenco che include:
+
+Tempo Indeterminato / Determinato / Determinato per Sostituzione
+
+Apprendistato (qualifica, professionalizzante, alta formazione)
+
+Lavoro Intermittente (con scelta Indeterminato/Determinato)
+
+Tirocinio, LSU-ASU, Lavoro a Domicilio, Lavoro Ripartito
+
+Contratto di Agenzia, Collaborazione Coordinata e Continuativa
+
+Versioni "con Piattaforma" per indeterminato, determinato e sostituzione
+
+Formazione Lavoro (solo P.A.), Borsa Lavoro/Work Experience
+
+Caratteristiche aggiuntive (toggle button attivabili):
+
+Socio Lavoratore
+
+Lavoratore in Mobilità
+
+Lavoro Stagionale
+
+Assunzione Obbligatoria (se attiva, mostra select con tipo: Disabili L.68/99, Categorie Protette, Centralinisti Non Vedenti, ecc.)
+
+Lavoro in Agricoltura
+
+Qualifica e mansioni:
+
+Qualifica e Livello
+
+Cod. Qualifica ISTAT e Qualifica ISTAT
+
+Mansionario (textarea)
+
+Orario e retribuzione:
+
+Tipologia Orario — Tempo Pieno, Part-time Orizzontale/Verticale, Misto, Non Definito
+
+Ore Settimanali
+
+N° Mensilità
+
+Retrib. Base Lorda CCNL
+
+Retrib. Spettante PT (visibile solo per part-time)
+
+Toggle Netto — se attivo mostra campo importo netto in busta
+
+Toggle 13ª, Toggle 14ª, Toggle Rateo Permessi
+
+Condizioni contrattuali:
+
+Periodo di Prova (es. "30 giorni")
+
+Ferie Spettanti (textarea)
+
+Permessi Spettanti (textarea)
+
+Preavviso (textarea)
+
+Distribuzione Orario Lavorativo (textarea)
+
+Pulsanti Aggiuntivi e Footer
+In cima al modal è presente anche il pulsante "Duplica" (viola) per duplicare una pratica esistente. Nel footer si trovano tre azioni:
+
+Annulla — chiude senza salvare
+
+Salva Dati — salva come bozza nel localStorage
+
+Assumi (verde, visibile solo dopo la validazione) — avvia ufficialmente la pratica di assunzione
+
+
+---------------------------------------------------------
+
+UNA VOLTA FATTA ASSUNZIONE IO FACCIO SCADENZIARIO CIOE' MI SEGNO LA PRATICA, A CHI, COME E UN RIASSUNTO E POI AD ESEMPIO SE HO TEMPO DETERMINATO MI SERVE UNA RIGA NELLO SCADENZIARIO CHE MI DICA QUANDO SCADE. 
+
+
+
+
+
+
+
+
