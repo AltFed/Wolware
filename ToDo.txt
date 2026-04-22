@@ -27,3 +27,13 @@ document.getElementById('btnDuplicaAssunzione').addEventListener('click', () => 
 document.getElementById('btnAssumiBtn').addEventListener('click', () => {
   toast('Assunzione avviata — work in progress', 'success');
 });
+
+Elenco Ditte -> Elenco Clienti
+----------
+
+Per passare di la la gestione Clienti:
+
+Tariffario
+Primanotastudio
+Clienti2
+Rendiconto
