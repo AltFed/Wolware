@@ -1,0 +1,3 @@
+[] fare grafica per aggiunta nuovo utente
+[] finalizzare almeno le assunzioni come pratica dall'inizo alla fine
+[] provare a fare contabilizazione delle assunzioni almeno per ciascuna ditta
