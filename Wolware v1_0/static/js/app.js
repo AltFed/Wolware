@@ -71,13 +71,30 @@ async function api(url,method='GET',body=null){
   return data;
 }
 
+// Variabile globale per cachare le stats
+let lastStats = null;
 /* STATS */
-async function loadStats(){
-  try{
-    const s=await api('/api/stats');
-    animateValue('kpiDitte',s.ditte);animateValue('kpiTotali',s.pratiche_totali);
-    animateValue('kpiAperte',s.pratiche_aperte);animateValue('kpiChiuse',s.pratiche_chiuse);
-  }catch(e){console.error(e);}
+async function loadStats() {
+    // Mostra subito i valori precedenti senza azzerare
+    if (lastStats) {
+        document.getElementById('kpiDitte').textContent = lastStats.ditte;
+        document.getElementById('kpiTotali').textContent = lastStats.pratiche.totali;
+        document.getElementById('kpiAperte').textContent = lastStats.pratiche.aperte;
+        document.getElementById('kpiChiuse').textContent = lastStats.pratiche.chiuse;
+    }
+    try {
+        const s = await api('/api/stats');
+        lastStats = s;
+        // Anima solo se il valore è cambiato
+        if (!lastStats || lastStats.ditte !== s.ditte)
+            animateValue('kpiDitte', s.ditte);
+        if (!lastStats || lastStats.pratiche.totali !== s.pratiche.totali)
+            animateValue('kpiTotali', s.pratiche.totali);
+        if (!lastStats || lastStats.pratiche.aperte !== s.pratiche.aperte)
+            animateValue('kpiAperte', s.pratiche.aperte);
+        if (!lastStats || lastStats.pratiche.chiuse !== s.pratiche.chiuse)
+            animateValue('kpiChiuse', s.pratiche.chiuse);
+    } catch(e) { console.error(e); }
 }
 function animateValue(id,target){
   const el=document.getElementById(id);if(!el)return;
@@ -738,3 +755,87 @@ setupDropdown('btnNuovaPratica2','dropdownPratica2',openPraticaModal);
 
 /* INIT */
 loadStats();loadHomePratiche();
+
+/* ══════════════════════════════════════════════════════════
+   AUTH — controlla ruolo e mostra tab admin
+══════════════════════════════════════════════════════════ */
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/me');
+    if (res.status === 401) { window.location.href = '/login'; return; }
+    const user = await res.json();
+    if (user.role === 'admin') {
+      document.getElementById('navAdmin').style.display = '';
+      document.getElementById('tabBtnAdmin').style.display = '';
+    }
+  } catch(e) { console.error(e); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   GESTIONE UTENTI (tab admin)
+══════════════════════════════════════════════════════════ */
+async function loadUsers() {
+  try {
+    const users = await api('/api/users');
+    const tbody = document.getElementById('usersTableBody');
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-row">Nessun utente trovato.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(u => `<tr>
+      <td style="font-weight:500">${u.username}</td>
+      <td><span class="badge ${u.role === 'admin' ? 'badge-blue' : 'badge-gray'}">${u.role}</span></td>
+      <td style="color:var(--color-text-muted)">${u.created_at ? u.created_at.split(' ')[0] : '—'}</td>
+      <td><div class="row-actions">
+        ${u.username !== 'admin' ? `<button class="btn btn-icon btn-ghost" title="Elimina"
+          onclick="deleteUser(${u.id}, '${u.username}')" style="color:var(--color-error)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>` : '<span style="color:var(--color-text-faint);font-size:var(--text-xs)">protetto</span>'}
+      </div></td>
+    </tr>`).join('');
+  } catch(e) { toast('Errore nel caricamento utenti', 'error'); }
+}
+
+async function deleteUser(id, username) {
+  if (!confirm(`Eliminare l'utente "${username}"?`)) return;
+  try {
+    await api(`/api/users/${id}`, 'DELETE');
+    toast(`Utente ${username} eliminato`, 'success');
+    loadUsers();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function openNuovoUtente() {
+  const username = prompt('Username:');
+  if (!username) return;
+  const password = prompt('Password:');
+  if (!password) return;
+  const role = confirm('Ruolo ADMIN?\n(OK = admin, Annulla = user)') ? 'admin' : 'user';
+  api('/api/users', 'POST', { username, password, role })
+    .then(() => { toast('Utente creato', 'success'); loadUsers(); })
+    .catch(e => toast(e.message, 'error'));
+}
+
+/* Carica utenti quando si apre il tab admin */
+const _origSwitchTab = switchTab;
+window.switchTab = function(tabName) {
+  _origSwitchTab(tabName);
+  if (tabName === 'admin') loadUsers();
+};
+
+/* ══════════════════════════════════════════════════════════
+   REAL-TIME SSE
+══════════════════════════════════════════════════════════ */
+(function() {
+  const sse = new EventSource('/api/events');
+  sse.addEventListener('ditta_created', () => { loadDitte(); loadStats(); toast('Nuova ditta aggiunta', 'info'); });
+  sse.addEventListener('ditta_updated', () => { loadDitte(); loadStats(); toast('Ditta modificata', 'info'); });
+  sse.addEventListener('ditta_deleted', () => { loadDitte(); loadStats(); toast('Ditta eliminata', 'info'); });
+  sse.addEventListener('pratica_created', () => { loadPratiche(); loadStats(); loadHomePratiche(); toast('Nuova pratica creata', 'info'); });
+  sse.addEventListener('pratica_updated', () => { loadPratiche(); loadStats(); loadHomePratiche(); toast('Pratica modificata', 'info'); });
+  sse.addEventListener('pratica_deleted', () => { loadPratiche(); loadStats(); loadHomePratiche(); toast('Pratica eliminata', 'info'); });
+  sse.onerror = () => console.warn('SSE disconnesso, riprovo...');
+})();
+
+/* INIT */
+checkAuth();
