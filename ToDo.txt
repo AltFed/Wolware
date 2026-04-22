@@ -18,6 +18,9 @@ Segretezza della Sessione Condivisa: Nel file config.py, la variabile SECRET_KEY
 
 Da Fare!
 
+document.getElementById('btnSalvaBozzaAssunzione').addEventListener('click', () => {
+  toast('Bozza salvata', 'success');
+});
 document.getElementById('btnDuplicaAssunzione').addEventListener('click', () => {
   toast('Duplica — work in progress', 'info');
 });
