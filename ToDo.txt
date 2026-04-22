@@ -14,3 +14,13 @@ Migrazioni del Database Rudimentali: La funzione init_db() in database.py utiliz
 Scarsa Validazione dei Dati: Le API di creazione e aggiornamento delle ditte verificano esclusivamente che la ragione_sociale sia presente. Non viene fatto alcun controllo di validità sul Codice Fiscale, sulla Partita IVA o sulla validità degli indirizzi email.
 
 Segretezza della Sessione Condivisa: Nel file config.py, la variabile SECRET_KEY utilizzata per firmare i cookie di sessione di Flask ha un valore predefinito cablato nel codice ('wolware-dev-key-cambiala-in-produzione'). Se l'app viene compilata come eseguibile e le variabili d'ambiente non sono impostate, tutte le installazioni dell'app condivideranno la stessa chiave di sicurezza, il che è una cattiva pratica.
+
+
+Da Fare!
+
+document.getElementById('btnDuplicaAssunzione').addEventListener('click', () => {
+  toast('Duplica — work in progress', 'info');
+});
+document.getElementById('btnAssumiBtn').addEventListener('click', () => {
+  toast('Assunzione avviata — work in progress', 'success');
+});
