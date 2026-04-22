@@ -1,3 +1,16 @@
 [] fare grafica per aggiunta nuovo utente
 [] finalizzare almeno le assunzioni come pratica dall'inizo alla fine
 [] provare a fare contabilizazione delle assunzioni almeno per ciascuna ditta
+
+
+IMPORTANTE DA FARE : 
+
+Bug Critico sulla Serializzazione JSON: Nel file routes/ditte.py, i dati provenienti dal frontend vengono acquisiti tramite request.get_json(). Se i campi come sedi_json, inail_json o tariff_json sono passati come oggetti o liste, Python li estrarrà come tali. Tuttavia, durante l'inserimento (INSERT INTO ditte...) o l'aggiornamento, questi valori vengono passati direttamente alla query SQL senza essere prima convertiti in stringhe usando json.dumps(). Questo farà sì che SQLite salvi la rappresentazione di default di Python (che usa singoli apici invece che doppi per le chiavi, es. {'chiave': 'valore'}), rompendo il formato JSON. Al momento della rilettura, il frontend non riuscirà a decodificarli correttamente.
+
+Gestione Fragile delle Connessioni SQLite: Nelle API in routes/ditte.py, le connessioni al database vengono aperte con conn = get_db() e chiuse manualmente alla fine con conn.close(). Se si verifica un'eccezione imprevista tra l'apertura e la chiusura (che non sia un sqlite3.IntegrityError già gestito), la connessione rimarrà aperta, bloccando (lock) il file del database. Sarebbe molto più sicuro usare un blocco try...finally o un context manager per garantire sempre la chiusura.
+
+Migrazioni del Database Rudimentali: La funzione init_db() in database.py utilizza un ciclo basato su PRAGMA table_info per alterare le tabelle e aggiungere colonne mancanti per migrare i vecchi database. Questo approccio "artigianale" funziona per piccole modifiche, ma diventerà presto ingestibile e prono a errori. Sarebbe preferibile utilizzare uno strumento dedicato come Alembic.
+
+Scarsa Validazione dei Dati: Le API di creazione e aggiornamento delle ditte verificano esclusivamente che la ragione_sociale sia presente. Non viene fatto alcun controllo di validità sul Codice Fiscale, sulla Partita IVA o sulla validità degli indirizzi email.
+
+Segretezza della Sessione Condivisa: Nel file config.py, la variabile SECRET_KEY utilizzata per firmare i cookie di sessione di Flask ha un valore predefinito cablato nel codice ('wolware-dev-key-cambiala-in-produzione'). Se l'app viene compilata come eseguibile e le variabili d'ambiente non sono impostate, tutte le installazioni dell'app condivideranno la stessa chiave di sicurezza, il che è una cattiva pratica.
