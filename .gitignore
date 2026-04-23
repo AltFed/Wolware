@@ -13,9 +13,10 @@ gestione_clienti.db
 __pycache__/
 *.pyc
 
-# File di sistema Windows/Mac
+# File di sistema Windows/Mac   
 .DS_Store
 Thumbs.db
+wolware.db
 
 # Credenziali e sicurezza 
 accounts.json
@@ -23,3 +24,6 @@ accounts.json.bak
 *.bak
 *.log
 loggin_errore_auth.log
+.secret_key
+.env
+
