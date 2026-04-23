@@ -97,6 +97,35 @@ def init_db():
             "INSERT INTO users (username, password_hash, role) VALUES (?,?,?)",
             ('admin', generate_password_hash('admin123'), 'admin')
         )
+        # --- Tabella tariffari globali ---
+    c.execute('''CREATE TABLE IF NOT EXISTS tariffari (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        note TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+    )''')
+
+    # --- Tabella macrogruppi ---
+    c.execute('''CREATE TABLE IF NOT EXISTS macrogruppi (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tariffario_id INTEGER NOT NULL,
+        nome TEXT NOT NULL,
+        tipo TEXT NOT NULL DEFAULT 'fisso_mensile',
+        ordine INTEGER DEFAULT 0,
+        FOREIGN KEY (tariffario_id) REFERENCES tariffari(id)
+    )''')
+
+    # --- Tabella voci di costo ---
+    c.execute('''CREATE TABLE IF NOT EXISTS voci_costo (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        macrogruppo_id INTEGER NOT NULL,
+        nome TEXT NOT NULL,
+        prezzo REAL DEFAULT 0.0,
+        unita TEXT,
+        note TEXT,
+        ordine INTEGER DEFAULT 0,
+        FOREIGN KEY (macrogruppo_id) REFERENCES macrogruppi(id)
+    )''')
 
     conn.commit()
     conn.close()

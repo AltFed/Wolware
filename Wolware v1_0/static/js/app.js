@@ -1079,5 +1079,416 @@ document.getElementById('btnConfermaResetPassword').addEventListener('click', as
   sse.onerror = () => console.warn('SSE disconnesso, riprovo...');
 })();
 
+// ═══════════════════════════════════════════════════════════════
+//  TARIFFARI GLOBALI
+// ═══════════════════════════════════════════════════════════════
+
+let tariffariGlobali = [];
+let activeTariffarioId = null;
+let activeMacrogruppoId = null;
+
+const TIPO_META = {
+  fisso_mensile:     { label: 'Fisso Mensile',      color: 'var(--color-blue)',    bg: 'var(--color-blue-highlight)' },
+  fisso_annuale:     { label: 'Fisso Annuale',       color: 'var(--color-primary)', bg: 'var(--color-primary-highlight)' },
+  variabile_mensile: { label: 'Variabile Mensile',   color: 'var(--color-orange)',  bg: 'var(--color-orange-highlight)' },
+  variabile_annuale: { label: 'Variabile Annuale',   color: 'var(--color-gold)',    bg: 'var(--color-gold-highlight)' },
+};
+
+// ── Carica lista tariffari ────────────────────────────────────
+async function loadTariffari() {
+  try {
+    tariffariGlobali = await api('/api/tariffari');
+    renderTariffariList();
+  } catch(e) {
+    toast('Errore nel caricamento tariffari', 'error');
+  }
+}
+
+function renderTariffariList() {
+  const container = document.getElementById('tariffariList');
+  if (!tariffariGlobali.length) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:var(--space-10) var(--space-4)">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.5" opacity="0.25">
+          <line x1="8" y1="6" x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+        <p>Nessun tariffario.<br>Clicca <strong>Nuovo Tariffario</strong>.</p>
+      </div>`;
+    return;
+  }
+  container.innerHTML = tariffariGlobali.map(t => `
+    <div onclick="selectTariffario(${t.id})"
+         style="padding:var(--space-3);border-radius:var(--radius-md);cursor:pointer;
+                margin-bottom:var(--space-1);
+                background:${t.id === activeTariffarioId ? 'var(--color-primary-highlight)' : 'transparent'};
+                border:1px solid ${t.id === activeTariffarioId ? 'var(--color-primary)' : 'transparent'};
+                transition:background var(--transition-interactive),border-color var(--transition-interactive)">
+      <div style="font-size:var(--text-sm);font-weight:${t.id === activeTariffarioId ? '600' : '500'};
+                  color:${t.id === activeTariffarioId ? 'var(--color-primary)' : 'var(--color-text)'}">
+        ${t.nome}
+      </div>
+      ${t.note ? `<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:2px">${t.note}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ── Seleziona un tariffario ───────────────────────────────────
+async function selectTariffario(id) {
+  activeTariffarioId = id;
+  renderTariffariList();
+  const t = tariffariGlobali.find(x => x.id === id);
+  document.getElementById('tariffarioNomeHeader').textContent = t.nome;
+  document.getElementById('tariffarioNoteHeader').textContent = t.note || '';
+  document.getElementById('tariffarioPlaceholder').style.display = 'none';
+  const content = document.getElementById('tariffarioContent');
+  content.style.display = 'flex';
+  await renderMacrogruppi(id);
+}
+
+// ── Render macrogruppi + voci ─────────────────────────────────
+async function renderMacrogruppi(tariffarioId) {
+  let gruppi = [];
+  try {
+    gruppi = await api(`/api/tariffari/${tariffarioId}/macrogruppi`);
+  } catch(e) {
+    toast('Errore nel caricamento macrogruppi', 'error');
+    return;
+  }
+
+  const container = document.getElementById('macrogruppiContainer');
+
+  if (!gruppi.length) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:var(--space-10)">
+        <p style="font-size:var(--text-sm);color:var(--color-text-muted)">
+          Nessun macrogruppo ancora.<br>
+          Clicca <strong>Nuovo Macrogruppo</strong> per iniziare.
+        </p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = gruppi.map(g => {
+    const tipo = TIPO_META[g.tipo] || TIPO_META.fisso_mensile;
+
+    const vociHtml = g.voci && g.voci.length
+      ? g.voci.map(v => `
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);
+                      background:var(--color-bg);margin-bottom:var(--space-1)">
+            <div style="flex:1;min-width:0">
+              <span style="font-size:var(--text-sm);color:var(--color-text)">${v.nome}</span>
+              ${v.unita ? `<span style="font-size:var(--text-xs);color:var(--color-text-muted);
+                            margin-left:var(--space-2)">${v.unita}</span>` : ''}
+              ${v.note ? `<div style="font-size:var(--text-xs);color:var(--color-text-muted)">${v.note}</div>` : ''}
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0">
+              <span style="font-size:var(--text-sm);font-weight:600;font-variant-numeric:tabular-nums;
+                           color:var(--color-text)">
+                ${v.prezzo > 0 ? '€ ' + Number(v.prezzo).toFixed(2) : '—'}
+              </span>
+              <button onclick="openEditVoce(${g.id}, ${JSON.stringify(v).replace(/"/g, '&quot;')})"
+                      class="btn btn-icon btn-ghost" title="Modifica voce">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              <button onclick="deleteVoce(${v.id})"
+                      class="btn btn-icon btn-ghost" title="Elimina voce"
+                      style="color:var(--color-error)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                </svg>
+              </button>
+            </div>
+          </div>`)
+        .join('')
+      : `<div style="font-size:var(--text-xs);color:var(--color-text-muted);padding:var(--space-2) var(--space-1)">
+           Nessuna voce. Clicca <strong>+ Voce</strong> per aggiungerne una.
+         </div>`;
+
+    return `
+      <div style="border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden">
+        <!-- Header macrogruppo -->
+        <div style="padding:var(--space-3) var(--space-4);background:var(--color-surface-offset);
+                    display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)">
+          <div style="display:flex;align-items:center;gap:var(--space-3)">
+            <span style="font-size:var(--text-xs);font-weight:600;padding:2px var(--space-2);
+                         border-radius:var(--radius-full);
+                         background:${tipo.bg};color:${tipo.color}">
+              ${tipo.label}
+            </span>
+            <span style="font-size:var(--text-sm);font-weight:600;color:var(--color-text)">${g.nome}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--space-2)">
+            <button class="btn btn-ghost btn-sm" onclick="openNuovaVoce(${g.id})"
+                    style="font-size:var(--text-xs)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Voce
+            </button>
+            <button onclick="deleteMacrogruppo(${g.id})"
+                    class="btn btn-icon btn-ghost" title="Elimina macrogruppo"
+                    style="color:var(--color-error)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <!-- Voci -->
+        <div style="padding:var(--space-3) var(--space-4)">${vociHtml}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Highlight radio button selezionato ───────────────────────
+function updateRadioUI() {
+  const map = {
+    'fisso_mensile':     'radioFissoMensile',
+    'fisso_annuale':     'radioFissoAnnuale',
+    'variabile_mensile': 'radioVariabileMensile',
+    'variabile_annuale': 'radioVariabileAnnuale',
+  };
+  document.querySelectorAll('input[name="tipoMacrogruppo"]').forEach(r => {
+    const label = document.getElementById(map[r.value]);
+    if (!label) return;
+    if (r.checked) {
+      label.style.borderColor = 'var(--color-primary)';
+      label.style.background  = 'var(--color-primary-highlight)';
+    } else {
+      label.style.borderColor = 'var(--color-border)';
+      label.style.background  = 'var(--color-surface)';
+    }
+  });
+}
+
+// Aggancia listener ai 4 radio
+['tipoFissoMensile','tipoFissoAnnuale','tipoVariabileMensile','tipoVariabileAnnuale']
+  .forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', updateRadioUI);
+  });
+
+// ── Apri modale nuovo tariffario ─────────────────────────────
+document.getElementById('btnNuovoTariffario').addEventListener('click', () => {
+  document.getElementById('inputNomeTariffario').value = '';
+  document.getElementById('inputNoteTariffario').value = '';
+  document.getElementById('inputNomeMacrogruppoInline').value = '';
+  // reset radio → fisso_mensile di default
+  document.getElementById('tipoFissoMensile').checked = true;
+  updateRadioUI();
+  document.getElementById('errNuovoTariffario').style.display = 'none';
+  openModal('modalNuovoTariffario');
+  setTimeout(() => document.getElementById('inputNomeTariffario').focus(), 120);
+});
+
+// ── Salva tariffario (+ eventuale primo macrogruppo) ──────────
+document.getElementById('btnSalvaNuovoTariffario').addEventListener('click', async () => {
+  const nome     = document.getElementById('inputNomeTariffario').value.trim();
+  const note     = document.getElementById('inputNoteTariffario').value.trim();
+  const nomeGruppo = document.getElementById('inputNomeMacrogruppoInline').value.trim();
+  const tipoGruppo = document.querySelector('input[name="tipoMacrogruppo"]:checked')?.value || 'fisso_mensile';
+  const errEl    = document.getElementById('errNuovoTariffario');
+  errEl.style.display = 'none';
+
+  if (!nome) {
+    errEl.textContent = 'Il nome del tariffario è obbligatorio.';
+    errEl.style.display = 'block';
+    document.getElementById('inputNomeTariffario').focus();
+    return;
+  }
+
+  try {
+    // 1. Crea il tariffario
+    const tariffario = await api('/api/tariffari', 'POST', { nome, note });
+
+    // 2. Se ha inserito anche il nome del macrogruppo, crealo subito
+    if (nomeGruppo) {
+      await api(`/api/tariffari/${tariffario.id}/macrogruppi`, 'POST', {
+        nome: nomeGruppo,
+        tipo: tipoGruppo
+      });
+    }
+
+    closeModal('modalNuovoTariffario');
+    await loadTariffari();
+    await selectTariffario(tariffario.id);
+    toast('Tariffario creato', 'success');
+
+  } catch(e) {
+    errEl.textContent = e.message || 'Errore nella creazione.';
+    errEl.style.display = 'block';
+  }
+});
+
+// Enter sul nome tariffario → focus sul macrogruppo
+document.getElementById('inputNomeTariffario').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('inputNomeMacrogruppoInline').focus();
+});
+
+// Enter sul macrogruppo → salva
+document.getElementById('inputNomeMacrogruppoInline').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnSalvaNuovoTariffario').click();
+});
+
+// ── ELIMINA TARIFFARIO ────────────────────────────────────────
+document.getElementById('btnDeleteTariffario').addEventListener('click', async () => {
+  if (!activeTariffarioId) return;
+  const t = tariffariGlobali.find(x => x.id === activeTariffarioId);
+  if (!confirm(`Eliminare il tariffario "${t?.nome}" e tutti i suoi macrogruppi?`)) return;
+
+  try {
+    await api(`/api/tariffari/${activeTariffarioId}`, 'DELETE');
+    activeTariffarioId = null;
+    document.getElementById('tariffarioPlaceholder').style.display = '';
+    document.getElementById('tariffarioContent').style.display = 'none';
+    await loadTariffari();
+    toast('Tariffario eliminato', 'success');
+  } catch(e) {
+    toast('Errore nell\'eliminazione', 'error');
+  }
+});
+
+// ── NUOVO MACROGRUPPO ─────────────────────────────────────────
+document.getElementById('btnNuovoMacrogruppo').addEventListener('click', () => {
+  document.getElementById('inputNomeMacrogruppo').value = '';
+  document.getElementById('inputTipoMacrogruppo').value = 'fisso_mensile';
+  document.getElementById('errNuovoMacrogruppo').style.display = 'none';
+  openModal('modalNuovoMacrogruppo');
+  setTimeout(() => document.getElementById('inputNomeMacrogruppo').focus(), 120);
+});
+
+document.getElementById('btnSalvaNuovoMacrogruppo').addEventListener('click', async () => {
+  const nome = document.getElementById('inputNomeMacrogruppo').value.trim();
+  const tipo = document.getElementById('inputTipoMacrogruppo').value;
+  const errEl = document.getElementById('errNuovoMacrogruppo');
+  errEl.style.display = 'none';
+
+  if (!nome) {
+    errEl.textContent = 'Il nome del macrogruppo è obbligatorio.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    await api(`/api/tariffari/${activeTariffarioId}/macrogruppi`, 'POST', { nome, tipo });
+    closeModal('modalNuovoMacrogruppo');
+    await renderMacrogruppi(activeTariffarioId);
+    toast('Macrogruppo aggiunto', 'success');
+  } catch(e) {
+    errEl.textContent = e.message || 'Errore nella creazione.';
+    errEl.style.display = 'block';
+  }
+});
+
+document.getElementById('inputNomeMacrogruppo').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnSalvaNuovoMacrogruppo').click();
+});
+
+// ── NUOVA VOCE / MODIFICA VOCE ────────────────────────────────
+function openNuovaVoce(macrogruppoId) {
+  activeMacrogruppoId = macrogruppoId;
+  document.getElementById('voceEditId').value = '';
+  document.getElementById('voceEditMacrogruppoId').value = macrogruppoId;
+  document.getElementById('inputNomeVoce').value = '';
+  document.getElementById('inputPrezzoVoce').value = '';
+  document.getElementById('inputUnitaVoce').value = '';
+  document.getElementById('inputNoteVoce').value = '';
+  document.getElementById('modalNuovaVoceTitolo').textContent = 'Nuova Voce di Costo';
+  document.getElementById('errNuovaVoce').style.display = 'none';
+  openModal('modalNuovaVoce');
+  setTimeout(() => document.getElementById('inputNomeVoce').focus(), 120);
+}
+
+function openEditVoce(macrogruppoId, v) {
+  activeMacrogruppoId = macrogruppoId;
+  document.getElementById('voceEditId').value = v.id;
+  document.getElementById('voceEditMacrogruppoId').value = macrogruppoId;
+  document.getElementById('inputNomeVoce').value = v.nome || '';
+  document.getElementById('inputPrezzoVoce').value = v.prezzo || '';
+  document.getElementById('inputUnitaVoce').value = v.unita || '';
+  document.getElementById('inputNoteVoce').value = v.note || '';
+  document.getElementById('modalNuovaVoceTitolo').textContent = 'Modifica Voce di Costo';
+  document.getElementById('errNuovaVoce').style.display = 'none';
+  openModal('modalNuovaVoce');
+  setTimeout(() => document.getElementById('inputNomeVoce').focus(), 120);
+}
+
+document.getElementById('btnSalvaVoce').addEventListener('click', async () => {
+  const nome    = document.getElementById('inputNomeVoce').value.trim();
+  const prezzo  = parseFloat(document.getElementById('inputPrezzoVoce').value) || 0;
+  const unita   = document.getElementById('inputUnitaVoce').value.trim();
+  const note    = document.getElementById('inputNoteVoce').value.trim();
+  const editId  = document.getElementById('voceEditId').value;
+  const gid     = document.getElementById('voceEditMacrogruppoId').value;
+  const errEl   = document.getElementById('errNuovaVoce');
+  errEl.style.display = 'none';
+
+  if (!nome) {
+    errEl.textContent = 'Il nome della voce è obbligatorio.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    if (editId) {
+      await api(`/api/voci/${editId}`, 'PUT', { nome, prezzo, unita, note });
+      toast('Voce aggiornata', 'success');
+    } else {
+      await api(`/api/macrogruppi/${gid}/voci`, 'POST', { nome, prezzo, unita, note });
+      toast('Voce aggiunta', 'success');
+    }
+    closeModal('modalNuovaVoce');
+    await renderMacrogruppi(activeTariffarioId);
+  } catch(e) {
+    errEl.textContent = e.message || 'Errore nel salvataggio.';
+    errEl.style.display = 'block';
+  }
+});
+
+// ── ELIMINA MACROGRUPPO ───────────────────────────────────────
+async function deleteMacrogruppo(gid) {
+  if (!confirm('Eliminare questo macrogruppo e tutte le sue voci?')) return;
+  try {
+    await api(`/api/macrogruppi/${gid}`, 'DELETE');
+    await renderMacrogruppi(activeTariffarioId);
+    toast('Macrogruppo eliminato', 'success');
+  } catch(e) {
+    toast('Errore nell\'eliminazione', 'error');
+  }
+}
+
+// ── ELIMINA VOCE ──────────────────────────────────────────────
+async function deleteVoce(vid) {
+  if (!confirm('Eliminare questa voce di costo?')) return;
+  try {
+    await api(`/api/voci/${vid}`, 'DELETE');
+    await renderMacrogruppi(activeTariffarioId);
+    toast('Voce eliminata', 'success');
+  } catch(e) {
+    toast('Errore nell\'eliminazione', 'error');
+  }
+}
+
+// ── Carica tariffari quando si apre il tab ────────────────────
+const _origSwitchTabTariffari = switchTab;
+window.switchTab = function(tabName) {
+  _origSwitchTabTariffari(tabName);
+  if (tabName === 'tariffari') loadTariffari();
+};
+
+
 /* INIT */
 checkAuth();

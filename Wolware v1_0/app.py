@@ -11,6 +11,7 @@ from database import init_db
 from routes.stats import stats_bp
 
 
+
 def create_app():
     template_folder = os.environ.get('FLASK_TEMPLATES', 'templates')
     static_folder   = os.environ.get('FLASK_STATIC', 'static')
@@ -29,6 +30,7 @@ def create_app():
     from routes.ditte   import ditte_bp
     from routes.pratiche import pratiche_bp
     from routes.users   import users_bp
+    from routes.tariffari import tariffari_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(events_bp)
@@ -36,6 +38,7 @@ def create_app():
     app.register_blueprint(pratiche_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(stats_bp)
+    app.register_blueprint(tariffari_bp)
 
     return app
 
