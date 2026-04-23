@@ -31,6 +31,7 @@ def create_app():
     from routes.pratiche import pratiche_bp
     from routes.users   import users_bp
     from routes.tariffari import tariffari_bp
+    from routes.ditta_tariffario import bp as ditta_tariffario_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(events_bp)
@@ -39,6 +40,7 @@ def create_app():
     app.register_blueprint(users_bp)
     app.register_blueprint(stats_bp)
     app.register_blueprint(tariffari_bp)
+    app.register_blueprint(ditta_tariffario_bp)
 
     return app
 

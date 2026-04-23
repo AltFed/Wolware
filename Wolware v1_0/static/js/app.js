@@ -1,73 +1,77 @@
 /* THEME TOGGLE */
-(function(){
-  const root=document.documentElement,btn=document.querySelector('[data-theme-toggle]');
-  let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
-  root.setAttribute('data-theme',d);
-  function setIcon(){if(!btn)return;btn.innerHTML=d==='dark'
-    ?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
-    :'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';}
+(function () {
+  const root = document.documentElement, btn = document.querySelector('[data-theme-toggle]');
+  let d = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  root.setAttribute('data-theme', d);
+  function setIcon() {
+    if (!btn) return; btn.innerHTML = d === 'dark'
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  }
   setIcon();
-  if(btn)btn.addEventListener('click',()=>{d=d==='dark'?'light':'dark';root.setAttribute('data-theme',d);setIcon();});
+  if (btn) btn.addEventListener('click', () => { d = d === 'dark' ? 'light' : 'dark'; root.setAttribute('data-theme', d); setIcon(); });
 })();
 
 /* CLOCK */
-function updateClock(){const el=document.getElementById('topbarClock');
-  if(el)el.textContent=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
-updateClock();setInterval(updateClock,1000);
+function updateClock() {
+  const el = document.getElementById('topbarClock');
+  if (el) el.textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+updateClock(); setInterval(updateClock, 1000);
 
 /* TOAST */
-function toast(msg,type='success'){
-  const c=document.getElementById('toastContainer'),el=document.createElement('div');
-  el.className=`toast toast-${type}`;
-  el.innerHTML=`<span style="font-size:1rem">${{success:'✓',error:'✕',info:'ℹ'}[type]}</span><span>${msg}</span>`;
-  c.appendChild(el);setTimeout(()=>el.remove(),3500);
+function toast(msg, type = 'success') {
+  const c = document.getElementById('toastContainer'), el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<span style="font-size:1rem">${{ success: '✓', error: '✕', info: 'ℹ' }[type]}</span><span>${msg}</span>`;
+  c.appendChild(el); setTimeout(() => el.remove(), 3500);
 }
 
 /* TAB NAVIGATION */
-function switchTab(tabName){
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
-  const panel=document.getElementById('tab-'+tabName);
-  if(panel)panel.classList.add('active');
-  document.querySelectorAll(`[data-tab="${tabName}"]`).forEach(b=>b.classList.add('active'));
-  if(tabName==='home'){loadStats();loadHomePratiche();}
-  if(tabName==='pratiche')loadPratiche();
-  if(tabName==='ditte')loadDitte();
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById('tab-' + tabName);
+  if (panel) panel.classList.add('active');
+  document.querySelectorAll(`[data-tab="${tabName}"]`).forEach(b => b.classList.add('active'));
+  if (tabName === 'home') { loadStats(); loadHomePratiche(); }
+  if (tabName === 'pratiche') loadPratiche();
+  if (tabName === 'ditte') loadDitte();
 }
-document.querySelectorAll('[data-tab]').forEach(el=>{
-  el.addEventListener('click',e=>{e.preventDefault();switchTab(el.dataset.tab);});
+document.querySelectorAll('[data-tab]').forEach(el => {
+  el.addEventListener('click', e => { e.preventDefault(); switchTab(el.dataset.tab); });
 });
 
 /* MODAL */
-function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
-document.querySelectorAll('[data-close]').forEach(btn=>{
-  btn.addEventListener('click',()=>closeModal(btn.dataset.close));
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.addEventListener('click', () => closeModal(btn.dataset.close));
 });
-document.querySelectorAll('.modal-overlay').forEach(overlay=>{
-  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open');});
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
 });
 
 /* DROPDOWN */
-function setupDropdown(triggerId,menuId,onSelect){
-  const trigger=document.getElementById(triggerId),menu=document.getElementById(menuId);
-  if(!trigger||!menu)return;
-  trigger.addEventListener('click',e=>{e.stopPropagation();menu.classList.toggle('open');});
-  menu.querySelectorAll('.dropdown-item').forEach(item=>{
-    item.addEventListener('click',()=>{menu.classList.remove('open');onSelect(item.dataset.tipo);});
+function setupDropdown(triggerId, menuId, onSelect) {
+  const trigger = document.getElementById(triggerId), menu = document.getElementById(menuId);
+  if (!trigger || !menu) return;
+  trigger.addEventListener('click', e => { e.stopPropagation(); menu.classList.toggle('open'); });
+  menu.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', () => { menu.classList.remove('open'); onSelect(item.dataset.tipo); });
   });
 }
-document.addEventListener('click',()=>{
-  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('open'));
+document.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
 });
 
 /* API */
-async function api(url,method='GET',body=null){
-  const opts={method,headers:{'Content-Type':'application/json'}};
-  if(body)opts.body=JSON.stringify(body);
-  const res=await fetch(url,opts),data=await res.json();
-  if(!res.ok)throw new Error(data.error||'Errore del server');
+async function api(url, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts), data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Errore del server');
   return data;
 }
 
@@ -75,80 +79,82 @@ async function api(url,method='GET',body=null){
 let lastStats = null;
 /* STATS */
 async function loadStats() {
-    // Mostra subito i valori precedenti senza azzerare
-    if (lastStats) {
-        document.getElementById('kpiDitte').textContent = lastStats.ditte;
-        document.getElementById('kpiTotali').textContent = lastStats.pratiche.totali;
-        document.getElementById('kpiAperte').textContent = lastStats.pratiche.aperte;
-        document.getElementById('kpiChiuse').textContent = lastStats.pratiche.chiuse;
-    }
-    try {
-        const s = await api('/api/stats');
-        lastStats = s;
-        // Anima solo se il valore è cambiato
-        if (!lastStats || lastStats.ditte !== s.ditte)
-            animateValue('kpiDitte', s.ditte);
-        if (!lastStats || lastStats.pratiche.totali !== s.pratiche.totali)
-            animateValue('kpiTotali', s.pratiche.totali);
-        if (!lastStats || lastStats.pratiche.aperte !== s.pratiche.aperte)
-            animateValue('kpiAperte', s.pratiche.aperte);
-        if (!lastStats || lastStats.pratiche.chiuse !== s.pratiche.chiuse)
-            animateValue('kpiChiuse', s.pratiche.chiuse);
-    } catch(e) { console.error(e); }
+  // Mostra subito i valori precedenti senza azzerare
+  if (lastStats) {
+    document.getElementById('kpiDitte').textContent = lastStats.ditte;
+    document.getElementById('kpiTotali').textContent = lastStats.pratiche.totali;
+    document.getElementById('kpiAperte').textContent = lastStats.pratiche.aperte;
+    document.getElementById('kpiChiuse').textContent = lastStats.pratiche.chiuse;
+  }
+  try {
+    const s = await api('/api/stats');
+    lastStats = s;
+    // Anima solo se il valore è cambiato
+    if (!lastStats || lastStats.ditte !== s.ditte)
+      animateValue('kpiDitte', s.ditte);
+    if (!lastStats || lastStats.pratiche.totali !== s.pratiche.totali)
+      animateValue('kpiTotali', s.pratiche.totali);
+    if (!lastStats || lastStats.pratiche.aperte !== s.pratiche.aperte)
+      animateValue('kpiAperte', s.pratiche.aperte);
+    if (!lastStats || lastStats.pratiche.chiuse !== s.pratiche.chiuse)
+      animateValue('kpiChiuse', s.pratiche.chiuse);
+  } catch (e) { console.error(e); }
 }
-function animateValue(id,target){
-  const el=document.getElementById(id);if(!el)return;
-  let start=0;const duration=600;
-  const step=ts=>{if(!start)start=ts;const p=Math.min((ts-start)/duration,1);
-    el.textContent=Math.floor(p*target);if(p<1)requestAnimationFrame(step);else el.textContent=target;};
+function animateValue(id, target) {
+  const el = document.getElementById(id); if (!el) return;
+  let start = 0; const duration = 600;
+  const step = ts => {
+    if (!start) start = ts; const p = Math.min((ts - start) / duration, 1);
+    el.textContent = Math.floor(p * target); if (p < 1) requestAnimationFrame(step); else el.textContent = target;
+  };
   requestAnimationFrame(step);
 }
 
 /* BADGES */
-function statoBadge(s){
-  const m={'Aperta':'badge-orange','In Lavorazione':'badge-blue','Chiusa':'badge-green'};
-  return `<span class="badge ${m[s]||'badge-gray'}">${s}</span>`;
+function statoBadge(s) {
+  const m = { 'Aperta': 'badge-orange', 'In Lavorazione': 'badge-blue', 'Chiusa': 'badge-green' };
+  return `<span class="badge ${m[s] || 'badge-gray'}">${s}</span>`;
 }
-function prioritaBadge(p){
-  const m={'Urgente':'badge-red','Alta':'badge-orange','Normale':'badge-gray','Bassa':'badge-blue'};
-  return `<span class="badge ${m[p]||'badge-gray'}">${p}</span>`;
+function prioritaBadge(p) {
+  const m = { 'Urgente': 'badge-red', 'Alta': 'badge-orange', 'Normale': 'badge-gray', 'Bassa': 'badge-blue' };
+  return `<span class="badge ${m[p] || 'badge-gray'}">${p}</span>`;
 }
-function formatDate(d){if(!d)return '—';const[y,m,g]=d.split('-');return `${g}/${m}/${y}`;}
+function formatDate(d) { if (!d) return '—'; const [y, m, g] = d.split('-'); return `${g}/${m}/${y}`; }
 
 /* HOME TABLE */
-async function loadHomePratiche(){
-  try{
-    const list=await api('/api/pratiche');
-    const tbody=document.getElementById('homeTableBody'),recent=list.slice(0,8);
-    if(!recent.length){
-      tbody.innerHTML=`<tr><td colspan="6" class="empty-row"><span class="empty-icon">📋</span><br>Nessuna pratica. Crea la tua prima pratica!</td></tr>`;return;
+async function loadHomePratiche() {
+  try {
+    const list = await api('/api/pratiche');
+    const tbody = document.getElementById('homeTableBody'), recent = list.slice(0, 8);
+    if (!recent.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-row"><span class="empty-icon">📋</span><br>Nessuna pratica. Crea la tua prima pratica!</td></tr>`; return;
     }
-    tbody.innerHTML=recent.map(p=>`<tr>
+    tbody.innerHTML = recent.map(p => `<tr>
       <td style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-faint)">#${p.id}</td>
-      <td>${p.ditta_nome||'<em style="color:var(--color-text-faint)">—</em>'}</td>
+      <td>${p.ditta_nome || '<em style="color:var(--color-text-faint)">—</em>'}</td>
       <td>${p.tipo_pratica}</td><td>${statoBadge(p.stato)}</td>
       <td>${prioritaBadge(p.priorita)}</td>
       <td style="color:var(--color-text-muted)">${formatDate(p.data_apertura)}</td>
     </tr>`).join('');
-  }catch(e){console.error(e);}
+  } catch (e) { console.error(e); }
 }
 
 /* PRATICHE TAB */
-let allPratiche=[];
-async function loadPratiche(){
-  try{allPratiche=await api('/api/pratiche');renderPratiche(allPratiche);}
-  catch(e){toast('Errore nel caricamento pratiche','error');}
+let allPratiche = [];
+async function loadPratiche() {
+  try { allPratiche = await api('/api/pratiche'); renderPratiche(allPratiche); }
+  catch (e) { toast('Errore nel caricamento pratiche', 'error'); }
 }
-function renderPratiche(list){
-  const tbody=document.getElementById('praticheTableBody');
-  if(!list.length){
-    tbody.innerHTML=`<tr><td colspan="9" class="empty-row"><span class="empty-icon">📋</span><br>Nessuna pratica trovata.</td></tr>`;return;
+function renderPratiche(list) {
+  const tbody = document.getElementById('praticheTableBody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-row"><span class="empty-icon">📋</span><br>Nessuna pratica trovata.</td></tr>`; return;
   }
-  tbody.innerHTML=list.map(p=>`<tr>
+  tbody.innerHTML = list.map(p => `<tr>
     <td style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-faint)">#${p.id}</td>
-    <td style="font-weight:500">${p.ditta_nome||'—'}</td>
+    <td style="font-weight:500">${p.ditta_nome || '—'}</td>
     <td>${p.tipo_pratica}</td>
-    <td style="color:var(--color-text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.descrizione||'—'}</td>
+    <td style="color:var(--color-text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.descrizione || '—'}</td>
     <td>${statoBadge(p.stato)}</td><td>${prioritaBadge(p.priorita)}</td>
     <td style="color:var(--color-text-muted)">${formatDate(p.data_apertura)}</td>
     <td style="color:var(--color-text-muted)">${formatDate(p.data_scadenza)}</td>
@@ -162,36 +168,36 @@ function renderPratiche(list){
     </div></td>
   </tr>`).join('');
 }
-document.getElementById('filterPratiche').addEventListener('input',filterPratiche);
-document.getElementById('filterStato').addEventListener('change',filterPratiche);
-function filterPratiche(){
-  const q=document.getElementById('filterPratiche').value.toLowerCase();
-  const stato=document.getElementById('filterStato').value;
-  let f=allPratiche;
-  if(q)f=f.filter(p=>(p.tipo_pratica||'').toLowerCase().includes(q)||(p.ditta_nome||'').toLowerCase().includes(q)||(p.descrizione||'').toLowerCase().includes(q));
-  if(stato)f=f.filter(p=>p.stato===stato);
+document.getElementById('filterPratiche').addEventListener('input', filterPratiche);
+document.getElementById('filterStato').addEventListener('change', filterPratiche);
+function filterPratiche() {
+  const q = document.getElementById('filterPratiche').value.toLowerCase();
+  const stato = document.getElementById('filterStato').value;
+  let f = allPratiche;
+  if (q) f = f.filter(p => (p.tipo_pratica || '').toLowerCase().includes(q) || (p.ditta_nome || '').toLowerCase().includes(q) || (p.descrizione || '').toLowerCase().includes(q));
+  if (stato) f = f.filter(p => p.stato === stato);
   renderPratiche(f);
 }
 
 /* DITTE TAB */
-let allDitte=[];
-async function loadDitte(){
-  try{allDitte=await api('/api/ditte');renderDitte(allDitte);}
-  catch(e){toast('Errore nel caricamento ditte','error');}
+let allDitte = [];
+async function loadDitte() {
+  try { allDitte = await api('/api/ditte'); renderDitte(allDitte); }
+  catch (e) { toast('Errore nel caricamento ditte', 'error'); }
 }
-function renderDitte(list){
-  const grid=document.getElementById('ditteGrid');
-  if(!list.length){
-    grid.innerHTML=`<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><p>Nessuna ditta presente.<br>Clicca su <strong>Nuova Ditta</strong> per aggiungere il tuo primo cliente.</p></div>`;return;
+function renderDitte(list) {
+  const grid = document.getElementById('ditteGrid');
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><p>Nessuna ditta presente.<br>Clicca su <strong>Nuova Ditta</strong> per aggiungere il tuo primo cliente.</p></div>`; return;
   }
-  grid.innerHTML=list.map(d=>{
-    const ini=d.ragione_sociale.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  grid.innerHTML = list.map(d => {
+    const ini = d.ragione_sociale.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
     return `<div class="ditta-card">
       <div class="ditta-card-header">
         <div style="display:flex;gap:var(--space-3);align-items:center">
           <div class="ditta-avatar">${ini}</div>
           <div><div class="ditta-name">${d.ragione_sociale}</div>
-          <div class="ditta-forma">${d.forma_giuridica||''} ${d.settore_ateco?'· '+d.settore_ateco:''}</div></div>
+          <div class="ditta-forma">${d.forma_giuridica || ''} ${d.settore_ateco ? '· ' + d.settore_ateco : ''}</div></div>
         </div>
         <div class="ditta-card-actions">
           <button class="btn btn-icon btn-ghost" title="Modifica" onclick="editDitta(${d.id})">
@@ -203,22 +209,22 @@ function renderDitte(list){
         </div>
       </div>
       <div class="ditta-meta">
-        ${d.partita_iva?`<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>P.IVA: ${d.partita_iva}</div>`:''}
-        ${d.citta?`<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${d.citta}${d.provincia?' ('+d.provincia.toUpperCase()+')':''}</div>`:''}
-        ${d.referente?`<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${d.referente}</div>`:''}
-        ${d.email?`<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>${d.email}</div>`:''}
+        ${d.partita_iva ? `<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>P.IVA: ${d.partita_iva}</div>` : ''}
+        ${d.citta ? `<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${d.citta}${d.provincia ? ' (' + d.provincia.toUpperCase() + ')' : ''}</div>` : ''}
+        ${d.referente ? `<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${d.referente}</div>` : ''}
+        ${d.email ? `<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>${d.email}</div>` : ''}
       </div>
     </div>`;
   }).join('');
 }
-document.getElementById('filterDitte').addEventListener('input',filterDitte);
-document.getElementById('filterForma').addEventListener('change',filterDitte);
-function filterDitte(){
-  const q=document.getElementById('filterDitte').value.toLowerCase();
-  const forma=document.getElementById('filterForma').value;
-  let f=allDitte;
-  if(q)f=f.filter(d=>d.ragione_sociale.toLowerCase().includes(q)||(d.partita_iva||'').toLowerCase().includes(q)||(d.referente||'').toLowerCase().includes(q)||(d.citta||'').toLowerCase().includes(q));
-  if(forma)f=f.filter(d=>d.forma_giuridica===forma);
+document.getElementById('filterDitte').addEventListener('input', filterDitte);
+document.getElementById('filterForma').addEventListener('change', filterDitte);
+function filterDitte() {
+  const q = document.getElementById('filterDitte').value.toLowerCase();
+  const forma = document.getElementById('filterForma').value;
+  let f = allDitte;
+  if (q) f = f.filter(d => d.ragione_sociale.toLowerCase().includes(q) || (d.partita_iva || '').toLowerCase().includes(q) || (d.referente || '').toLowerCase().includes(q) || (d.citta || '').toLowerCase().includes(q));
+  if (forma) f = f.filter(d => d.forma_giuridica === forma);
   renderDitte(f);
 }
 
@@ -236,8 +242,8 @@ document.querySelectorAll('.modal-tab').forEach(tab => {
   });
 });
 function resetModalTabs() {
-  document.querySelectorAll('.modal-tab').forEach((t,i) => t.classList.toggle('active', i===0));
-  document.querySelectorAll('.modal-tab-panel').forEach((p,i) => p.classList.toggle('active', i===0));
+  document.querySelectorAll('.modal-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+  document.querySelectorAll('.modal-tab-panel').forEach((p, i) => p.classList.toggle('active', i === 0));
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -256,7 +262,7 @@ function renderSedi() {
   container.innerHTML = `
     <div class="sede-card">
       <div class="sede-card-header">
-        <span style="font-weight:600;font-size:var(--text-sm)">Sede ${sedeIdx+1}</span>
+        <span style="font-weight:600;font-size:var(--text-sm)">Sede ${sedeIdx + 1}</span>
         <button type="button" class="btn btn-icon btn-ghost" style="color:var(--color-error)" onclick="removeSede(${sedeIdx})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         </button>
@@ -264,52 +270,52 @@ function renderSedi() {
       <div class="form-grid">
         <div class="form-field col-span-2">
           <label>Nome / Descrizione Sede</label>
-          <input type="text" value="${s.nome||''}" oninput="sedi[${sedeIdx}].nome=this.value" placeholder="es. Magazzino, Filiale Nord..."/>
+          <input type="text" value="${s.nome || ''}" oninput="sedi[${sedeIdx}].nome=this.value" placeholder="es. Magazzino, Filiale Nord..."/>
         </div>
         <div class="form-field col-span-2">
           <label>Indirizzo</label>
-          <input type="text" value="${s.indirizzo||''}" oninput="sedi[${sedeIdx}].indirizzo=this.value" placeholder="Via ..."/>
+          <input type="text" value="${s.indirizzo || ''}" oninput="sedi[${sedeIdx}].indirizzo=this.value" placeholder="Via ..."/>
         </div>
         <div class="form-field">
           <label>CAP</label>
-          <input type="text" maxlength="5" value="${s.cap||''}" oninput="sedi[${sedeIdx}].cap=this.value" placeholder="80100"/>
+          <input type="text" maxlength="5" value="${s.cap || ''}" oninput="sedi[${sedeIdx}].cap=this.value" placeholder="80100"/>
         </div>
         <div class="form-field">
           <label>Comune</label>
-          <input type="text" value="${s.citta||''}" oninput="sedi[${sedeIdx}].citta=this.value" placeholder="Napoli"/>
+          <input type="text" value="${s.citta || ''}" oninput="sedi[${sedeIdx}].citta=this.value" placeholder="Napoli"/>
         </div>
         <div class="form-field">
           <label>Prov.</label>
-          <input type="text" maxlength="2" value="${s.prov||''}" oninput="sedi[${sedeIdx}].prov=this.value" placeholder="NA"/>
+          <input type="text" maxlength="2" value="${s.prov || ''}" oninput="sedi[${sedeIdx}].prov=this.value" placeholder="NA"/>
         </div>
         <div class="form-field">
           <label>Cod. Catastale</label>
-          <input type="text" maxlength="4" value="${s.catastale||''}" oninput="sedi[${sedeIdx}].catastale=this.value" placeholder="F839"/>
+          <input type="text" maxlength="4" value="${s.catastale || ''}" oninput="sedi[${sedeIdx}].catastale=this.value" placeholder="F839"/>
         </div>
       </div>
       <div class="sede-nav">
-        <button type="button" class="sede-nav-btn" onclick="navSede(-1)" ${sedeIdx===0?'disabled':''}>
+        <button type="button" class="sede-nav-btn" onclick="navSede(-1)" ${sedeIdx === 0 ? 'disabled' : ''}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <span class="sede-counter">${sedeIdx+1} / ${sedi.length}</span>
-        <button type="button" class="sede-nav-btn" onclick="navSede(1)" ${sedeIdx===sedi.length-1?'disabled':''}>
+        <span class="sede-counter">${sedeIdx + 1} / ${sedi.length}</span>
+        <button type="button" class="sede-nav-btn" onclick="navSede(1)" ${sedeIdx === sedi.length - 1 ? 'disabled' : ''}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
     </div>`;
 }
 function navSede(dir) {
-  sedeIdx = Math.max(0, Math.min(sedi.length-1, sedeIdx+dir));
+  sedeIdx = Math.max(0, Math.min(sedi.length - 1, sedeIdx + dir));
   renderSedi();
 }
 function removeSede(i) {
   sedi.splice(i, 1);
-  sedeIdx = Math.max(0, sedeIdx-1);
+  sedeIdx = Math.max(0, sedeIdx - 1);
   renderSedi();
 }
 document.getElementById('btnAddSede').addEventListener('click', () => {
-  sedi.push({nome:'',indirizzo:'',cap:'',citta:'',prov:'',catastale:''});
-  sedeIdx = sedi.length-1;
+  sedi.push({ nome: '', indirizzo: '', cap: '', citta: '', prov: '', catastale: '' });
+  sedeIdx = sedi.length - 1;
   renderSedi();
 });
 
@@ -319,32 +325,32 @@ document.getElementById('btnAddSede').addEventListener('click', () => {
 let inailList = [];
 function renderInail() {
   const el = document.getElementById('inailList');
-  if (!inailList.length) { el.innerHTML='<div class="list-empty-msg">Nessuna gestione INAIL inserita.</div>'; return; }
-  el.innerHTML = inailList.map((g,i) => `
+  if (!inailList.length) { el.innerHTML = '<div class="list-empty-msg">Nessuna gestione INAIL inserita.</div>'; return; }
+  el.innerHTML = inailList.map((g, i) => `
     <div class="list-item">
       <div class="list-item-header">
-        <span class="list-item-title">Gestione INAIL #${i+1}</span>
+        <span class="list-item-title">Gestione INAIL #${i + 1}</span>
         <button type="button" class="btn btn-icon btn-ghost" style="color:var(--color-error)" onclick="removeInail(${i})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         </button>
       </div>
       <div class="list-item-grid">
         <div class="list-item-field"><label>Codice PAT</label>
-          <input value="${g.pat||''}" oninput="inailList[${i}].pat=this.value" placeholder="PAT000000000"/></div>
+          <input value="${g.pat || ''}" oninput="inailList[${i}].pat=this.value" placeholder="PAT000000000"/></div>
         <div class="list-item-field"><label>Sede INAIL</label>
-          <input value="${g.sede||''}" oninput="inailList[${i}].sede=this.value" placeholder="es. Napoli"/></div>
+          <input value="${g.sede || ''}" oninput="inailList[${i}].sede=this.value" placeholder="es. Napoli"/></div>
         <div class="list-item-field"><label>Codice ATECO</label>
-          <input value="${g.ateco||''}" oninput="inailList[${i}].ateco=this.value" placeholder="es. 47.11"/></div>
+          <input value="${g.ateco || ''}" oninput="inailList[${i}].ateco=this.value" placeholder="es. 47.11"/></div>
         <div class="list-item-field"><label>Sede Lavorativa</label>
-          <input value="${g.sedeLav||''}" oninput="inailList[${i}].sedeLav=this.value" placeholder="es. Via Roma 1"/></div>
+          <input value="${g.sedeLav || ''}" oninput="inailList[${i}].sedeLav=this.value" placeholder="es. Via Roma 1"/></div>
         <div class="list-item-field full"><label>Note</label>
-          <input value="${g.note||''}" oninput="inailList[${i}].note=this.value" placeholder="Note aggiuntive..."/></div>
+          <input value="${g.note || ''}" oninput="inailList[${i}].note=this.value" placeholder="Note aggiuntive..."/></div>
       </div>
     </div>`).join('');
 }
-function removeInail(i) { inailList.splice(i,1); renderInail(); }
+function removeInail(i) { inailList.splice(i, 1); renderInail(); }
 document.getElementById('btnAddInail').addEventListener('click', () => {
-  inailList.push({pat:'',sede:'',ateco:'',sedeLav:'',note:''});
+  inailList.push({ pat: '', sede: '', ateco: '', sedeLav: '', note: '' });
   renderInail();
 });
 
@@ -354,32 +360,32 @@ document.getElementById('btnAddInail').addEventListener('click', () => {
 let inpsList = [];
 function renderInps() {
   const el = document.getElementById('inpsList');
-  if (!inpsList.length) { el.innerHTML='<div class="list-empty-msg">Nessuna gestione INPS inserita.</div>'; return; }
-  el.innerHTML = inpsList.map((g,i) => `
+  if (!inpsList.length) { el.innerHTML = '<div class="list-empty-msg">Nessuna gestione INPS inserita.</div>'; return; }
+  el.innerHTML = inpsList.map((g, i) => `
     <div class="list-item">
       <div class="list-item-header">
-        <span class="list-item-title">Gestione INPS #${i+1}</span>
+        <span class="list-item-title">Gestione INPS #${i + 1}</span>
         <button type="button" class="btn btn-icon btn-ghost" style="color:var(--color-error)" onclick="removeInps(${i})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
         </button>
       </div>
       <div class="list-item-grid">
         <div class="list-item-field"><label>Matricola INPS</label>
-          <input value="${g.matricola||''}" oninput="inpsList[${i}].matricola=this.value" placeholder="1234567890"/></div>
+          <input value="${g.matricola || ''}" oninput="inpsList[${i}].matricola=this.value" placeholder="1234567890"/></div>
         <div class="list-item-field"><label>Sede INPS</label>
-          <input value="${g.sede||''}" oninput="inpsList[${i}].sede=this.value" placeholder="es. Napoli"/></div>
+          <input value="${g.sede || ''}" oninput="inpsList[${i}].sede=this.value" placeholder="es. Napoli"/></div>
         <div class="list-item-field"><label>CCNL</label>
-          <input value="${g.ccnl||''}" oninput="inpsList[${i}].ccnl=this.value" placeholder="es. Commercio"/></div>
+          <input value="${g.ccnl || ''}" oninput="inpsList[${i}].ccnl=this.value" placeholder="es. Commercio"/></div>
         <div class="list-item-field"><label>Codice ATECO</label>
-          <input value="${g.ateco||''}" oninput="inpsList[${i}].ateco=this.value" placeholder="es. 47.11"/></div>
+          <input value="${g.ateco || ''}" oninput="inpsList[${i}].ateco=this.value" placeholder="es. 47.11"/></div>
         <div class="list-item-field full"><label>Note</label>
-          <input value="${g.note||''}" oninput="inpsList[${i}].note=this.value" placeholder="Note aggiuntive..."/></div>
+          <input value="${g.note || ''}" oninput="inpsList[${i}].note=this.value" placeholder="Note aggiuntive..."/></div>
       </div>
     </div>`).join('');
 }
-function removeInps(i) { inpsList.splice(i,1); renderInps(); }
+function removeInps(i) { inpsList.splice(i, 1); renderInps(); }
 document.getElementById('btnAddInps').addEventListener('click', () => {
-  inpsList.push({matricola:'',sede:'',ccnl:'',ateco:'',note:''});
+  inpsList.push({ matricola: '', sede: '', ccnl: '', ateco: '', note: '' });
   renderInps();
 });
 
@@ -389,22 +395,22 @@ document.getElementById('btnAddInps').addEventListener('click', () => {
 let ccList = [];
 function renderCC() {
   const el = document.getElementById('ccList');
-  if (!ccList.length) { el.innerHTML='<div class="list-empty-msg">Nessun contatto CC aggiunto.</div>'; return; }
-  el.innerHTML = ccList.map((c,i) => `
+  if (!ccList.length) { el.innerHTML = '<div class="list-empty-msg">Nessun contatto CC aggiunto.</div>'; return; }
+  el.innerHTML = ccList.map((c, i) => `
     <div class="list-item" style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;opacity:0.4"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
       <input type="email" style="flex:1;padding:0 var(--space-2);height:30px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm);color:var(--color-text)"
-        value="${c.email||''}" oninput="ccList[${i}].email=this.value" placeholder="email@esempio.it"/>
+        value="${c.email || ''}" oninput="ccList[${i}].email=this.value" placeholder="email@esempio.it"/>
       <input type="text" style="width:160px;padding:0 var(--space-2);height:30px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm);color:var(--color-text)"
-        value="${c.nome||''}" oninput="ccList[${i}].nome=this.value" placeholder="Nome (opzionale)"/>
+        value="${c.nome || ''}" oninput="ccList[${i}].nome=this.value" placeholder="Nome (opzionale)"/>
       <button type="button" class="btn btn-icon btn-ghost" style="color:var(--color-error);flex-shrink:0" onclick="removeCC(${i})">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
       </button>
     </div>`).join('');
 }
-function removeCC(i) { ccList.splice(i,1); renderCC(); }
+function removeCC(i) { ccList.splice(i, 1); renderCC(); }
 document.getElementById('btnAddCC').addEventListener('click', () => {
-  ccList.push({email:'',nome:''});
+  ccList.push({ email: '', nome: '' });
   renderCC();
 });
 
@@ -413,33 +419,36 @@ document.getElementById('btnAddCC').addEventListener('click', () => {
 ══════════════════════════════════════════════════════════ */
 let tariffItems = [];
 const TARIFF_BASE = [
-  {desc:'Costo Cedolino', prezzo:''},
-  {desc:'Assunzione', prezzo:''},
-  {desc:'Variazione', prezzo:''},
-  {desc:'Cessazione', prezzo:''},
+  { desc: 'Costo Cedolino', prezzo: '' },
+  { desc: 'Assunzione', prezzo: '' },
+  { desc: 'Variazione', prezzo: '' },
+  { desc: 'Cessazione', prezzo: '' },
 ];
 function renderTariff() {
   const el = document.getElementById('tariffList');
+  if (!el) return; 
   if (!tariffItems.length) {
-    el.innerHTML='<div class="list-empty-msg">Nessuna voce. Clicca "Tariffario Base" per caricare le voci predefinite.</div>'; return;
+    el.innerHTML = '<div class="list-empty-msg">Nessuna voce. Clicca "Tariffario Base" per caricare le voci predefinite.</div>'; return;
   }
   el.innerHTML = `<table class="tariff-table">
     <thead><tr><th>Descrizione</th><th>Prezzo (€)</th><th></th></tr></thead>
-    <tbody>${tariffItems.map((v,i)=>`<tr>
-      <td><input value="${v.desc||''}" oninput="tariffItems[${i}].desc=this.value" placeholder="Descrizione voce"/></td>
-      <td class="tariff-row-price"><input type="number" step="0.01" min="0" value="${v.prezzo||''}" oninput="tariffItems[${i}].prezzo=this.value" placeholder="0.00"/></td>
+    <tbody>${tariffItems.map((v, i) => `<tr>
+      <td><input value="${v.desc || ''}" oninput="tariffItems[${i}].desc=this.value" placeholder="Descrizione voce"/></td>
+      <td class="tariff-row-price"><input type="number" step="0.01" min="0" value="${v.prezzo || ''}" oninput="tariffItems[${i}].prezzo=this.value" placeholder="0.00"/></td>
       <td><button type="button" class="btn btn-icon btn-ghost" style="color:var(--color-error)" onclick="removeTariff(${i})">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
       </button></td>
     </tr>`).join('')}</tbody>
   </table>`;
 }
-function removeTariff(i) { tariffItems.splice(i,1); renderTariff(); }
-document.getElementById('btnTariffBase').addEventListener('click', () => {
-  tariffItems = TARIFF_BASE.map(v => ({...v})); renderTariff();
+function removeTariff(i) { tariffItems.splice(i, 1); renderTariff(); }
+document.getElementById('btnTariffBase')?.addEventListener('click', () => {
+  tariffItems = TARIFF_BASE.map(v => ({ ...v })); 
+  renderTariff();
 });
-document.getElementById('btnAddTariff').addEventListener('click', () => {
-  tariffItems.push({desc:'',prezzo:''}); renderTariff();
+document.getElementById('btnAddTariff')?.addEventListener('click', () => {
+  tariffItems.push({ desc: '', prezzo: '' }); 
+  renderTariff();
 });
 
 /* ══════════════════════════════════════════════════════════
@@ -466,6 +475,8 @@ function resetDittaForm() {
   document.getElementById('cedolino_onnicomprensivo').checked = false;
   sedi = []; sedeIdx = 0; inailList = []; inpsList = []; ccList = []; tariffItems = [];
   renderSedi(); renderInail(); renderInps(); renderCC(); renderTariff();
+  currentDittaIdForTariff = null;
+  renderDittaVoci([]);
   document.getElementById('formDittaError').style.display = 'none';
   document.getElementById('modalDittaTitle').textContent = 'Nuova Ditta';
   resetModalTabs();
@@ -478,22 +489,24 @@ async function editDitta(id) {
   try {
     const d = await api(`/api/ditte/${id}`);
     document.getElementById('dittaId').value = d.id;
-    ['ragione_sociale','codice_fiscale','partita_iva','indirizzo','cap','citta',
-     'provincia','cod_catastale','amministratore','cf_amministratore',
-     'tel_amministratore','email_amministratore','data_inizio_rapporto',
-     'email','pec','telefono'].forEach(f => {
-      const el = document.getElementById(f);
-      if (el && d[f]) el.value = d[f];
-    });
+    ['ragione_sociale', 'codice_fiscale', 'partita_iva', 'indirizzo', 'cap', 'citta',
+      'provincia', 'cod_catastale', 'amministratore', 'cf_amministratore',
+      'tel_amministratore', 'email_amministratore', 'data_inizio_rapporto',
+      'email', 'pec', 'telefono'].forEach(f => {
+        const el = document.getElementById(f);
+        if (el && d[f]) el.value = d[f];
+      });
     document.getElementById('cedolino_onnicomprensivo').checked = !!d.cedolino_onnicomprensivo;
-    if (d.sedi_json) { try { sedi = JSON.parse(d.sedi_json); sedeIdx=0; } catch(e){} }
-    if (d.inail_json) { try { inailList = JSON.parse(d.inail_json); } catch(e){} }
-    if (d.inps_json)  { try { inpsList = JSON.parse(d.inps_json);  } catch(e){} }
-    if (d.cc_json)    { try { ccList = JSON.parse(d.cc_json);       } catch(e){} }
-    if (d.tariff_json){ try { tariffItems = JSON.parse(d.tariff_json); } catch(e){} }
+    if (d.sedi_json) { try { sedi = JSON.parse(d.sedi_json); sedeIdx = 0; } catch (e) { } }
+    if (d.inail_json) { try { inailList = JSON.parse(d.inail_json); } catch (e) { } }
+    if (d.inps_json) { try { inpsList = JSON.parse(d.inps_json); } catch (e) { } }
+    if (d.cc_json) { try { ccList = JSON.parse(d.cc_json); } catch (e) { } }
+    if (d.tariff_json) { try { tariffItems = JSON.parse(d.tariff_json); } catch (e) { } }
     renderSedi(); renderInail(); renderInps(); renderCC(); renderTariff();
+    currentDittaIdForTariff = d.id;
+    await loadDittaVoci(d.id);
     openModal('modalDitta');
-  } catch(e) { toast('Errore nel caricamento ditta', 'error'); }
+  } catch (e) { toast('Errore nel caricamento ditta', 'error'); }
 }
 
 document.getElementById('btnSaveDitta').addEventListener('click', async () => {
@@ -532,22 +545,22 @@ document.getElementById('btnSaveDitta').addEventListener('click', async () => {
   try {
     const id = document.getElementById('dittaId').value;
     if (id) { await api(`/api/ditte/${id}`, 'PUT', data); toast('Ditta aggiornata'); }
-    else     { await api('/api/ditte', 'POST', data); toast('Ditta creata'); }
+    else { await api('/api/ditte', 'POST', data); toast('Ditta creata'); }
     closeModal('modalDitta');
     loadDitte(); loadStats();
-  } catch(e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+  } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
 });
 
 
 /* BINDINGS */
-document.getElementById('btnNuovaDitta').addEventListener('click',openDittaModal);
-document.getElementById('btnNuovaDitta2').addEventListener('click',openDittaModal);
+document.getElementById('btnNuovaDitta').addEventListener('click', openDittaModal);
+document.getElementById('btnNuovaDitta2').addEventListener('click', openDittaModal);
 function openPraticaModal(tipo) {
   if (tipo === 'Assunzione') { openAssunzioneModal(); return; }
-  const wip = ['Cessazione','Trasformazione Contratto','Proroga Contratto',
-    'Elaborazione Buste Paga','Variazione Retributiva','Conguaglio Fiscale',
-    'Comunicazione INPS','Comunicazione INAIL','Gestione CIG','Variazione INAIL',
-    'Modello 770','CU - Certificazione Unica','Autoliquidazione INAIL','Altra Pratica'];
+  const wip = ['Cessazione', 'Trasformazione Contratto', 'Proroga Contratto',
+    'Elaborazione Buste Paga', 'Variazione Retributiva', 'Conguaglio Fiscale',
+    'Comunicazione INPS', 'Comunicazione INAIL', 'Gestione CIG', 'Variazione INAIL',
+    'Modello 770', 'CU - Certificazione Unica', 'Autoliquidazione INAIL', 'Altra Pratica'];
   document.getElementById('pratica_tipo').value = tipo;
   document.getElementById('modalPraticaTitle').textContent = 'Nuova Pratica — ' + tipo;
   const wipEl = document.getElementById('praticaWipNotice');
@@ -570,8 +583,8 @@ document.querySelectorAll('.modal-tab[data-atab]').forEach(tab => {
   });
 });
 function resetAssunzioneTabs() {
-  document.querySelectorAll('.modal-tab[data-atab]').forEach((t,i) => t.classList.toggle('active', i===0));
-  document.querySelectorAll('[id^="atab-"]').forEach((p,i) => p.classList.toggle('active', i===0));
+  document.querySelectorAll('.modal-tab[data-atab]').forEach((t, i) => t.classList.toggle('active', i === 0));
+  document.querySelectorAll('[id^="atab-"]').forEach((p, i) => p.classList.toggle('active', i === 0));
 }
 
 /* Toggle buttons */
@@ -586,33 +599,33 @@ document.querySelectorAll('.toggle-btn').forEach(btn => {
 });
 
 /* Toggle straniero */
-document.getElementById('ass_straniero').addEventListener('change', function() {
+document.getElementById('ass_straniero').addEventListener('change', function () {
   document.getElementById('ass_permesso_section').style.display = this.checked ? 'block' : 'none';
 });
 
 /* Tipologia contratto → mostra data fine */
-const TIPI_TERMINE = ['TD','TD_SOS','TD_PIATT','TD_SOS_PIATT','APP_QUAL','APP_PROF','APP_AF','INT_DET','TIR','LSU','FL','BWE'];
-document.getElementById('ass_tipologia_contratto').addEventListener('change', function() {
+const TIPI_TERMINE = ['TD', 'TD_SOS', 'TD_PIATT', 'TD_SOS_PIATT', 'APP_QUAL', 'APP_PROF', 'APP_AF', 'INT_DET', 'TIR', 'LSU', 'FL', 'BWE'];
+document.getElementById('ass_tipologia_contratto').addEventListener('change', function () {
   document.getElementById('ass_data_fine_wrapper').style.display = TIPI_TERMINE.includes(this.value) ? 'block' : 'none';
 });
 
 /* Tipologia orario → mostra retrib PT */
-document.getElementById('ass_tipo_orario').addEventListener('change', function() {
-  document.getElementById('ass_retrib_pt_wrapper').style.display = ['PTO','PTV','PTM'].includes(this.value) ? 'block' : 'none';
+document.getElementById('ass_tipo_orario').addEventListener('change', function () {
+  document.getElementById('ass_retrib_pt_wrapper').style.display = ['PTO', 'PTV', 'PTM'].includes(this.value) ? 'block' : 'none';
 });
 
 /* Cod istruzione → descrizione */
 const ISTR_MAP = {
-  '10':'Nessun titolo','20':'Licenza Elementare','30':'Licenza Media',
-  '40':'Diploma Professionale','50':'Diploma Superiore','60':'Laurea Triennale',
-  '70':'Laurea Magistrale','80':'Master / Specializzazione','90':'Dottorato'
+  '10': 'Nessun titolo', '20': 'Licenza Elementare', '30': 'Licenza Media',
+  '40': 'Diploma Professionale', '50': 'Diploma Superiore', '60': 'Laurea Triennale',
+  '70': 'Laurea Magistrale', '80': 'Master / Specializzazione', '90': 'Dottorato'
 };
-document.getElementById('ass_cod_istruzione').addEventListener('change', function() {
+document.getElementById('ass_cod_istruzione').addEventListener('change', function () {
   document.getElementById('ass_livello_istruzione').value = ISTR_MAP[this.value] || '';
 });
 
 /* Azienda select → auto-fill campi */
-document.getElementById('ass_ditta_id').addEventListener('change', async function() {
+document.getElementById('ass_ditta_id').addEventListener('change', async function () {
   const id = this.value;
   if (!id) { clearAziendaFields(); return; }
   try {
@@ -628,11 +641,11 @@ document.getElementById('ass_ditta_id').addEventListener('change', async functio
     const inpsSel = document.getElementById('ass_matricola_inps');
     inpsSel.innerHTML = '<option value="">-- Seleziona --</option>';
     let inpsList = [];
-    try { inpsList = d.inps_json ? JSON.parse(d.inps_json) : []; } catch(e) {}
-    inpsList.forEach((g,i) => {
+    try { inpsList = d.inps_json ? JSON.parse(d.inps_json) : []; } catch (e) { }
+    inpsList.forEach((g, i) => {
       const o = document.createElement('option');
       o.value = i;
-      o.textContent = g.matricola ? g.matricola + (g.ccnl ? ' — ' + g.ccnl : '') : 'INPS #' + (i+1);
+      o.textContent = g.matricola ? g.matricola + (g.ccnl ? ' — ' + g.ccnl : '') : 'INPS #' + (i + 1);
       o.dataset.ateco = g.ateco || ''; o.dataset.ccnl = g.ccnl || '';
       inpsSel.appendChild(o);
     });
@@ -640,39 +653,39 @@ document.getElementById('ass_ditta_id').addEventListener('change', async functio
     const inailSel = document.getElementById('ass_pat_inail');
     inailSel.innerHTML = '<option value="">-- Seleziona --</option>';
     let inailList = [];
-    try { inailList = d.inail_json ? JSON.parse(d.inail_json) : []; } catch(e) {}
-    inailList.forEach((g,i) => {
+    try { inailList = d.inail_json ? JSON.parse(d.inail_json) : []; } catch (e) { }
+    inailList.forEach((g, i) => {
       const o = document.createElement('option');
       o.value = i;
-      o.textContent = g.pat ? g.pat + (g.sede ? ' — ' + g.sede : '') : 'INAIL #' + (i+1);
+      o.textContent = g.pat ? g.pat + (g.sede ? ' — ' + g.sede : '') : 'INAIL #' + (i + 1);
       inailSel.appendChild(o);
     });
     /* Sedi lavorative */
     const sedeSel = document.getElementById('ass_sede_lav_select');
     sedeSel.innerHTML = '<option value="">Sede Legale (default)</option>';
     let sediList = [];
-    try { sediList = d.sedi_json ? JSON.parse(d.sedi_json) : []; } catch(e) {}
-    sediList.forEach((s,i) => {
+    try { sediList = d.sedi_json ? JSON.parse(d.sedi_json) : []; } catch (e) { }
+    sediList.forEach((s, i) => {
       const o = document.createElement('option');
       o.value = i;
-      o.textContent = s.nome || 'Sede ' + (i+1);
-      o.dataset.indirizzo = s.indirizzo||''; o.dataset.cap = s.cap||'';
-      o.dataset.citta = s.citta||''; o.dataset.prov = s.prov||'';
-      o.dataset.catastale = s.catastale||'';
+      o.textContent = s.nome || 'Sede ' + (i + 1);
+      o.dataset.indirizzo = s.indirizzo || ''; o.dataset.cap = s.cap || '';
+      o.dataset.citta = s.citta || ''; o.dataset.prov = s.prov || '';
+      o.dataset.catastale = s.catastale || '';
       sedeSel.appendChild(o);
     });
-  } catch(e) { console.error(e); }
+  } catch (e) { console.error(e); }
 });
 
 /* INPS select → autofill ATECO e CCNL */
-document.getElementById('ass_matricola_inps').addEventListener('change', function() {
+document.getElementById('ass_matricola_inps').addEventListener('change', function () {
   const opt = this.options[this.selectedIndex];
   document.getElementById('ass_cod_ateco').value = opt.dataset ? (opt.dataset.ateco || '') : '';
   document.getElementById('ass_ccnl').value = opt.dataset ? (opt.dataset.ccnl || '') : '';
 });
 
 /* Sede lavorativa → autofill */
-document.getElementById('ass_sede_lav_select').addEventListener('change', function() {
+document.getElementById('ass_sede_lav_select').addEventListener('change', function () {
   const opt = this.options[this.selectedIndex];
   if (!opt.dataset) return;
   document.getElementById('ass_indirizzo_lav').value = opt.dataset.indirizzo || '';
@@ -683,10 +696,10 @@ document.getElementById('ass_sede_lav_select').addEventListener('change', functi
 });
 
 function clearAziendaFields() {
-  ['ass_cf_azienda','ass_pec_azienda','ass_indirizzo_legale','ass_cap_legale',
-   'ass_comune_legale','ass_prov_legale','ass_catastale_legale','ass_cod_ateco','ass_ccnl'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
+  ['ass_cf_azienda', 'ass_pec_azienda', 'ass_indirizzo_legale', 'ass_cap_legale',
+    'ass_comune_legale', 'ass_prov_legale', 'ass_catastale_legale', 'ass_cod_ateco', 'ass_ccnl'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
   document.getElementById('ass_matricola_inps').innerHTML = '<option value="">-- Seleziona prima l\'azienda --</option>';
   document.getElementById('ass_pat_inail').innerHTML = '<option value="">-- Seleziona prima l\'azienda --</option>';
   document.getElementById('ass_sede_lav_select').innerHTML = '<option value="">Sede Legale (default)</option>';
@@ -698,10 +711,10 @@ function resetAssunzioneForm() {
   document.querySelectorAll('#modalAssunzione textarea').forEach(el => el.value = '');
   document.querySelectorAll('#modalAssunzione input[type=checkbox]').forEach(el => el.checked = false);
   document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-  ['ass_permesso_section','ass_obbligatoria_section','ass_netto_wrapper',
-   'ass_data_fine_wrapper','ass_retrib_pt_wrapper'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.style.display = 'none';
-  });
+  ['ass_permesso_section', 'ass_obbligatoria_section', 'ass_netto_wrapper',
+    'ass_data_fine_wrapper', 'ass_retrib_pt_wrapper'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.display = 'none';
+    });
   clearAziendaFields();
   const errEl = document.getElementById('formAssunzioneError');
   if (errEl) errEl.style.display = 'none';
@@ -720,7 +733,7 @@ async function populateAziendaSelect() {
       o.value = d.id; o.textContent = d.ragione_sociale;
       sel.appendChild(o);
     });
-  } catch(e) {}
+  } catch (e) { }
 }
 
 function openAssunzioneModal() {
@@ -750,11 +763,11 @@ document.getElementById('btnAssumiBtn').addEventListener('click', () => {
   toast('Assunzione avviata — work in progress', 'success');
 });
 
-setupDropdown('btnNuovaPratica','dropdownPratica',openPraticaModal);
-setupDropdown('btnNuovaPratica2','dropdownPratica2',openPraticaModal);
+setupDropdown('btnNuovaPratica', 'dropdownPratica', openPraticaModal);
+setupDropdown('btnNuovaPratica2', 'dropdownPratica2', openPraticaModal);
 
 /* INIT */
-loadStats();loadHomePratiche();
+loadStats(); loadHomePratiche();
 
 /* ══════════════════════════════════════════════════════════
    AUTH — controlla ruolo e mostra tab admin
@@ -768,7 +781,7 @@ async function checkAuth() {
       document.getElementById('navAdmin').style.display = '';
       document.getElementById('tabBtnAdmin').style.display = '';
     }
-  } catch(e) { console.error(e); }
+  } catch (e) { console.error(e); }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -807,12 +820,12 @@ async function loadUsers() {
         ` : '<span style="color:var(--color-text-faint);font-size:var(--text-xs)">protetto</span>'}
       </div></td>
     </tr>`).join('');
-  } catch(e) { toast('Errore nel caricamento utenti', 'error'); }
+  } catch (e) { toast('Errore nel caricamento utenti', 'error'); }
 }
 
 // ── CAMBIA PASSWORD ───────────────────────────────────────────────────────────
 function openCambiaPassword() {
-  ['cpVecchia','cpNuova','cpConferma'].forEach(id =>
+  ['cpVecchia', 'cpNuova', 'cpConferma'].forEach(id =>
     document.getElementById(id).value = '');
   document.getElementById('formCambiaPasswordError').style.display = 'none';
   document.getElementById('formCambiaPasswordSuccess').style.display = 'none';
@@ -821,15 +834,15 @@ function openCambiaPassword() {
 }
 
 document.getElementById('btnSalvaNuovaPassword').addEventListener('click', async () => {
-  const vecchia  = document.getElementById('cpVecchia').value;
-  const nuova    = document.getElementById('cpNuova').value;
+  const vecchia = document.getElementById('cpVecchia').value;
+  const nuova = document.getElementById('cpNuova').value;
   const conferma = document.getElementById('cpConferma').value;
-  const errBox   = document.getElementById('formCambiaPasswordError');
-  const okBox    = document.getElementById('formCambiaPasswordSuccess');
-  const btn      = document.getElementById('btnSalvaNuovaPassword');
+  const errBox = document.getElementById('formCambiaPasswordError');
+  const okBox = document.getElementById('formCambiaPasswordSuccess');
+  const btn = document.getElementById('btnSalvaNuovaPassword');
 
   errBox.style.display = 'none';
-  okBox.style.display  = 'none';
+  okBox.style.display = 'none';
 
   // Validazione frontend
   if (!vecchia || !nuova || !conferma) {
@@ -853,17 +866,17 @@ document.getElementById('btnSalvaNuovaPassword').addEventListener('click', async
 
   try {
     await api('/api/users/me/password', 'PUT', {
-      vecchia_password:  vecchia,
-      nuova_password:    nuova,
+      vecchia_password: vecchia,
+      nuova_password: nuova,
       conferma_password: conferma
     });
     // Mostra il messaggio di successo e chiudi dopo 1.5s
     okBox.style.display = 'block';
-    ['cpVecchia','cpNuova','cpConferma'].forEach(id =>
+    ['cpVecchia', 'cpNuova', 'cpConferma'].forEach(id =>
       document.getElementById(id).value = '');
     setTimeout(() => closeModal('modalCambiaPassword'), 1500);
     toast('Password aggiornata con successo', 'success');
-  } catch(e) {
+  } catch (e) {
     errBox.textContent = e.message || 'Errore. Riprova.';
     errBox.style.display = 'block';
   } finally {
@@ -897,7 +910,7 @@ document.getElementById('btnConfermaEliminaUtente').addEventListener('click', as
     closeModal('modalEliminaUtente');
     toast('Utente eliminato con successo', 'success');
     loadUsers();
-  } catch(e) {
+  } catch (e) {
     toast(e.message || 'Errore durante l\'eliminazione', 'error');
     closeModal('modalEliminaUtente');
   } finally {
@@ -933,7 +946,7 @@ document.getElementById('btnTogglePassword').addEventListener('click', () => {
   const input = document.getElementById('nuovoUtentePassword');
   const isHidden = input.type === 'password';
   input.type = isHidden ? 'text' : 'password';
-  document.getElementById('iconEyeOpen').style.display  = isHidden ? 'none' : '';
+  document.getElementById('iconEyeOpen').style.display = isHidden ? 'none' : '';
   document.getElementById('iconEyeClosed').style.display = isHidden ? '' : 'none';
 });
 
@@ -946,9 +959,9 @@ document.getElementById('nuovoUtentePassword').addEventListener('keydown', e => 
 document.getElementById('btnSalvaNuovoUtente').addEventListener('click', async () => {
   const username = document.getElementById('nuovoUtenteUsername').value.trim();
   const password = document.getElementById('nuovoUtentePassword').value;
-  const role     = document.getElementById('nuovoUtenteRuolo').value;
-  const errBox   = document.getElementById('formNuovoUtenteError');
-  const btn      = document.getElementById('btnSalvaNuovoUtente');
+  const role = document.getElementById('nuovoUtenteRuolo').value;
+  const errBox = document.getElementById('formNuovoUtenteError');
+  const btn = document.getElementById('btnSalvaNuovoUtente');
 
   errBox.style.display = 'none';
   if (!username) {
@@ -983,7 +996,7 @@ document.getElementById('btnSalvaNuovoUtente').addEventListener('click', async (
     closeModal('modalNuovoUtente');
     toast(`Utente "${json.username}" creato con successo`, 'success');
     loadUsers();
-  } catch(e) {
+  } catch (e) {
     errBox.textContent = 'Errore di rete. Riprova.';
     errBox.style.display = 'block';
   } finally {
@@ -994,7 +1007,7 @@ document.getElementById('btnSalvaNuovoUtente').addEventListener('click', async (
 
 /* Carica utenti quando si apre il tab admin */
 const _origSwitchTab = switchTab;
-window.switchTab = function(tabName) {
+window.switchTab = function (tabName) {
   _origSwitchTab(tabName);
   if (tabName === 'admin') loadUsers();
 };
@@ -1008,7 +1021,7 @@ function openResetPassword(id, username) {
   document.getElementById('resetPasswordNome').textContent = username || `#${id}`;
   document.getElementById('resetNuovaPassword').value = '';
   document.getElementById('resetNuovaPassword').type = 'password';
-  document.getElementById('resetEyeOpen').style.display  = '';
+  document.getElementById('resetEyeOpen').style.display = '';
   document.getElementById('resetEyeClosed').style.display = 'none';
   const errBox = document.getElementById('formResetPasswordError');
   errBox.style.display = 'none';
@@ -1022,7 +1035,7 @@ document.getElementById('btnToggleResetPassword').addEventListener('click', () =
   const input = document.getElementById('resetNuovaPassword');
   const isHidden = input.type === 'password';
   input.type = isHidden ? 'text' : 'password';
-  document.getElementById('resetEyeOpen').style.display  = isHidden ? 'none' : '';
+  document.getElementById('resetEyeOpen').style.display = isHidden ? 'none' : '';
   document.getElementById('resetEyeClosed').style.display = isHidden ? '' : 'none';
 });
 
@@ -1035,8 +1048,8 @@ document.getElementById('resetNuovaPassword').addEventListener('keydown', e => {
 document.getElementById('btnConfermaResetPassword').addEventListener('click', async () => {
   if (!_resetUserId) return;
   const password = document.getElementById('resetNuovaPassword').value;
-  const errBox   = document.getElementById('formResetPasswordError');
-  const btn      = document.getElementById('btnConfermaResetPassword');
+  const errBox = document.getElementById('formResetPasswordError');
+  const btn = document.getElementById('btnConfermaResetPassword');
 
   errBox.style.display = 'none';
 
@@ -1055,7 +1068,7 @@ document.getElementById('btnConfermaResetPassword').addEventListener('click', as
     await api(`/api/users/${_resetUserId}/password`, 'PUT', { password });
     closeModal('modalResetPassword');
     toast(`Password di "${document.getElementById('resetPasswordNome').textContent}" aggiornata`, 'success');
-  } catch(e) {
+  } catch (e) {
     errBox.textContent = e.message || 'Errore. Riprova.';
     errBox.style.display = 'block';
   } finally {
@@ -1068,7 +1081,7 @@ document.getElementById('btnConfermaResetPassword').addEventListener('click', as
 /* ══════════════════════════════════════════════════════════
    REAL-TIME SSE
 ══════════════════════════════════════════════════════════ */
-(function() {
+(function () {
   const sse = new EventSource('/api/events');
   sse.addEventListener('ditta_created', () => { loadDitte(); loadStats(); toast('Nuova ditta aggiunta', 'info'); });
   sse.addEventListener('ditta_updated', () => { loadDitte(); loadStats(); toast('Ditta modificata', 'info'); });
@@ -1088,10 +1101,10 @@ let activeTariffarioId = null;
 let activeMacrogruppoId = null;
 
 const TIPO_META = {
-  fisso_mensile:     { label: 'Fisso Mensile',      color: 'var(--color-blue)',    bg: 'var(--color-blue-highlight)' },
-  fisso_annuale:     { label: 'Fisso Annuale',       color: 'var(--color-primary)', bg: 'var(--color-primary-highlight)' },
-  variabile_mensile: { label: 'Variabile Mensile',   color: 'var(--color-orange)',  bg: 'var(--color-orange-highlight)' },
-  variabile_annuale: { label: 'Variabile Annuale',   color: 'var(--color-gold)',    bg: 'var(--color-gold-highlight)' },
+  fisso_mensile: { label: 'Fisso Mensile', color: 'var(--color-blue)', bg: 'var(--color-blue-highlight)' },
+  fisso_annuale: { label: 'Fisso Annuale', color: 'var(--color-primary)', bg: 'var(--color-primary-highlight)' },
+  variabile_mensile: { label: 'Variabile Mensile', color: 'var(--color-orange)', bg: 'var(--color-orange-highlight)' },
+  variabile_annuale: { label: 'Variabile Annuale', color: 'var(--color-gold)', bg: 'var(--color-gold-highlight)' },
 };
 
 // ── Carica lista tariffari ────────────────────────────────────
@@ -1099,7 +1112,7 @@ async function loadTariffari() {
   try {
     tariffariGlobali = await api('/api/tariffari');
     renderTariffariList();
-  } catch(e) {
+  } catch (e) {
     toast('Errore nel caricamento tariffari', 'error');
   }
 }
@@ -1156,7 +1169,7 @@ async function renderMacrogruppi(tariffarioId) {
   let gruppi = [];
   try {
     gruppi = await api(`/api/tariffari/${tariffarioId}/macrogruppi`);
-  } catch(e) {
+  } catch (e) {
     toast('Errore nel caricamento macrogruppi', 'error');
     return;
   }
@@ -1256,8 +1269,8 @@ async function renderMacrogruppi(tariffarioId) {
 // ── Highlight radio button selezionato ───────────────────────
 function updateRadioUI() {
   const map = {
-    'fisso_mensile':     'radioFissoMensile',
-    'fisso_annuale':     'radioFissoAnnuale',
+    'fisso_mensile': 'radioFissoMensile',
+    'fisso_annuale': 'radioFissoAnnuale',
     'variabile_mensile': 'radioVariabileMensile',
     'variabile_annuale': 'radioVariabileAnnuale',
   };
@@ -1266,16 +1279,16 @@ function updateRadioUI() {
     if (!label) return;
     if (r.checked) {
       label.style.borderColor = 'var(--color-primary)';
-      label.style.background  = 'var(--color-primary-highlight)';
+      label.style.background = 'var(--color-primary-highlight)';
     } else {
       label.style.borderColor = 'var(--color-border)';
-      label.style.background  = 'var(--color-surface)';
+      label.style.background = 'var(--color-surface)';
     }
   });
 }
 
 // Aggancia listener ai 4 radio
-['tipoFissoMensile','tipoFissoAnnuale','tipoVariabileMensile','tipoVariabileAnnuale']
+['tipoFissoMensile', 'tipoFissoAnnuale', 'tipoVariabileMensile', 'tipoVariabileAnnuale']
   .forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', updateRadioUI);
@@ -1296,11 +1309,11 @@ document.getElementById('btnNuovoTariffario').addEventListener('click', () => {
 
 // ── Salva tariffario (+ eventuale primo macrogruppo) ──────────
 document.getElementById('btnSalvaNuovoTariffario').addEventListener('click', async () => {
-  const nome     = document.getElementById('inputNomeTariffario').value.trim();
-  const note     = document.getElementById('inputNoteTariffario').value.trim();
+  const nome = document.getElementById('inputNomeTariffario').value.trim();
+  const note = document.getElementById('inputNoteTariffario').value.trim();
   const nomeGruppo = document.getElementById('inputNomeMacrogruppoInline').value.trim();
   const tipoGruppo = document.querySelector('input[name="tipoMacrogruppo"]:checked')?.value || 'fisso_mensile';
-  const errEl    = document.getElementById('errNuovoTariffario');
+  const errEl = document.getElementById('errNuovoTariffario');
   errEl.style.display = 'none';
 
   if (!nome) {
@@ -1327,7 +1340,7 @@ document.getElementById('btnSalvaNuovoTariffario').addEventListener('click', asy
     await selectTariffario(tariffario.id);
     toast('Tariffario creato', 'success');
 
-  } catch(e) {
+  } catch (e) {
     errEl.textContent = e.message || 'Errore nella creazione.';
     errEl.style.display = 'block';
   }
@@ -1356,7 +1369,7 @@ document.getElementById('btnDeleteTariffario').addEventListener('click', async (
     document.getElementById('tariffarioContent').style.display = 'none';
     await loadTariffari();
     toast('Tariffario eliminato', 'success');
-  } catch(e) {
+  } catch (e) {
     toast('Errore nell\'eliminazione', 'error');
   }
 });
@@ -1387,7 +1400,7 @@ document.getElementById('btnSalvaNuovoMacrogruppo').addEventListener('click', as
     closeModal('modalNuovoMacrogruppo');
     await renderMacrogruppi(activeTariffarioId);
     toast('Macrogruppo aggiunto', 'success');
-  } catch(e) {
+  } catch (e) {
     errEl.textContent = e.message || 'Errore nella creazione.';
     errEl.style.display = 'block';
   }
@@ -1427,13 +1440,13 @@ function openEditVoce(macrogruppoId, v) {
 }
 
 document.getElementById('btnSalvaVoce').addEventListener('click', async () => {
-  const nome    = document.getElementById('inputNomeVoce').value.trim();
-  const prezzo  = parseFloat(document.getElementById('inputPrezzoVoce').value) || 0;
-  const unita   = document.getElementById('inputUnitaVoce').value.trim();
-  const note    = document.getElementById('inputNoteVoce').value.trim();
-  const editId  = document.getElementById('voceEditId').value;
-  const gid     = document.getElementById('voceEditMacrogruppoId').value;
-  const errEl   = document.getElementById('errNuovaVoce');
+  const nome = document.getElementById('inputNomeVoce').value.trim();
+  const prezzo = parseFloat(document.getElementById('inputPrezzoVoce').value) || 0;
+  const unita = document.getElementById('inputUnitaVoce').value.trim();
+  const note = document.getElementById('inputNoteVoce').value.trim();
+  const editId = document.getElementById('voceEditId').value;
+  const gid = document.getElementById('voceEditMacrogruppoId').value;
+  const errEl = document.getElementById('errNuovaVoce');
   errEl.style.display = 'none';
 
   if (!nome) {
@@ -1452,7 +1465,7 @@ document.getElementById('btnSalvaVoce').addEventListener('click', async () => {
     }
     closeModal('modalNuovaVoce');
     await renderMacrogruppi(activeTariffarioId);
-  } catch(e) {
+  } catch (e) {
     errEl.textContent = e.message || 'Errore nel salvataggio.';
     errEl.style.display = 'block';
   }
@@ -1465,7 +1478,7 @@ async function deleteMacrogruppo(gid) {
     await api(`/api/macrogruppi/${gid}`, 'DELETE');
     await renderMacrogruppi(activeTariffarioId);
     toast('Macrogruppo eliminato', 'success');
-  } catch(e) {
+  } catch (e) {
     toast('Errore nell\'eliminazione', 'error');
   }
 }
@@ -1477,18 +1490,260 @@ async function deleteVoce(vid) {
     await api(`/api/voci/${vid}`, 'DELETE');
     await renderMacrogruppi(activeTariffarioId);
     toast('Voce eliminata', 'success');
-  } catch(e) {
+  } catch (e) {
     toast('Errore nell\'eliminazione', 'error');
   }
 }
 
 // ── Carica tariffari quando si apre il tab ────────────────────
 const _origSwitchTabTariffari = switchTab;
-window.switchTab = function(tabName) {
+window.switchTab = function (tabName) {
   _origSwitchTabTariffari(tabName);
   if (tabName === 'tariffari') loadTariffari();
 };
 
+// ═══════════════════════════════════════════════════════
+// TARIFFARIO DITTA (tab tariffario nella modale ditta)
+// ═══════════════════════════════════════════════════════
+
+let currentDittaIdForTariff = null;
+
+// Popola la select dei tariffari globali nel tab ditta
+async function loadTariffariSelectDitta(selectedId = null) {
+  const sel = document.getElementById('dittaTariffarioSelect');
+  if (!sel) return;
+  try {
+    const list = await api('/api/tariffari');
+    sel.innerHTML = '<option value="">— Nessun tariffario associato —</option>';
+    list.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t.id;
+      o.textContent = t.nome;
+      if (selectedId && t.id == selectedId) o.selected = true;
+      sel.appendChild(o);
+    });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Render lista voci della ditta
+function renderDittaVoci(voci) {
+  const el = document.getElementById('dittaVociList');
+  if (!voci || !voci.length) {
+    el.innerHTML = `<div class="list-empty-msg">
+      Associa un tariffario e clicca <strong>Sincronizza</strong>,
+      oppure aggiungi una <strong>Voce Custom</strong>.
+    </div>`;
+    return;
+  }
+
+  // Raggruppa per tipo + macrogruppo_nome
+  const gruppi = {};
+  voci.forEach(v => {
+    const key = `${v.tipo}||${v.macrogruppo_nome || 'Extra'}`;
+    if (!gruppi[key]) gruppi[key] = { tipo: v.tipo, nome: v.macrogruppo_nome || 'Extra', voci: [] };
+    gruppi[key].voci.push(v);
+  });
+
+  const TIPOMETA_DV = {
+    fisso_mensile: { label: 'Fisso Mensile', color: 'var(--color-blue)', bg: 'var(--color-blue-highlight)' },
+    fisso_annuale: { label: 'Fisso Annuale', color: 'var(--color-primary)', bg: 'var(--color-primary-highlight)' },
+    variabile_mensile: { label: 'Variabile Mensile', color: 'var(--color-orange)', bg: 'var(--color-orange-highlight)' },
+    variabile_annuale: { label: 'Variabile Annuale', color: 'var(--color-gold)', bg: 'var(--color-gold-highlight)' },
+  };
+
+  el.innerHTML = Object.values(gruppi).map(g => {
+    const meta = TIPOMETA_DV[g.tipo] || TIPOMETA_DV['fisso_mensile'];
+    const vociHtml = g.voci.map(v => `
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);
+                  background:var(--color-bg);margin-bottom:var(--space-1)">
+        <div style="flex:1;min-width:0">
+          <span style="font-size:var(--text-sm);color:var(--color-text)">${v.nome}</span>
+          ${v.unita ? `<span style="font-size:var(--text-xs);color:var(--color-text-muted);margin-left:var(--space-2)">${v.unita}</span>` : ''}
+          ${v.custom ? `<span style="font-size:var(--text-xs);color:var(--color-warning);margin-left:var(--space-2);font-style:italic">custom</span>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0">
+          <span style="font-size:var(--text-sm);font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-text)">
+            ${v.prezzo > 0 ? '€ ' + Number(v.prezzo).toFixed(2) : '—'}
+          </span>
+          <button onclick="openEditVoceCustom(${v.id}, ${JSON.stringify(v).replace(/"/g, '&quot;')})"
+                  class="btn btn-icon btn-ghost" title="Modifica voce">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+          <button onclick="deleteVoceDitta(${v.id})"
+                  class="btn btn-icon btn-ghost" title="Elimina voce"
+                  style="color:var(--color-error)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            </svg>
+          </button>
+        </div>
+      </div>`).join('');
+
+    return `
+      <div style="border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-3)">
+        <div style="padding:var(--space-2) var(--space-4);background:var(--color-surface-offset);
+                    display:flex;align-items:center;gap:var(--space-3)">
+          <span style="font-size:var(--text-xs);font-weight:600;padding:2px var(--space-2);
+                       border-radius:var(--radius-full);background:${meta.bg};color:${meta.color}">
+            ${meta.label}
+          </span>
+          <span style="font-size:var(--text-sm);font-weight:600;color:var(--color-text)">${g.nome}</span>
+        </div>
+        <div style="padding:var(--space-3) var(--space-4)">${vociHtml}</div>
+      </div>`;
+  }).join('');
+}
+
+// Carica voci dal server
+async function loadDittaVoci(dittaId) {
+  if (!dittaId) return;
+  try {
+    const data = await api(`/api/ditte/${dittaId}/tariffario`);
+    // Imposta select tariffario
+    await loadTariffariSelectDitta(data.tariffario ? data.tariffario.id : null);
+    renderDittaVoci(data.voci);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Cambia tariffario associato → salva subito
+document.getElementById('dittaTariffarioSelect')?.addEventListener('change', async function () {
+  if (!currentDittaIdForTariff) return;
+  const tid = this.value || null;
+  try {
+    await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/associa`, 'PUT', { tariffario_id: tid });
+    toast('Tariffario associato', 'success');
+  } catch (e) {
+    toast('Errore associazione: ' + e.message, 'error');
+  }
+});
+
+// Sincronizza voci dal tariffario standard
+document.getElementById('btnSyncTariffario')?.addEventListener('click', async function () {
+  if (!currentDittaIdForTariff) return;
+  const tid = document.getElementById('dittaTariffarioSelect').value;
+  if (!tid) { toast('Seleziona prima un tariffario', 'error'); return; }
+  const btn = this;
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Sincronizzazione...';
+  const res_el = document.getElementById('syncResult');
+  try {
+    // Prima associa (nel caso non fosse già stato salvato)
+    await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/associa`, 'PUT', { tariffario_id: parseInt(tid) });
+    // Poi sincronizza
+    const r = await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/sync`, 'POST');
+    res_el.textContent = `✓ Sincronizzato: ${r.aggiunte} voci aggiunte, ${r.aggiornate} aggiornate`;
+    res_el.style.display = 'block';
+    setTimeout(() => res_el.style.display = 'none', 4000);
+    await loadDittaVoci(currentDittaIdForTariff);
+    toast('Voci sincronizzate', 'success');
+  } catch (e) {
+    toast('Errore sincronizzazione: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+});
+
+// Apri modale voce custom (nuova)
+document.getElementById('btnAddVoceCustom')?.addEventListener('click', () => {
+  document.getElementById('voceCustomEditId').value = '';
+  document.getElementById('modalVoceCustomTitolo').textContent = 'Nuova Voce Custom';
+  document.getElementById('vcNome').value = '';
+  document.getElementById('vcPrezzo').value = '';
+  document.getElementById('vcUnita').value = '';
+  document.getElementById('vcGruppo').value = '';
+  document.getElementById('vcTipo').value = 'fisso_mensile';
+  document.getElementById('vcNote').value = '';
+  document.getElementById('errVoceCustom').style.display = 'none';
+  openModal('modalVoceCustom');
+  setTimeout(() => document.getElementById('vcNome').focus(), 120);
+});
+
+// Apri modale voce custom (modifica)
+function openEditVoceCustom(id, v) {
+  document.getElementById('voceCustomEditId').value = id;
+  document.getElementById('modalVoceCustomTitolo').textContent = 'Modifica Voce';
+  document.getElementById('vcNome').value = v.nome || '';
+  document.getElementById('vcPrezzo').value = v.prezzo || '';
+  document.getElementById('vcUnita').value = v.unita || '';
+  document.getElementById('vcGruppo').value = v.macrogruppo_nome || '';
+  document.getElementById('vcTipo').value = v.tipo || 'fisso_mensile';
+  document.getElementById('vcNote').value = v.note || '';
+  document.getElementById('errVoceCustom').style.display = 'none';
+  openModal('modalVoceCustom');
+  setTimeout(() => document.getElementById('vcNome').focus(), 120);
+}
+
+// Salva voce custom (nuova o modifica)
+document.getElementById('btnSalvaVoceCustom')?.addEventListener('click', async function () {
+  const errEl = document.getElementById('errVoceCustom');
+  errEl.style.display = 'none';
+  const nome = document.getElementById('vcNome').value.trim();
+  if (!nome) {
+    errEl.textContent = 'Il nome della voce è obbligatorio.';
+    errEl.style.display = 'block';
+    document.getElementById('vcNome').focus();
+    return;
+  }
+  const payload = {
+    nome,
+    prezzo: parseFloat(document.getElementById('vcPrezzo').value) || 0,
+    unita: document.getElementById('vcUnita').value.trim(),
+    macrogruppo_nome: document.getElementById('vcGruppo').value.trim() || 'Extra',
+    tipo: document.getElementById('vcTipo').value,
+    note: document.getElementById('vcNote').value.trim(),
+  };
+  const editId = document.getElementById('voceCustomEditId').value;
+  const btn = this;
+  btn.disabled = true;
+  try {
+    if (editId) {
+      await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/voce/${editId}`, 'PUT', payload);
+      toast('Voce aggiornata', 'success');
+    } else {
+      await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/voce`, 'POST', payload);
+      toast('Voce aggiunta', 'success');
+    }
+    closeModal('modalVoceCustom');
+    await loadDittaVoci(currentDittaIdForTariff);
+  } catch (e) {
+    errEl.textContent = e.message || 'Errore nel salvataggio.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// Elimina voce ditta
+async function deleteVoceDitta(vid) {
+  if (!confirm('Eliminare questa voce?')) return;
+  try {
+    await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/voce/${vid}`, 'DELETE');
+    toast('Voce eliminata', 'success');
+    await loadDittaVoci(currentDittaIdForTariff);
+  } catch (e) {
+    toast('Errore: ' + e.message, 'error');
+  }
+}
+
+// Enter su vcNome → focus su prezzo
+document.getElementById('vcNome')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('vcPrezzo').focus();
+});
+
+function openCambiaPassword() {
+  openModal('modalCambiaPassword');
+}
 
 /* INIT */
 checkAuth();
