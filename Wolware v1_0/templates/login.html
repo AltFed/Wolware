@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="it" data-theme="light">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,46 +10,111 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/style.css">
   <style>
-    body { display:flex; align-items:center; justify-content:center; min-height:100dvh; }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+    }
+
     .login-box {
-      width:100%; max-width:360px; padding:var(--space-8);
-      background:var(--color-surface); border:1px solid var(--color-border);
-      border-radius:var(--radius-xl); box-shadow:var(--shadow-lg);
+      width: 100%;
+      max-width: 360px;
+      padding: var(--space-8);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
     }
-    .login-logo { display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-6); }
-    .login-title { font-size:var(--text-xl); font-weight:700; }
-    .login-sub { font-size:var(--text-sm); color:var(--color-text-muted); margin-top:var(--space-1); }
-    .login-field { display:flex; flex-direction:column; gap:var(--space-2); margin-bottom:var(--space-4); }
-    .login-field label { font-size:var(--text-sm); color:var(--color-text-muted); font-weight:500; }
+
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-6);
+    }
+
+    .login-title {
+      font-size: var(--text-xl);
+      font-weight: 700;
+    }
+
+    .login-sub {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      margin-top: var(--space-1);
+    }
+
+    .login-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+    }
+
+    .login-field label {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      font-weight: 500;
+    }
+
     .login-field input {
-      padding:var(--space-3); border:1px solid var(--color-border);
-      border-radius:var(--radius-md); background:var(--color-bg);
-      font-size:var(--text-base); color:var(--color-text);
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-bg);
+      font-size: var(--text-base);
+      color: var(--color-text);
     }
-    .login-field input:focus { outline:2px solid var(--color-primary); outline-offset:2px; border-color:transparent; }
+
+    .login-field input:focus {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      border-color: transparent;
+    }
+
     .btn-login {
-      width:100%; padding:var(--space-3); background:var(--color-primary);
-      color:#fff; border-radius:var(--radius-md); font-weight:600;
-      font-size:var(--text-sm); cursor:pointer; border:none; margin-top:var(--space-2);
-      transition:background var(--transition-interactive);
+      width: 100%;
+      padding: var(--space-3);
+      background: var(--color-primary);
+      color: #fff;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: var(--text-sm);
+      cursor: pointer;
+      border: none;
+      margin-top: var(--space-2);
+      transition: background var(--transition-interactive);
     }
-    .btn-login:hover { background:var(--color-primary-hover); }
-    .btn-login:disabled { opacity:0.6; cursor:not-allowed; }
+
+    .btn-login:hover {
+      background: var(--color-primary-hover);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     .login-error {
-      color:var(--color-error); font-size:var(--text-sm);
-      margin-top:var(--space-3); display:none;
-      padding:var(--space-2) var(--space-3);
-      background:var(--color-error-highlight);
-      border-radius:var(--radius-md);
+      color: var(--color-error);
+      font-size: var(--text-sm);
+      margin-top: var(--space-3);
+      display: none;
+      padding: var(--space-2) var(--space-3);
+      background: var(--color-error-highlight);
+      border-radius: var(--radius-md);
     }
   </style>
 </head>
+
 <body>
   <div class="login-box">
     <div class="login-logo">
       <svg width="32" height="32" viewBox="0 0 28 28" fill="none" aria-label="Wolware Logo">
-        <rect width="28" height="28" rx="7" fill="var(--color-primary)"/>
-        <path d="M6 10l4 8 4-6 4 6 4-8" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect width="28" height="28" rx="7" fill="var(--color-primary)" />
+        <path d="M6 10l4 8 4-6 4 6 4-8" stroke="white" stroke-width="2.2" stroke-linecap="round"
+          stroke-linejoin="round" />
       </svg>
       <div>
         <div class="login-title">Wolware</div>
@@ -84,8 +150,8 @@
       try {
         const res = await fetch('/login', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({username, password})
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
         });
         const data = await res.json();
         if (res.ok) {
@@ -96,7 +162,7 @@
           btn.disabled = false;
           btn.textContent = 'Accedi';
         }
-      } catch(e) {
+      } catch (e) {
         errEl.textContent = 'Errore di connessione al server.';
         errEl.style.display = 'block';
         btn.disabled = false;
@@ -109,4 +175,5 @@
     });
   </script>
 </body>
+
 </html>

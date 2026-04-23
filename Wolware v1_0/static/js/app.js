@@ -787,34 +787,210 @@ async function loadUsers() {
       <td><span class="badge ${u.role === 'admin' ? 'badge-blue' : 'badge-gray'}">${u.role}</span></td>
       <td style="color:var(--color-text-muted)">${u.created_at ? u.created_at.split(' ')[0] : '—'}</td>
       <td><div class="row-actions">
-        ${u.username !== 'admin' ? `<button class="btn btn-icon btn-ghost" title="Elimina"
-          onclick="deleteUser(${u.id}, '${u.username}')" style="color:var(--color-error)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-        </button>` : '<span style="color:var(--color-text-faint);font-size:var(--text-xs)">protetto</span>'}
+        ${u.username !== 'admin' ? `
+          <button class="btn btn-icon btn-ghost" title="Reset Password"
+            onclick="openResetPassword(${u.id}, '${u.username}')"
+            style="color:var(--color-gold)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </button>
+          <button class="btn btn-icon btn-ghost" title="Elimina"
+            onclick="deleteUser(${u.id}, '${u.username}')"
+            style="color:var(--color-error)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            </svg>
+          </button>
+        ` : '<span style="color:var(--color-text-faint);font-size:var(--text-xs)">protetto</span>'}
       </div></td>
     </tr>`).join('');
   } catch(e) { toast('Errore nel caricamento utenti', 'error'); }
 }
 
-async function deleteUser(id, username) {
-  if (!confirm(`Eliminare l'utente "${username}"?`)) return;
-  try {
-    await api(`/api/users/${id}`, 'DELETE');
-    toast(`Utente ${username} eliminato`, 'success');
-    loadUsers();
-  } catch(e) { toast(e.message, 'error'); }
+// ── CAMBIA PASSWORD ───────────────────────────────────────────────────────────
+function openCambiaPassword() {
+  ['cpVecchia','cpNuova','cpConferma'].forEach(id =>
+    document.getElementById(id).value = '');
+  document.getElementById('formCambiaPasswordError').style.display = 'none';
+  document.getElementById('formCambiaPasswordSuccess').style.display = 'none';
+  openModal('modalCambiaPassword');
+  setTimeout(() => document.getElementById('cpVecchia').focus(), 120);
 }
 
-function openNuovoUtente() {
-  const username = prompt('Username:');
-  if (!username) return;
-  const password = prompt('Password:');
-  if (!password) return;
-  const role = confirm('Ruolo ADMIN?\n(OK = admin, Annulla = user)') ? 'admin' : 'user';
-  api('/api/users', 'POST', { username, password, role })
-    .then(() => { toast('Utente creato', 'success'); loadUsers(); })
-    .catch(e => toast(e.message, 'error'));
+document.getElementById('btnSalvaNuovaPassword').addEventListener('click', async () => {
+  const vecchia  = document.getElementById('cpVecchia').value;
+  const nuova    = document.getElementById('cpNuova').value;
+  const conferma = document.getElementById('cpConferma').value;
+  const errBox   = document.getElementById('formCambiaPasswordError');
+  const okBox    = document.getElementById('formCambiaPasswordSuccess');
+  const btn      = document.getElementById('btnSalvaNuovaPassword');
+
+  errBox.style.display = 'none';
+  okBox.style.display  = 'none';
+
+  // Validazione frontend
+  if (!vecchia || !nuova || !conferma) {
+    errBox.textContent = 'Tutti i campi sono obbligatori.';
+    errBox.style.display = 'block'; return;
+  }
+  if (nuova.length < 6) {
+    errBox.textContent = 'La nuova password deve essere di almeno 6 caratteri.';
+    errBox.style.display = 'block';
+    document.getElementById('cpNuova').focus(); return;
+  }
+  if (nuova !== conferma) {
+    errBox.textContent = 'La nuova password e la conferma non coincidono.';
+    errBox.style.display = 'block';
+    document.getElementById('cpConferma').focus(); return;
+  }
+
+  const originalHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Aggiornamento…';
+
+  try {
+    await api('/api/users/me/password', 'PUT', {
+      vecchia_password:  vecchia,
+      nuova_password:    nuova,
+      conferma_password: conferma
+    });
+    // Mostra il messaggio di successo e chiudi dopo 1.5s
+    okBox.style.display = 'block';
+    ['cpVecchia','cpNuova','cpConferma'].forEach(id =>
+      document.getElementById(id).value = '');
+    setTimeout(() => closeModal('modalCambiaPassword'), 1500);
+    toast('Password aggiornata con successo', 'success');
+  } catch(e) {
+    errBox.textContent = e.message || 'Errore. Riprova.';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+  }
+});
+
+// Invio con Enter dall'ultimo campo
+document.getElementById('cpConferma').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnSalvaNuovaPassword').click();
+});
+
+let _deleteUserId = null; // id temporaneo in attesa di conferma
+
+function deleteUser(id, username) {
+  _deleteUserId = id;
+  // Mostra il nome dell'utente nella modale
+  document.getElementById('eliminaUtenteNome').textContent = username || `#${id}`;
+  openModal('modalEliminaUtente');
 }
+
+document.getElementById('btnConfermaEliminaUtente').addEventListener('click', async () => {
+  if (!_deleteUserId) return;
+  const btn = document.getElementById('btnConfermaEliminaUtente');
+  btn.disabled = true;
+  btn.textContent = 'Eliminazione…';
+
+  try {
+    await api(`/api/users/${_deleteUserId}`, 'DELETE');
+    closeModal('modalEliminaUtente');
+    toast('Utente eliminato con successo', 'success');
+    loadUsers();
+  } catch(e) {
+    toast(e.message || 'Errore durante l\'eliminazione', 'error');
+    closeModal('modalEliminaUtente');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.5">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+      </svg>
+      Elimina definitivamente`;
+    _deleteUserId = null;
+  }
+});
+
+function openNuovoUtente() {
+  document.getElementById('nuovoUtenteUsername').value = '';
+  document.getElementById('nuovoUtentePassword').value = '';
+  document.getElementById('nuovoUtenteRuolo').value = 'user';
+  const errBox = document.getElementById('formNuovoUtenteError');
+  errBox.style.display = 'none';
+  errBox.textContent = '';
+  // Ripristina password nascosta
+  document.getElementById('nuovoUtentePassword').type = 'password';
+  document.getElementById('iconEyeOpen').style.display = '';
+  document.getElementById('iconEyeClosed').style.display = 'none';
+  openModal('modalNuovoUtente');
+  setTimeout(() => document.getElementById('nuovoUtenteUsername').focus(), 120);
+}
+
+// Toggle mostra/nascondi password
+document.getElementById('btnTogglePassword').addEventListener('click', () => {
+  const input = document.getElementById('nuovoUtentePassword');
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  document.getElementById('iconEyeOpen').style.display  = isHidden ? 'none' : '';
+  document.getElementById('iconEyeClosed').style.display = isHidden ? '' : 'none';
+});
+
+// Invio con Enter
+document.getElementById('nuovoUtentePassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnSalvaNuovoUtente').click();
+});
+
+// Salva nuovo utente
+document.getElementById('btnSalvaNuovoUtente').addEventListener('click', async () => {
+  const username = document.getElementById('nuovoUtenteUsername').value.trim();
+  const password = document.getElementById('nuovoUtentePassword').value;
+  const role     = document.getElementById('nuovoUtenteRuolo').value;
+  const errBox   = document.getElementById('formNuovoUtenteError');
+  const btn      = document.getElementById('btnSalvaNuovoUtente');
+
+  errBox.style.display = 'none';
+  if (!username) {
+    errBox.textContent = 'Il campo Username è obbligatorio.';
+    errBox.style.display = 'block';
+    document.getElementById('nuovoUtenteUsername').focus();
+    return;
+  }
+  if (password.length < 6) {
+    errBox.textContent = 'La password deve essere di almeno 6 caratteri.';
+    errBox.style.display = 'block';
+    document.getElementById('nuovoUtentePassword').focus();
+    return;
+  }
+
+  btn.disabled = true;
+  const originalHTML = btn.innerHTML;
+  btn.textContent = 'Creazione…';
+
+  try {
+    const res = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, role })
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      errBox.textContent = json.error || 'Errore durante la creazione.';
+      errBox.style.display = 'block';
+      return;
+    }
+    closeModal('modalNuovoUtente');
+    toast(`Utente "${json.username}" creato con successo`, 'success');
+    loadUsers();
+  } catch(e) {
+    errBox.textContent = 'Errore di rete. Riprova.';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+  }
+});
 
 /* Carica utenti quando si apre il tab admin */
 const _origSwitchTab = switchTab;
@@ -822,6 +998,72 @@ window.switchTab = function(tabName) {
   _origSwitchTab(tabName);
   if (tabName === 'admin') loadUsers();
 };
+
+// ── RESET PASSWORD (admin) ────────────────────────────────────────────────────
+
+let _resetUserId = null;
+
+function openResetPassword(id, username) {
+  _resetUserId = id;
+  document.getElementById('resetPasswordNome').textContent = username || `#${id}`;
+  document.getElementById('resetNuovaPassword').value = '';
+  document.getElementById('resetNuovaPassword').type = 'password';
+  document.getElementById('resetEyeOpen').style.display  = '';
+  document.getElementById('resetEyeClosed').style.display = 'none';
+  const errBox = document.getElementById('formResetPasswordError');
+  errBox.style.display = 'none';
+  errBox.textContent = '';
+  openModal('modalResetPassword');
+  setTimeout(() => document.getElementById('resetNuovaPassword').focus(), 120);
+}
+
+// Toggle mostra/nascondi
+document.getElementById('btnToggleResetPassword').addEventListener('click', () => {
+  const input = document.getElementById('resetNuovaPassword');
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  document.getElementById('resetEyeOpen').style.display  = isHidden ? 'none' : '';
+  document.getElementById('resetEyeClosed').style.display = isHidden ? '' : 'none';
+});
+
+// Invio con Enter
+document.getElementById('resetNuovaPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnConfermaResetPassword').click();
+});
+
+// Conferma reset
+document.getElementById('btnConfermaResetPassword').addEventListener('click', async () => {
+  if (!_resetUserId) return;
+  const password = document.getElementById('resetNuovaPassword').value;
+  const errBox   = document.getElementById('formResetPasswordError');
+  const btn      = document.getElementById('btnConfermaResetPassword');
+
+  errBox.style.display = 'none';
+
+  if (password.length < 6) {
+    errBox.textContent = 'La password deve essere di almeno 6 caratteri.';
+    errBox.style.display = 'block';
+    document.getElementById('resetNuovaPassword').focus();
+    return;
+  }
+
+  const originalHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Aggiornamento…';
+
+  try {
+    await api(`/api/users/${_resetUserId}/password`, 'PUT', { password });
+    closeModal('modalResetPassword');
+    toast(`Password di "${document.getElementById('resetPasswordNome').textContent}" aggiornata`, 'success');
+  } catch(e) {
+    errBox.textContent = e.message || 'Errore. Riprova.';
+    errBox.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+    _resetUserId = null;
+  }
+});
 
 /* ══════════════════════════════════════════════════════════
    REAL-TIME SSE
