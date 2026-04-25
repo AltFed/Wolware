@@ -228,6 +228,34 @@ function filterDitte() {
   renderDitte(f);
 }
 
+async function deleteDitta(id) {
+  const ditta = allDitte.find(d => d.id === id);
+  const nome = ditta?.ragione_sociale || 'questa ditta';
+  if (!confirm(`Eliminare "${nome}"?\n\nL'operazione non può essere annullata.`)) return;
+  try {
+    await api(`/api/ditte/${id}`, 'DELETE');
+    toast('Ditta eliminata', 'success');
+    loadDitte();
+    loadStats();
+  } catch(e) {
+    toast('Errore eliminazione: ' + e.message, 'error');
+  }
+}
+
+async function deleteDitta(id) {
+  const ditta = allDitte.find(d => d.id === id);
+  const nome = ditta?.ragione_sociale || 'questa ditta';
+  if (!confirm(`Eliminare "${nome}"?\n\nL'operazione non può essere annullata.`)) return;
+  try {
+    await api(`/api/ditte/${id}`, 'DELETE');
+    toast('Ditta eliminata', 'success');
+    loadDitte();
+    loadStats();
+  } catch(e) {
+    toast('Errore nell\'eliminazione: ' + e.message, 'error');
+  }
+}
+
 
 /* ══════════════════════════════════════════════════════════
    MODAL DITTA — TABS
