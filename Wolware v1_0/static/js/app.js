@@ -192,14 +192,14 @@ function renderDitte(list) {
   }
   grid.innerHTML = list.map(d => {
     const ini = d.ragione_sociale.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    return `<div class="ditta-card">
+    return `<div class="ditta-card" onclick="editDitta(${d.id})" style="cursor:pointer">
       <div class="ditta-card-header">
         <div style="display:flex;gap:var(--space-3);align-items:center">
           <div class="ditta-avatar">${ini}</div>
           <div><div class="ditta-name">${d.ragione_sociale}</div>
           <div class="ditta-forma">${d.forma_giuridica || ''} ${d.settore_ateco ? '· ' + d.settore_ateco : ''}</div></div>
         </div>
-        <div class="ditta-card-actions">
+        <div class="ditta-card-actions" onclick="event.stopPropagation()">
           <button class="btn btn-icon btn-ghost" title="Modifica" onclick="editDitta(${d.id})">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
