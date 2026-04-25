@@ -1179,7 +1179,9 @@ function renderTariffariList() {
       </div>`;
     return;
   }
-  container.innerHTML = tariffariGlobali.map(t => `
+  container.innerHTML = tariffariGlobali.map(t => {
+    const totVoci = t.voci_count || 0;
+    return `
     <div onclick="selectTariffario(${t.id})"
          style="padding:var(--space-3);border-radius:var(--radius-md);cursor:pointer;
                 margin-bottom:var(--space-1);
@@ -1190,8 +1192,10 @@ function renderTariffariList() {
                   color:${t.id===activeTariffarioId?'var(--color-primary)':'var(--color-text)'}">
         ${t.nome}
       </div>
-      ${t.note?`<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:2px">${t.note}</div>`:''}
-    </div>`).join('');
+      <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:2px">
+        ${totVoci} voce${totVoci !== 1 ? 'i' : ''} configurate
+      </div>
+    </div>`; }).join('');
 }
 
 // ── Seleziona un tariffario ───────────────────────────────────
@@ -1202,6 +1206,8 @@ async function selectTariffario(id) {
   const t = tariffariGlobali.find(x => x.id === id);
   document.getElementById('tariffarioNomeHeader').textContent = t.nome;
   document.getElementById('tariffarioNoteHeader').textContent = t.note || '';
+  document.getElementById('tariffarioRenameInline').style.display = 'none';
+  document.getElementById('tariffarioNomeHeader').style.display = '';
   document.getElementById('tariffarioPlaceholder').style.display = 'none';
   const content = document.getElementById('tariffarioContent');
   content.style.display = 'flex';
@@ -1735,10 +1741,53 @@ document.getElementById('btnDeleteTariffario').addEventListener('click', async (
 
 const _origSwitchTabTariffari = switchTab;
 window.switchTab = function (tabName) {
+  if (voceInEditing && tabName !== 'tariffari') {
+    const ok = confirm(
+      'Ci sono modifiche non confermate su una voce.\n' +
+      'Vuoi abbandonare le modifiche e cambiare sezione?'
+    );
+    if (!ok) return;
+    voceInEditing = null;
+  }
   _origSwitchTabTariffari(tabName);
   if (tabName === 'tariffari') loadTariffari();
 };
 
+
+// ── Rinomina tariffario inline ────────────────────────────────
+function avviaRinominaTariffario() {
+  const t = tariffariGlobali.find(x => x.id === activeTariffarioId);
+  if (!t) return;
+  document.getElementById('tariffarioNomeHeader').style.display = 'none';
+  const inp = document.getElementById('tariffarioRenameInline');
+  inp.value = t.nome;
+  inp.style.display = 'inline-block';
+  inp.focus();
+  inp.select();
+}
+
+async function salvaRinominaTariffario() {
+  const nome = document.getElementById('tariffarioRenameInline').value.trim();
+  if (!nome) { toast('Il nome non può essere vuoto.', 'error'); return; }
+  const t = tariffariGlobali.find(x => x.id === activeTariffarioId);
+  if (nome === t.nome) { annullaRinominaTariffario(); return; }
+  try {
+    await api(`/api/tariffari/${activeTariffarioId}`, 'PUT', { nome, note: t.note || '' });
+    toast('Tariffario rinominato', 'success');
+    await loadTariffari();
+    document.getElementById('tariffarioNomeHeader').textContent = nome;
+  } catch(e) {
+    toast('Errore nel rinominare: '+(e.message||''), 'error');
+  } finally {
+    document.getElementById('tariffarioRenameInline').style.display = 'none';
+    document.getElementById('tariffarioNomeHeader').style.display = '';
+  }
+}
+
+function annullaRinominaTariffario() {
+  document.getElementById('tariffarioRenameInline').style.display = 'none';
+  document.getElementById('tariffarioNomeHeader').style.display = '';
+}
 // ═══════════════════════════════════════════════════════
 // TARIFFARIO DITTA (tab tariffario nella modale ditta)
 // ═══════════════════════════════════════════════════════

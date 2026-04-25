@@ -485,10 +485,26 @@
               <div id="tariffarioContent" style="display:none;flex:1;overflow-y:auto;flex-direction:column">
                 <div style="padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--color-border);
                             display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)">
-                  <div>
+                  <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap">
                     <h2 id="tariffarioNomeHeader" style="font-size:var(--text-lg);font-weight:600;margin:0"></h2>
+                    <input id="tariffarioRenameInline" type="text"
+                           style="display:none;font-size:var(--text-lg);font-weight:600;
+                                  padding:2px 8px;border:1px solid var(--color-primary);
+                                  border-radius:var(--radius-sm);background:var(--color-surface);
+                                  color:var(--color-text);min-width:180px"
+                           onkeydown="if(event.key==='Enter') salvaRinominaTariffario();
+                                      if(event.key==='Escape') annullaRinominaTariffario();"
+                           onblur="salvaRinominaTariffario()"/>
+                    <button onclick="avviaRinominaTariffario()"
+                            class="btn btn-icon btn-ghost" title="Rinomina tariffario"
+                            style="opacity:0.5" id="btnRinominaTariffario">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
                     <p id="tariffarioNoteHeader"
-                      style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:3px"></p>
+                      style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:3px;width:100%"></p>
                   </div>
                   <div style="display:flex;gap:var(--space-2)">
                     <button class="btn btn-secondary btn-sm" id="btnNuovoMacrogruppo">

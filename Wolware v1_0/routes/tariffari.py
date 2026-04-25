@@ -26,7 +26,16 @@ def list_tariffari():
     db = get_db()
     try:
         rows = db.execute('SELECT * FROM tariffari ORDER BY created_at DESC').fetchall()
-        return jsonify([dict(r) for r in rows])
+        result = []
+        for r in rows:
+            t = dict(r)
+            count = db.execute(
+                'SELECT COUNT(*) FROM voci_costo WHERE macrogruppo_id IN '
+                '(SELECT id FROM macrogruppi WHERE tariffario_id=?)', (t['id'],)
+            ).fetchone()[0]
+            t['voci_count'] = count
+            result.append(t)
+        return jsonify(result)
     finally:
         db.close()
 
