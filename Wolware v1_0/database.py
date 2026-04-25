@@ -1,1 +1,161 @@
-IyBkYXRhYmFzZS5weQppbXBvcnQgc3FsaXRlMwppbXBvcnQganNvbgpmcm9tIHdlcmtiZXVnLnNlY3VyaXR5IGltcG9ydCBnZW5lcmF0ZV9wYXNzd29yZF9oYXNoCmZyb20gY29uZmlnIGltcG9ydCBEQl9QQVRICgoKZGVmIGdldF9kYigpOgogICAgY29ubiA9IHNxbGl0ZTMuY29ubmVjdChEQl9QQVRIKQogICAgY29ubi5yb3dfZmFjdG9yeSA9IHNxbGl0ZTMuUm93CiAgICByZXR1cm4gY29ubgoKCmRlZiBpbml0X2RiKCk6CiAgICBjb25uID0gZ2V0X2RiKCkKICAgIGMgPSBjb25uLmN1cnNvcigpCgogICAgIyAtLS0gVGFiZWxsYSBkaXR0ZSAtLS0KICAgIGMuZXhlY3V0ZSgnJydDUkVBVEUgVEFCTEUgSUYgTk9UIEVYSVNUUyBkaXR0ZSAoCiAgICAgICAgaWQgSU5URUdFUiBQUklNQVJZIEtFWSBBVVRPSU5DUkVNRU5ULAogICAgICAgIHJhZ2lvbmVfc29jaWFsZSBURVhUIE5PVCBOVUxMLAogICAgICAgIHBhcnRpdGFfaXZhIFRFWFQgVU5JUVVFLAogICAgICAgIGNvZGljZV9maXNjYWxlIFRFWFQsCiAgICAgICAgZm9ybWFfZ2l1cmlkaWNhIFRFWFQsCiAgICAgICAgc2V0dG9yZV9hdGVjbyBURVhULAogICAgICAgIGNvZGljZV9hdGVjbyBURVhULAogICAgICAgIGluZGlyaXp6byBURVhULAogICAgICAgIGNpdHRhIFRFWFQsCiAgICAgICAgY2FwIFRFWFQsCiAgICAgICAgcHJvdmluY2lhIFRFWFQsCiAgICAgICAgY29kX2NhdGFzdGFsZSBURVhULAogICAgICAgIGFtbWluaXN0cmF0b3JlIFRFWFQsCiAgICAgICAgY2ZfYW1taW5pc3RyYXRvcmUgVEVYVCwKICAgICAgICB0ZWxfYW1taW5pc3RyYXRvcmUgVEVYVCwKICAgICAgICBlbWFpbF9hbW1pbmlzdHJhdG9yZSBURVhULAogICAgICAgIHRlbGVmb25vIFRFWFQsCiAgICAgICAgZW1haWwgVEVYVCwKICAgICAgICBwZWMgVEVYVCwKICAgICAgICByZWZlcmVudGUgVEVYVCwKICAgICAgICBjZWRvbGlub19vbm5pY29tcHJlbnNpdm8gSU5URUdFUiBERUZBVUxUIDAsCiAgICAgICAgc2VkaV9qc29uIFRFWFQsCiAgICAgICAgaW5haWxfanNvbiBURVhULAogICAgICAgIGlucHNfanNvbiBURVhULAogICAgICAgIGNjX2pzb24gVEVYVCwKICAgICAgICB0YXJpZmZfanNvbiBURVhULAogICAgICAgIGRhdGFfaW5pemlvX3JhcHBvcnRvIFRFWFQsCiAgICAgICAgbm90ZSBURVhULAogICAgICAgIGNyZWF0ZWRfYXQgVEVYVCBERUZBVUxUIChkYXRldGltZSgnbm93JykpCiAgICApJycnKQoKICAgICMgLS0tIE1pZ3JhemlvbmUgY29sb25uZSBkaXR0ZSAtLS0KICAgIGV4aXN0aW5nID0gW3Jvd1sxXSBmb3Igcm93IGluIGMuZXhlY3V0ZSgiUFJBR01BIHRhYmxlX2luZm8oZGl0dGUpIikuZmV0Y2hhbGwoKV0KICAgIGZvciBjb2wsIHR5cGVkZWYgaW4gWwogICAgICAgICgnY29kX2NhdGFzdGFsZScsICdURVhUJyksCiAgICAgICAgKCdhbW1pbmlzdHJhdG9yZScsICdURVhUJyksCiAgICAgICAgKCdjZl9hbW1pbmlzdHJhdG9yZScsICdURVhUJyksCiAgICAgICAgKCd0ZWxfYW1taW5pc3RyYXRvcmUnLCAnVEVYVCcpLAogICAgICAgICgnZW1haWxfYW1taW5pc3RyYXRvcmUnLCAnVEVYVCcpLAogICAgICAgICgnY2Vkb2xpbm9fb25uaWNvbXByZW5zaXZvJywgJ0lOVEVHRVIgREVGQVVMVCAwJyksCiAgICAgICAgKCdzZWRpX2pzb24nLCAnVEVYVCcpLAogICAgICAgICgnaW5haWxfanNvbicsICdURVhUJyksCiAgICAgICAgKCdpbnBzX2pzb24nLCAnVEVYVCcpLAogICAgICAgICgnY2NfanNvbicsICdURVhUJyksCiAgICAgICAgKCd0YXJpZmZfanNvbicsICdURVhUJyksCiAgICAgICAgKCd0YXJpZmZhcmlvX2lkJywgJ0lOVEVHRVInKSwKICAgIF06CiAgICAgICAgaWYgY29sIG5vdCBpbiBleGlzdGluZzoKICAgICAgICAgICAgYy5leGVjdXRlKGYnQUxURVIgVEFCTEUgZGl0dGUgQUREIENPTFVNTiB7Y29sfSB7dHlwZWRlZn0nKQoKICAgICMgLS0tIFRhYmVsbGEgcHJhdGljaGUgLS0tCiAgICBjLmV4ZWN1dGUoJycnQ1JFQVRFIFRBQkxFIElGIE5PVCBFWElTVFMgcHJhdGljaGUgKAogICAgICAgIGlkIElOVEVHRVIgUFJJTUFSWSBLRVkgQVVUT0lOQ1JFTUVOVCwKICAgICAgICBkaXR0YV9pZCBJTlRFR0VSLAogICAgICAgIHRpcG9fcHJhdGljYSBURVhUIE5PVCBOVUxMLAogICAgICAgIGRlc2NyaXppb25lIFRFWFQsCiAgICAgICAgc3RhdG8gVEVYVCBERUZBVUxUIFwnQXBlcnRhXCcsCiAgICAgICAgcHJpb3JpdGEgVEVYVCBERUZBVUxUIFwnTm9ybWFsZVwnLAogICAgICAgIGRhdGFfYXBlcnR1cmEgVEVYVCwKICAgICAgICBkYXRhX3NjYWRlbnphIFRFWFQsCiAgICAgICAgZGF0YV9jaGl1c3VyYSBURVhULAogICAgICAgIG5vdGUgVEVYVCwKICAgICAgICBjcmVhdGVkX2F0IFRFWFQgREVGQVVMVCAoZGF0ZXRpbWUoXCdub3dcJykpLAogICAgICAgIEZPUkVJR04gS0VZIChkaXR0YV9pZCkgUkVGRVJFTkNFUyBkaXR0ZShpZCkKICAgICknJycpCgogICAgIyAtLS0gVGFiZWxsYSB1c2VycyAtLS0KICAgIGMuZXhlY3V0ZSgnJydDUkVBVEUgVEFCTEUgSUYgTk9UIEVYSVNUUyB1c2VycyAoCiAgICAgICAgaWQgSU5URUdFUiBQUklNQVJZIEtFWSBBVVRPSU5DUkVNRU5ULAogICAgICAgIHVzZXJuYW1lIFRFWFQgVU5JUVVFIE5PVCBOVUxMLAogICAgICAgIHBhc3N3b3JkX2hhc2ggVEVYVCBOT1QgTlVMTCwKICAgICAgICByb2xlIFRFWFQgREVGQVVMVCBcJ3VzZXJcJywKICAgICAgICBjcmVhdGVkX2F0IFRFWFQgREVGQVVMVCAoZGF0ZXRpbWUoXCdub3dcJykpCiAgICApJycnKQoKICAgICMgLS0tIEFkbWluIGRpIGRlZmF1bHQgLS0tCiAgICBleGlzdHMgPSBjLmV4ZWN1dGUoIlNFTEVDVCBpZCBGUk9NIHVzZXJzIFdIRVJFIHVzZXJuYW1lPSdhZG1pbiciKS5mZXRjaG9uZSgpCiAgICBpZiBub3QgZXhpc3RzOgogICAgICAgIGMuZXhlY3V0ZSgKICAgICAgICAgICAgIklOU0VSVCBJTlRPIHVzZXJzICh1c2VybmFtZSwgcGFzc3dvcmRfaGFzaCwgcm9sZSkgVkFMVUVTICg/LD8sPykiLAogICAgICAgICAgICAoJ2FkbWluJywgZ2VuZXJhdGVfcGFzc3dvcmRfaGFzaCgnYWRtaW4xMjMnKSwgJ2FkbWluJykKICAgICAgICApCgogICAgIyAtLS0gVGFiZWxsYSB0YXJpZmZhcmkgZ2xvYmFsaSAtLS0KICAgIGMuZXhlY3V0ZSgnJydDUkVBVEUgVEFCTEUgSUYgTk9UIEVYSVNUUyB0YXJpZmZhcmkgKAogICAgICAgIGlkIElOVEVHRVIgUFJJTUFSWSBLRVkgQVVUT0lOQ1JFTUVOVCwKICAgICAgICBub21lIFRFWFQgTk9UIE5VTEwsCiAgICAgICAgbm90ZSBURVhULAogICAgICAgIGNyZWF0ZWRfYXQgVEVYVCBERUZBVUxUIChkYXRldGltZSgnbm93JykpCiAgICApJycnKQoKICAgICMgLS0tIFRhYmVsbGEgbWFjcm9ncnVwcGkgLS0tCiAgICBjLmV4ZWN1dGUoJycnQ1JFQVRFIFRBQkxFIElGIE5PVCBFWElTVFMgbWFjcm9ncnVwcGkgKAogICAgICAgIGlkIElOVEVHRVIgUFJJTUFSWSBLRVkgQVVUT0lOQ1JFTUVOVCwKICAgICAgICB0YXJpZmZhcmlvX2lkIElOVEVHRVIgTk9UIE5VTEwsCiAgICAgICAgbm9tZSBURVhUIE5PVCBOVUxMLAogICAgICAgIHRpcG8gVEVYVCBOT1QgTlVMTCBERUZBVUxUIFwnZmlzc29fbWVuc2lsZVwnLAogICAgICAgIG9yZGluZSBJTlRFR0VSIERFRkFVTFQgMCwKICAgICAgICBGT1JFSUdOIEtFWSAodGFyaWZmYXJpb19pZCkgUkVGRVJFTkNFUyB0YXJpZmZhcmkoaWQpCiAgICApJycnKQoKICAgICMgLS0tIFRhYmVsbGEgdm9jaSBkaSBjb3N0byAodGFyaWZmYXJpbyBzdGFuZGFyZCkgLS0tCiAgICAjIE5PVUE6IGkgY2FtcGkgZXNlbnRlX2l2YSwgcmljaGllZGVfYW5ub19wcmVjZWRlbnRlLCBtZXNpX2pzb24gc29ubyBudW92aQogICAgYy5leGVjdXRlKCcnJ0NSRUFURSBUQUJMRSBJRiBOT1QgRVhJU1RTIHZvY2lfY29zdG8gKAogICAgICAgIGlkIElOVEVHRVIgUFJJTUFSWSBLRVkgQVVUT0lOQ1JFTUVOVCwKICAgICAgICBtYWNyb2dydXBwb19pZCBJTlRFR0VSIE5PVCBOVUxMLAogICAgICAgIG5vbWUgVEVYVCBOT1QgTlVMTCwKICAgICAgICBwcmV6em8gUkVBTCBERUZBVUxUIDAuMCwKICAgICAgICBlc2VudGVfaXZhIElOVEVHRVIgREVGQVVMVCAwLAogICAgICAgIHJpY2hpZWRlX2Fubm9fcHJlY2VkZW50ZSBJTlRFR0VSIERFRkFVTFQgMCwKICAgICAgICBtZXNpX2pzb24gVEVYVCBERUZBVUxUIFwnW11cJywKICAgICAgICBub3RlIFRFWFQsCiAgICAgICAgb3JkaW5lIElOVEVHRVIgREVGQVVMVCAwLAogICAgICAgIEZPUkVJR04gS0VZIChtYWNyb2dydXBwb19pZCkgUkVGRVJFTkNFUyBtYWNyb2dydXBwaSgpCiAgICApJycnKQoKICAgICMgLS0tIE1pZ3JhemlvbmUgY29sb25uZSB2b2NpX2Nvc3RvIC0tLQogICAgZXhpc3RpbmdfdmMgPSBbcm93WzFdIGZvciByb3cgaW4gYy5leGVjdXRlKCJQUkFHTUEgdGFibGVfaW5mbyh2b2NpX2Nvc3RvKSIpLmZldGNoYWxsKCldCiAgICBmb3IgY29sLCB0eXBlZGVmIGluIFsKICAgICAgICAoJ2VzZW50ZV9pdmEnLCAnSU5URUdFUiBERUZBVUxUIDBcJyksCiAgICAgICAgKCdyaWNoaWVkZV9hbm5vX3ByZWNlZGVudGUnLCAnSU5URUdFUiBERUZBVUxUIDBcJyksCiAgICAgICAgKCdtZXNpX2pzb24nLCAnVEVYVCBERUZBVUxUIFwnW11cJycpLAogICAgXToKICAgICAgICBpZiBjb2wgbm90IGluIGV4aXN0aW5nX3ZjOgogICAgICAgICAgICBjLmV4ZWN1dGUoZidBTFRFUiBUQUJMRSB2b2NpX2Nvc3RvIEFERCBDT0xVTU4ge2NvbH0ge3R5cGVkZWZ9JykKCiAgICAjIC0tLSBUYWJlbGxhIHZvY2kgY3VzdG9tIHBlciBzaW5nb2xhIGRpdHRhIC0tLQogICAgYy5leGVjdXRlKCcnJ0NSRUFURSBUQUJMRSBJRiBOT1QgRVhJU1RTIGRpdHRhX3ZvY2kgKAogICAgICAgIGlkIElOVEVHRVIgUFJJTUFSWSBLRVkgQVVUT0lOQ1JFTUVOVCwKICAgICAgICBkaXR0YV9pZCBJTlRFR0VSIE5PVCBOVUxMLAogICAgICAgIHZvY2VfY29zdG9faWQgSU5URUdFUiwKICAgICAgICBub21lIFRFWFQgTk9UIE5VTEwsCiAgICAgICAgcHJlenpvIFJFQUwgREVGQVVMVCAwLjAsCiAgICAgICAgZXNlbnRlX2l2YSBJTlRFR0VSIERFRkFVTFQgMCwKICAgICAgICByaWNoaWVkZV9hbm5vX3ByZWNlZGVudGUgSU5URUdFUiBERUZBVUxUIDAsCiAgICAgICAgbWVzaV9qc29uIFRFWFQgREVGQVVMVCBcJ1tdXCcsCiAgICAgICAgdW5pdGEgVEVYVCwKICAgICAgICBub3RlIFRFWFQsCiAgICAgICAgbWFjcm9ncnVwcG9fbm9tZSBURVhULAogICAgICAgIHRpcG8gVEVYVCBERUZBVUxUIFwnZmlzc29fbWVuc2lsZVwnLAogICAgICAgIGN1c3RvbSBJTlRFR0VSIERFRkFVTFQgMCwKICAgICAgICBGT1JFSUdOIEtFWSAoZGl0dGFfaWQpIFJFRkVSRU5DRVMgZGl0dGUoaWQpLAogICAgICAgIEZPUkVJR04gS0VZICh2b2NlX2Nvc3RvX2lkKSBSRUZFUkVOQ0VTIHZvY2lfY29zdG8oaWQpCiAgICApJycnKQoKICAgICMgLS0tIE1pZ3JhemlvbmUgY29sb25uZSBkaXR0YV92b2NpIC0tLQogICAgZXhpc3RpbmdfZHYgPSBbcm93WzFdIGZvciByb3cgaW4gYy5leGVjdXRlKCJQUkFHTUEgdGFibGVfaW5mbyhkaXR0YV92b2NpKSIpLmZldGNoYWxsKCldCiAgICBmb3IgY29sLCB0eXBlZGVmIGluIFsKICAgICAgICAoJ2VzZW50ZV9pdmEnLCAnSU5URUdFUiBERUZBVUxUIDBcJyksCiAgICAgICAgKCdyaWNoaWVkZV9hbm5vX3ByZWNlZGVudGUnLCAnSU5URUdFUiBERUZBVUxUIDBcJyksCiAgICAgICAgKCdtZXNpX2pzb24nLCAnVEVYVCBERUZBVUxUIFwnW11cJycpLAogICAgXToKICAgICAgICBpZiBjb2wgbm90IGluIGV4aXN0aW5nX2R2OgogICAgICAgICAgICBjLmV4ZWN1dGUoZidBTFRFUiBUQUJMRSBkaXR0YV92b2NpIEFERCBDT0xVTU4ge2NvbH0ge3R5cGVkZWZ9JykKCiAgICBjb25uLmNvbW1pdCgpCiAgICBjb25uLmNsb3NlKCk=
+# database.py
+import sqlite3
+from werkzeug.security import generate_password_hash
+from config import DB_PATH
+
+
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    conn = get_db()
+    c = conn.cursor()
+
+    # --- Tabella ditte ---
+    c.execute('''CREATE TABLE IF NOT EXISTS ditte (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ragione_sociale TEXT NOT NULL,
+        partita_iva TEXT UNIQUE,
+        codice_fiscale TEXT,
+        forma_giuridica TEXT,
+        settore_ateco TEXT,
+        codice_ateco TEXT,
+        indirizzo TEXT,
+        citta TEXT,
+        cap TEXT,
+        provincia TEXT,
+        cod_catastale TEXT,
+        amministratore TEXT,
+        cf_amministratore TEXT,
+        tel_amministratore TEXT,
+        email_amministratore TEXT,
+        telefono TEXT,
+        email TEXT,
+        pec TEXT,
+        referente TEXT,
+        cedolino_onnicomprensivo INTEGER DEFAULT 0,
+        sedi_json TEXT,
+        inail_json TEXT,
+        inps_json TEXT,
+        cc_json TEXT,
+        tariff_json TEXT,
+        data_inizio_rapporto TEXT,
+        note TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+    )''')
+
+    # --- Migrazione colonne ditte ---
+    existing = [row[1] for row in c.execute("PRAGMA table_info(ditte)").fetchall()]
+    for col, typedef in [
+        ('cod_catastale', 'TEXT'),
+        ('amministratore', 'TEXT'),
+        ('cf_amministratore', 'TEXT'),
+        ('tel_amministratore', 'TEXT'),
+        ('email_amministratore', 'TEXT'),
+        ('cedolino_onnicomprensivo', 'INTEGER DEFAULT 0'),
+        ('sedi_json', 'TEXT'),
+        ('inail_json', 'TEXT'),
+        ('inps_json', 'TEXT'),
+        ('cc_json', 'TEXT'),
+        ('tariff_json', 'TEXT'),
+        ('tariffario_id', 'INTEGER'),
+    ]:
+        if col not in existing:
+            c.execute(f'ALTER TABLE ditte ADD COLUMN {col} {typedef}')
+
+    # --- Tabella pratiche ---
+    c.execute('''CREATE TABLE IF NOT EXISTS pratiche (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ditta_id INTEGER,
+        tipo_pratica TEXT NOT NULL,
+        descrizione TEXT,
+        stato TEXT DEFAULT 'Aperta',
+        priorita TEXT DEFAULT 'Normale',
+        data_apertura TEXT,
+        data_scadenza TEXT,
+        data_chiusura TEXT,
+        note TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (ditta_id) REFERENCES ditte(id)
+    )''')
+
+    # --- Tabella users ---
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT DEFAULT 'user',
+        created_at TEXT DEFAULT (datetime('now'))
+    )''')
+
+    # --- Admin di default ---
+    exists = c.execute("SELECT id FROM users WHERE username='admin'").fetchone()
+    if not exists:
+        c.execute(
+            "INSERT INTO users (username, password_hash, role) VALUES (?,?,?)",
+            ('admin', generate_password_hash('admin123'), 'admin')
+        )
+
+    # --- Tabella tariffari globali ---
+    c.execute('''CREATE TABLE IF NOT EXISTS tariffari (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        note TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+    )''')
+
+    # --- Tabella macrogruppi ---
+    c.execute('''CREATE TABLE IF NOT EXISTS macrogruppi (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tariffario_id INTEGER NOT NULL,
+        nome TEXT NOT NULL,
+        tipo TEXT NOT NULL DEFAULT 'fisso_mensile',
+        ordine INTEGER DEFAULT 0,
+        FOREIGN KEY (tariffario_id) REFERENCES tariffari(id)
+    )''')
+
+    # --- Tabella voci di costo (tariffario standard) ---
+    c.execute('''CREATE TABLE IF NOT EXISTS voci_costo (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        macrogruppo_id INTEGER NOT NULL,
+        nome TEXT NOT NULL,
+        prezzo REAL DEFAULT 0.0,
+        esente_iva INTEGER DEFAULT 0,
+        richiede_anno_precedente INTEGER DEFAULT 0,
+        mesi_json TEXT,
+        note TEXT,
+        ordine INTEGER DEFAULT 0,
+        FOREIGN KEY (macrogruppo_id) REFERENCES macrogruppi(id)
+    )''')
+
+    # --- Migrazione colonne voci_costo ---
+    existing_vc = [row[1] for row in c.execute("PRAGMA table_info(voci_costo)").fetchall()]
+    for col, typedef in [
+        ('esente_iva', 'INTEGER DEFAULT 0'),
+        ('richiede_anno_precedente', 'INTEGER DEFAULT 0'),
+        ('mesi_json', 'TEXT'),
+    ]:
+        if col not in existing_vc:
+            c.execute(f'ALTER TABLE voci_costo ADD COLUMN {col} {typedef}')
+
+    # --- Tabella voci custom per singola ditta ---
+    c.execute('''CREATE TABLE IF NOT EXISTS ditta_voci (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ditta_id INTEGER NOT NULL,
+        voce_costo_id INTEGER,
+        nome TEXT NOT NULL,
+        prezzo REAL DEFAULT 0.0,
+        unita TEXT,
+        note TEXT,
+        macrogruppo_nome TEXT,
+        tipo TEXT DEFAULT 'fisso_mensile',
+        custom INTEGER DEFAULT 0,
+        FOREIGN KEY (ditta_id) REFERENCES ditte(id),
+        FOREIGN KEY (voce_costo_id) REFERENCES voci_costo(id)
+    )''')
+
+    conn.commit()
+    conn.close()

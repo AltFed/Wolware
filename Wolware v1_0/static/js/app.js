@@ -1096,23 +1096,31 @@ document.getElementById('btnConfermaResetPassword').addEventListener('click', as
 //  TARIFFARI GLOBALI
 // ═══════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+//  TARIFFARI GLOBALI  (riscrittura conforme a Scheda 1)
+// ═══════════════════════════════════════════════════════════════
+
 let tariffariGlobali = [];
 let activeTariffarioId = null;
-let activeMacrogruppoId = null;
+let voceInEditing = null;   // { gid, vid } – voce attualmente in editing inline
 
 const TIPO_META = {
-  fisso_mensile: { label: 'Fisso Mensile', color: 'var(--color-blue)', bg: 'var(--color-blue-highlight)' },
-  fisso_annuale: { label: 'Fisso Annuale', color: 'var(--color-primary)', bg: 'var(--color-primary-highlight)' },
-  variabile_mensile: { label: 'Variabile Mensile', color: 'var(--color-orange)', bg: 'var(--color-orange-highlight)' },
-  variabile_annuale: { label: 'Variabile Annuale', color: 'var(--color-gold)', bg: 'var(--color-gold-highlight)' },
+  fisso_mensile:    { label: 'Costi Fissi Mensili',    color: 'var(--color-blue)',   bg: 'var(--color-blue-highlight)' },
+  fisso_annuale:    { label: 'Costi Fissi Annuali',    color: 'var(--color-primary)',bg: 'var(--color-primary-highlight)' },
+  variabile_mensile:{ label: 'Costi Variabili Mensili',color: 'var(--color-orange)', bg: 'var(--color-orange-highlight)' },
+  variabile_annuale:{ label: 'Costi Variabili Annuali',color: 'var(--color-gold)',   bg: 'var(--color-gold-highlight)' },
 };
+const MESI_LABELS = ['G','F','M','A','M','G','L','A','S','O','N','D'];
+const TIPI_ANNUALI = ['fisso_annuale','variabile_annuale'];
+
+function isAnnuale(tipo){ return TIPI_ANNUALI.includes(tipo); }
 
 // ── Carica lista tariffari ────────────────────────────────────
 async function loadTariffari() {
   try {
     tariffariGlobali = await api('/api/tariffari');
     renderTariffariList();
-  } catch (e) {
+  } catch(e) {
     toast('Errore nel caricamento tariffari', 'error');
   }
 }
@@ -1122,14 +1130,10 @@ function renderTariffariList() {
   if (!tariffariGlobali.length) {
     container.innerHTML = `
       <div class="empty-state" style="padding:var(--space-10) var(--space-4)">
-        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="1.5" opacity="0.25">
-          <line x1="8" y1="6" x2="21" y2="6"/>
-          <line x1="8" y1="12" x2="21" y2="12"/>
-          <line x1="8" y1="18" x2="21" y2="18"/>
-          <line x1="3" y1="6" x2="3.01" y2="6"/>
-          <line x1="3" y1="12" x2="3.01" y2="12"/>
-          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.25">
+          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
         </svg>
         <p>Nessun tariffario.<br>Clicca <strong>Nuovo Tariffario</strong>.</p>
       </div>`;
@@ -1139,21 +1143,21 @@ function renderTariffariList() {
     <div onclick="selectTariffario(${t.id})"
          style="padding:var(--space-3);border-radius:var(--radius-md);cursor:pointer;
                 margin-bottom:var(--space-1);
-                background:${t.id === activeTariffarioId ? 'var(--color-primary-highlight)' : 'transparent'};
-                border:1px solid ${t.id === activeTariffarioId ? 'var(--color-primary)' : 'transparent'};
+                background:${t.id===activeTariffarioId?'var(--color-primary-highlight)':'transparent'};
+                border:1px solid ${t.id===activeTariffarioId?'var(--color-primary)':'transparent'};
                 transition:background var(--transition-interactive),border-color var(--transition-interactive)">
-      <div style="font-size:var(--text-sm);font-weight:${t.id === activeTariffarioId ? '600' : '500'};
-                  color:${t.id === activeTariffarioId ? 'var(--color-primary)' : 'var(--color-text)'}">
+      <div style="font-size:var(--text-sm);font-weight:${t.id===activeTariffarioId?'600':'500'};
+                  color:${t.id===activeTariffarioId?'var(--color-primary)':'var(--color-text)'}">
         ${t.nome}
       </div>
-      ${t.note ? `<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:2px">${t.note}</div>` : ''}
-    </div>
-  `).join('');
+      ${t.note?`<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:2px">${t.note}</div>`:''}
+    </div>`).join('');
 }
 
 // ── Seleziona un tariffario ───────────────────────────────────
 async function selectTariffario(id) {
   activeTariffarioId = id;
+  voceInEditing = null;
   renderTariffariList();
   const t = tariffariGlobali.find(x => x.id === id);
   document.getElementById('tariffarioNomeHeader').textContent = t.nome;
@@ -1164,218 +1168,481 @@ async function selectTariffario(id) {
   await renderMacrogruppi(id);
 }
 
-// ── Render macrogruppi + voci ─────────────────────────────────
+// ── Render macrogruppi + voci (inline) ───────────────────────
 async function renderMacrogruppi(tariffarioId) {
   let gruppi = [];
   try {
     gruppi = await api(`/api/tariffari/${tariffarioId}/macrogruppi`);
-  } catch (e) {
+  } catch(e) {
     toast('Errore nel caricamento macrogruppi', 'error');
     return;
   }
-
   const container = document.getElementById('macrogruppiContainer');
-
   if (!gruppi.length) {
     container.innerHTML = `
       <div class="empty-state" style="padding:var(--space-10)">
-        <p style="font-size:var(--text-sm);color:var(--color-text-muted)">
-          Nessun macrogruppo ancora.<br>
-          Clicca <strong>Nuovo Macrogruppo</strong> per iniziare.
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+          <line x1="9" y1="21" x2="9" y2="9"/>
+        </svg>
+        <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-top:var(--space-3)">
+          Nessun macrogruppo.<br>Clicca <strong>+ Macrogruppo</strong> per iniziare.
         </p>
       </div>`;
     return;
   }
 
+  const frozen = voceInEditing !== null;
+
   container.innerHTML = gruppi.map(g => {
     const tipo = TIPO_META[g.tipo] || TIPO_META.fisso_mensile;
+    const annuale = isAnnuale(g.tipo);
+    const isGruppoFrozen = frozen && voceInEditing && voceInEditing.gid !== g.id;
+    const opacity = isGruppoFrozen ? '0.35' : '1';
+    const pointerEvents = isGruppoFrozen ? 'none' : 'auto';
 
-    const vociHtml = g.voci && g.voci.length
-      ? g.voci.map(v => `
-          <div style="display:flex;align-items:center;justify-content:space-between;
-                      padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);
-                      background:var(--color-bg);margin-bottom:var(--space-1)">
-            <div style="flex:1;min-width:0">
-              <span style="font-size:var(--text-sm);color:var(--color-text)">${v.nome}</span>
-              ${v.unita ? `<span style="font-size:var(--text-xs);color:var(--color-text-muted);
-                            margin-left:var(--space-2)">${v.unita}</span>` : ''}
-              ${v.note ? `<div style="font-size:var(--text-xs);color:var(--color-text-muted)">${v.note}</div>` : ''}
-            </div>
-            <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0">
-              <span style="font-size:var(--text-sm);font-weight:600;font-variant-numeric:tabular-nums;
-                           color:var(--color-text)">
-                ${v.prezzo > 0 ? '€ ' + Number(v.prezzo).toFixed(2) : '—'}
-              </span>
-              <button onclick="openEditVoce(${g.id}, ${JSON.stringify(v).replace(/"/g, '&quot;')})"
-                      class="btn btn-icon btn-ghost" title="Modifica voce">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-              </button>
-              <button onclick="deleteVoce(${v.id})"
-                      class="btn btn-icon btn-ghost" title="Elimina voce"
-                      style="color:var(--color-error)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                </svg>
-              </button>
-            </div>
-          </div>`)
-        .join('')
-      : `<div style="font-size:var(--text-xs);color:var(--color-text-muted);padding:var(--space-2) var(--space-1)">
-           Nessuna voce. Clicca <strong>+ Voce</strong> per aggiungerne una.
-         </div>`;
+    // ── Form aggiunta nuova voce (in testa al card body) ──────
+    const mesiInputHtml = annuale ? `
+      <div class="form-field col-span-2" style="margin-top:var(--space-1)">
+        <label style="font-size:var(--text-xs);color:var(--color-text-muted)">Mesi di applicazione</label>
+        <div id="mesi-add-${g.id}" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+          ${MESI_LABELS.map((m,i)=>`
+            <button type="button"
+              onclick="toggleMeseAdd(${g.id},${i+1},this)"
+              data-mese="${i+1}"
+              style="width:28px;height:28px;border-radius:var(--radius-sm);
+                     border:1px solid var(--color-border);font-size:11px;font-weight:600;
+                     background:var(--color-surface);color:var(--color-text-muted);cursor:pointer;
+                     transition:all var(--transition-interactive)">${m}</button>`).join('')}
+        </div>
+      </div>` : '';
 
-    return `
-      <div style="border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden">
-        <!-- Header macrogruppo -->
-        <div style="padding:var(--space-3) var(--space-4);background:var(--color-surface-offset);
-                    display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)">
-          <div style="display:flex;align-items:center;gap:var(--space-3)">
-            <span style="font-size:var(--text-xs);font-weight:600;padding:2px var(--space-2);
-                         border-radius:var(--radius-full);
-                         background:${tipo.bg};color:${tipo.color}">
-              ${tipo.label}
-            </span>
-            <span style="font-size:var(--text-sm);font-weight:600;color:var(--color-text)">${g.nome}</span>
+    const addFormDisabled = (frozen && voceInEditing && voceInEditing.gid === g.id) ? 'disabled style="opacity:.4;pointer-events:none"' : '';
+
+    const addFormHtml = `
+      <div id="addform-${g.id}" ${addFormDisabled}
+           style="padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--color-border);
+                  background:var(--color-surface-2)">
+        <div style="display:grid;grid-template-columns:1fr 120px;gap:var(--space-2);align-items:end">
+          <div>
+            <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">
+              Descrizione <span style="color:var(--color-error)">*</span>
+            </label>
+            <input id="add-nome-${g.id}" type="text" placeholder="es. Cedolino dipendente"
+                   style="width:100%;padding:6px 10px;border:1px solid var(--color-border);
+                          border-radius:var(--radius-sm);background:var(--color-surface);
+                          font-size:var(--text-sm);color:var(--color-text)"
+                   onkeydown="if(event.key==='Enter') aggiungiVoce(${g.id})"/>
           </div>
-          <div style="display:flex;align-items:center;gap:var(--space-2)">
-            <button class="btn btn-ghost btn-sm" onclick="openNuovaVoce(${g.id})"
-                    style="font-size:var(--text-xs)">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
+          <div>
+            <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">Prezzo (€)</label>
+            <input id="add-prezzo-${g.id}" type="number" step="0.01" placeholder="0.00"
+                   style="width:100%;padding:6px 10px;border:1px solid var(--color-border);
+                          border-radius:var(--radius-sm);background:var(--color-surface);
+                          font-size:var(--text-sm);color:var(--color-text)"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--space-4);margin-top:var(--space-2);align-items:center">
+          <label style="display:flex;align-items:center;gap:6px;font-size:var(--text-xs);cursor:pointer">
+            <input type="checkbox" id="add-esente-${g.id}" style="width:14px;height:14px"/>
+            Esente IVA
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:var(--text-xs);cursor:pointer">
+            <input type="checkbox" id="add-annop-${g.id}" style="width:14px;height:14px"/>
+            Anno Precedente
+          </label>
+          <button type="button" onclick="aggiungiVoce(${g.id})"
+                  style="margin-left:auto;padding:6px 14px;border-radius:var(--radius-sm);
+                         background:var(--color-primary);color:#fff;font-size:var(--text-xs);
+                         font-weight:600;border:none;cursor:pointer;
+                         transition:background var(--transition-interactive)"
+                  onmouseover="this.style.background='var(--color-primary-hover)'"
+                  onmouseout="this.style.background='var(--color-primary)'">
+            + Aggiungi
+          </button>
+        </div>
+        ${mesiInputHtml}
+      </div>`;
+
+    // ── Voci esistenti ────────────────────────────────────────
+    const vociHtml = g.voci && g.voci.length ? g.voci.map(v => {
+      const isEditing = voceInEditing && voceInEditing.vid === v.id;
+      const meseLabels = v.mesi && v.mesi.length
+        ? v.mesi.map(m => MESI_LABELS[m-1]).join(' ')
+        : null;
+
+      if (isEditing) {
+        // ── ROW IN EDITING ────────────────────────────────────
+        const mesiEditHtml = annuale ? `
+          <div style="margin-top:var(--space-2)">
+            <label style="font-size:var(--text-xs);color:var(--color-text-muted)">Mesi di applicazione</label>
+            <div id="mesi-edit-${v.id}" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+              ${MESI_LABELS.map((m,i)=>{
+                const sel = v.mesi && v.mesi.includes(i+1);
+                return `<button type="button"
+                  onclick="toggleMeseEdit(${v.id},${i+1},this)"
+                  data-mese="${i+1}" data-sel="${sel?1:0}"
+                  style="width:28px;height:28px;border-radius:var(--radius-sm);
+                         border:1px solid ${sel?'var(--color-primary)':'var(--color-border)'};
+                         font-size:11px;font-weight:600;cursor:pointer;
+                         background:${sel?'var(--color-primary-highlight)':'var(--color-surface)'};
+                         color:${sel?'var(--color-primary)':'var(--color-text-muted)'};">${m}</button>`;
+              }).join('')}
+            </div>
+          </div>` : '';
+
+        return `
+          <div id="voce-row-${v.id}"
+               style="padding:var(--space-3) var(--space-4);border-radius:var(--radius-sm);
+                      background:var(--color-primary-highlight);
+                      border:1px solid var(--color-primary);margin-bottom:var(--space-2)">
+            <div style="display:grid;grid-template-columns:1fr 120px;gap:var(--space-2);align-items:end">
+              <div>
+                <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">
+                  Descrizione <span style="color:var(--color-error)">*</span>
+                </label>
+                <input id="edit-nome-${v.id}" value="${(v.nome||'').replace(/"/g,'&quot;')}"
+                       style="width:100%;padding:6px 10px;border:1px solid var(--color-primary);
+                              border-radius:var(--radius-sm);background:var(--color-surface);
+                              font-size:var(--text-sm);color:var(--color-text)"
+                       onkeydown="if(event.key==='Enter') salvaVoceInline(${v.id})"/>
+              </div>
+              <div>
+                <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">Prezzo (€)</label>
+                <input id="edit-prezzo-${v.id}" type="number" step="0.01"
+                       value="${v.prezzo||''}"
+                       style="width:100%;padding:6px 10px;border:1px solid var(--color-primary);
+                              border-radius:var(--radius-sm);background:var(--color-surface);
+                              font-size:var(--text-sm);color:var(--color-text)"/>
+              </div>
+            </div>
+            <div style="display:flex;gap:var(--space-4);margin-top:var(--space-2);align-items:center;flex-wrap:wrap">
+              <label style="display:flex;align-items:center;gap:6px;font-size:var(--text-xs);cursor:pointer">
+                <input type="checkbox" id="edit-esente-${v.id}" ${v.esente_iva?'checked':''} style="width:14px;height:14px"/>
+                Esente IVA
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:var(--text-xs);cursor:pointer">
+                <input type="checkbox" id="edit-annop-${v.id}" ${v.richiede_anno_precedente?'checked':''} style="width:14px;height:14px"/>
+                Anno Precedente
+              </label>
+              <div style="margin-left:auto;display:flex;gap:var(--space-2)">
+                <button onclick="annullaVoceInline()"
+                        style="padding:5px 12px;border-radius:var(--radius-sm);font-size:var(--text-xs);
+                               font-weight:600;border:1px solid var(--color-border);
+                               background:var(--color-surface);cursor:pointer;color:var(--color-text)">
+                  ✖ Annulla
+                </button>
+                <button onclick="salvaVoceInline(${v.id})"
+                        style="padding:5px 12px;border-radius:var(--radius-sm);font-size:var(--text-xs);
+                               font-weight:600;border:none;background:var(--color-primary);
+                               color:#fff;cursor:pointer">
+                  💾 Salva
+                </button>
+              </div>
+            </div>
+            ${mesiEditHtml}
+          </div>`;
+      }
+
+      // ── ROW SOLA LETTURA ──────────────────────────────────
+      const flagsHtml = [
+        v.esente_iva ? '<span style="font-size:10px;padding:2px 6px;border-radius:var(--radius-full);background:var(--color-gold-highlight);color:var(--color-gold);font-weight:600">Esente IVA</span>' : '',
+        v.richiede_anno_precedente ? '<span style="font-size:10px;padding:2px 6px;border-radius:var(--radius-full);background:var(--color-blue-highlight);color:var(--color-blue);font-weight:600">Anno Prec.</span>' : '',
+        meseLabels ? `<span style="font-size:10px;padding:2px 6px;border-radius:var(--radius-full);background:var(--color-surface-offset);color:var(--color-text-muted);font-weight:600">${meseLabels}</span>` : '',
+      ].filter(Boolean).join('');
+
+      return `
+        <div id="voce-row-${v.id}"
+             style="display:flex;align-items:center;justify-content:space-between;
+                    padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);
+                    background:var(--color-bg);margin-bottom:var(--space-1);
+                    opacity:${frozen&&!isEditing?'0.4':'1'};
+                    pointer-events:${frozen&&!isEditing?'none':'auto'}">
+          <div style="flex:1;min-width:0">
+            <span style="font-size:var(--text-sm);color:var(--color-text)">${v.nome}</span>
+            ${flagsHtml ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${flagsHtml}</div>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0">
+            <span style="font-size:var(--text-sm);font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-text)">
+              ${v.prezzo > 0 ? '€ '+Number(v.prezzo).toFixed(2) : '—'}
+            </span>
+            <button onclick="avviaEditVoce(${g.id},${JSON.stringify(v).replace(/"/g,'&quot;')})"
+                    class="btn btn-icon btn-ghost" title="Modifica voce"
+                    ${frozen?'disabled style="opacity:.3;cursor:not-allowed"':''}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
-              Voce
             </button>
-            <button onclick="deleteMacrogruppo(${g.id})"
-                    class="btn btn-icon btn-ghost" title="Elimina macrogruppo"
-                    style="color:var(--color-error)">
+            <button onclick="eliminaVoce(${v.id})"
+                    class="btn btn-icon btn-ghost" title="Elimina voce"
+                    style="color:var(--color-error)"
+                    ${frozen?'disabled style="opacity:.3;cursor:not-allowed"':''}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
               </svg>
             </button>
           </div>
+        </div>`;
+    }).join('')
+    : `<div style="font-size:var(--text-xs);color:var(--color-text-muted);
+                   padding:var(--space-2) var(--space-1)">
+         Nessuna voce. Usa il form qui sopra per aggiungerne una.
+       </div>`;
+
+    return `
+      <div style="border:1px solid var(--color-border);border-radius:var(--radius-lg);
+                  overflow:hidden;opacity:${opacity};pointer-events:${pointerEvents};
+                  transition:opacity 200ms">
+        <!-- Header macrogruppo -->
+        <div style="padding:var(--space-3) var(--space-4);background:var(--color-surface-offset);
+                    display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)">
+          <div style="display:flex;align-items:center;gap:var(--space-3)">
+            <span style="font-size:var(--text-xs);font-weight:600;padding:2px var(--space-2);
+                         border-radius:var(--radius-full);background:${tipo.bg};color:${tipo.color}">
+              ${tipo.label}
+            </span>
+            <span style="font-size:var(--text-sm);font-weight:600;color:var(--color-text)">${g.nome}</span>
+          </div>
+          <button onclick="eliminaMacrogruppo(${g.id}, ${g.voci?g.voci.length:0})"
+                  class="btn btn-icon btn-ghost" title="Elimina macrogruppo"
+                  style="color:var(--color-error)"
+                  ${frozen?'disabled':''}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            </svg>
+          </button>
         </div>
-        <!-- Voci -->
+        <!-- Form aggiunta voce + lista voci -->
+        ${addFormHtml}
         <div style="padding:var(--space-3) var(--space-4)">${vociHtml}</div>
       </div>`;
   }).join('');
 }
 
-// ── Highlight radio button selezionato ───────────────────────
-function updateRadioUI() {
-  const map = {
-    'fisso_mensile': 'radioFissoMensile',
-    'fisso_annuale': 'radioFissoAnnuale',
-    'variabile_mensile': 'radioVariabileMensile',
-    'variabile_annuale': 'radioVariabileAnnuale',
-  };
-  document.querySelectorAll('input[name="tipoMacrogruppo"]').forEach(r => {
-    const label = document.getElementById(map[r.value]);
-    if (!label) return;
-    if (r.checked) {
-      label.style.borderColor = 'var(--color-primary)';
-      label.style.background = 'var(--color-primary-highlight)';
-    } else {
-      label.style.borderColor = 'var(--color-border)';
-      label.style.background = 'var(--color-surface)';
-    }
-  });
+// ── Mesi toggle (form aggiunta) ───────────────────────────────
+function toggleMeseAdd(gid, mese, btn) {
+  const sel = btn.getAttribute('data-sel') === '1';
+  btn.setAttribute('data-sel', sel ? '0' : '1');
+  if (!sel) {
+    btn.style.background = 'var(--color-primary-highlight)';
+    btn.style.borderColor = 'var(--color-primary)';
+    btn.style.color = 'var(--color-primary)';
+  } else {
+    btn.style.background = 'var(--color-surface)';
+    btn.style.borderColor = 'var(--color-border)';
+    btn.style.color = 'var(--color-text-muted)';
+  }
 }
 
-// Aggancia listener ai 4 radio
-['tipoFissoMensile', 'tipoFissoAnnuale', 'tipoVariabileMensile', 'tipoVariabileAnnuale']
-  .forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('change', updateRadioUI);
-  });
+// ── Mesi toggle (form editing) ────────────────────────────────
+function toggleMeseEdit(vid, mese, btn) {
+  const sel = btn.getAttribute('data-sel') === '1';
+  btn.setAttribute('data-sel', sel ? '0' : '1');
+  if (!sel) {
+    btn.style.background = 'var(--color-primary-highlight)';
+    btn.style.borderColor = 'var(--color-primary)';
+    btn.style.color = 'var(--color-primary)';
+  } else {
+    btn.style.background = 'var(--color-surface)';
+    btn.style.borderColor = 'var(--color-border)';
+    btn.style.color = 'var(--color-text-muted)';
+  }
+}
 
-// ── Apri modale nuovo tariffario ─────────────────────────────
+function getMesiSelezionati(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return null;
+  const btns = container.querySelectorAll('button[data-mese]');
+  const sel = [];
+  btns.forEach(b => { if (b.getAttribute('data-sel')==='1') sel.push(parseInt(b.getAttribute('data-mese'))); });
+  return sel.length ? sel : null;
+}
+
+// ── Aggiungi voce (form inline) ───────────────────────────────
+async function aggiungiVoce(gid) {
+  if (voceInEditing) {
+    toast('Salva o annulla la voce in modifica prima di continuare.', 'error');
+    return;
+  }
+  const nomeEl = document.getElementById(`add-nome-${gid}`);
+  const nome = nomeEl.value.trim();
+  if (!nome) { nomeEl.focus(); nomeEl.style.borderColor='var(--color-error)'; return; }
+  nomeEl.style.borderColor = '';
+  const prezzo = parseFloat(document.getElementById(`add-prezzo-${gid}`).value) || 0;
+  const esenteEl = document.getElementById(`add-esente-${gid}`);
+  const annopEl  = document.getElementById(`add-annop-${gid}`);
+  const mesi = getMesiSelezionati(`mesi-add-${gid}`);
+
+  // Trova il gruppo per sapere se annuale
+  try {
+    const gruppi = await api(`/api/tariffari/${activeTariffarioId}/macrogruppi`);
+    const g = gruppi.find(x => x.id === gid);
+    await api(`/api/macrogruppi/${gid}/voci`, 'POST', {
+      nome,
+      prezzo,
+      esente_iva: esenteEl ? esenteEl.checked : false,
+      richiede_anno_precedente: annopEl ? annopEl.checked : false,
+      mesi: isAnnuale(g ? g.tipo : '') ? mesi : null,
+    });
+    toast('Voce aggiunta', 'success');
+    await renderMacrogruppi(activeTariffarioId);
+  } catch(e) {
+    toast('Errore nell\'aggiunta voce: '+(e.message||''), 'error');
+  }
+}
+
+// ── Avvia editing inline voce ─────────────────────────────────
+function avviaEditVoce(gid, v) {
+  if (voceInEditing) {
+    toast('Salva o annulla la voce in modifica prima di procedere.', 'error');
+    return;
+  }
+  voceInEditing = { gid, vid: v.id };
+  renderMacrogruppi(activeTariffarioId);
+}
+
+// ── Salva voce in editing ─────────────────────────────────────
+async function salvaVoceInline(vid) {
+  const nome = (document.getElementById(`edit-nome-${vid}`)?.value || '').trim();
+  if (!nome) {
+    toast('La descrizione è obbligatoria.', 'error');
+    document.getElementById(`edit-nome-${vid}`)?.focus();
+    return;
+  }
+  const prezzo = parseFloat(document.getElementById(`edit-prezzo-${vid}`)?.value) || 0;
+  const esente = document.getElementById(`edit-esente-${vid}`)?.checked || false;
+  const annop  = document.getElementById(`edit-annop-${vid}`)?.checked  || false;
+  const mesi   = getMesiSelezionati(`mesi-edit-${vid}`);
+  const { gid } = voceInEditing;
+
+  try {
+    const gruppi = await api(`/api/tariffari/${activeTariffarioId}/macrogruppi`);
+    const g = gruppi.find(x => x.id === gid);
+    await api(`/api/voci/${vid}`, 'PUT', {
+      nome,
+      prezzo,
+      esente_iva: esente,
+      richiede_anno_precedente: annop,
+      mesi: isAnnuale(g ? g.tipo : '') ? mesi : null,
+    });
+    voceInEditing = null;
+    toast('Voce aggiornata', 'success');
+    await renderMacrogruppi(activeTariffarioId);
+  } catch(e) {
+    toast('Errore nel salvataggio: '+(e.message||''), 'error');
+  }
+}
+
+// ── Annulla editing ───────────────────────────────────────────
+function annullaVoceInline() {
+  voceInEditing = null;
+  renderMacrogruppi(activeTariffarioId);
+}
+
+// ── Elimina voce ──────────────────────────────────────────────
+async function eliminaVoce(vid) {
+  if (!confirm('Eliminare questa voce di costo?')) return;
+  try {
+    await api(`/api/voci/${vid}`, 'DELETE');
+    await renderMacrogruppi(activeTariffarioId);
+    toast('Voce eliminata', 'success');
+  } catch(e) {
+    toast('Errore nell\'eliminazione', 'error');
+  }
+}
+
+// ── Elimina macrogruppo ───────────────────────────────────────
+async function eliminaMacrogruppo(gid, numVoci) {
+  const msg = numVoci > 0
+    ? `Il macrogruppo contiene ${numVoci} voce/i. Eliminandolo verranno eliminate anche tutte le sue voci. Confermare?`
+    : 'Eliminare questo macrogruppo?';
+  if (!confirm(msg)) return;
+  try {
+    await api(`/api/macrogruppi/${gid}`, 'DELETE');
+    voceInEditing = null;
+    await renderMacrogruppi(activeTariffarioId);
+    toast('Macrogruppo eliminato', 'success');
+  } catch(e) {
+    toast('Errore nell\'eliminazione', 'error');
+  }
+}
+
+// ── Bottone Nuovo Tariffario ──────────────────────────────────
 document.getElementById('btnNuovoTariffario').addEventListener('click', () => {
   document.getElementById('inputNomeTariffario').value = '';
   document.getElementById('inputNoteTariffario').value = '';
-  document.getElementById('inputNomeMacrogruppoInline').value = '';
-  // reset radio → fisso_mensile di default
-  document.getElementById('tipoFissoMensile').checked = true;
-  updateRadioUI();
   document.getElementById('errNuovoTariffario').style.display = 'none';
   openModal('modalNuovoTariffario');
   setTimeout(() => document.getElementById('inputNomeTariffario').focus(), 120);
 });
 
-// ── Salva tariffario (+ eventuale primo macrogruppo) ──────────
+// ── Salva nuovo tariffario ────────────────────────────────────
 document.getElementById('btnSalvaNuovoTariffario').addEventListener('click', async () => {
   const nome = document.getElementById('inputNomeTariffario').value.trim();
-  const note = document.getElementById('inputNoteTariffario').value.trim();
-  const nomeGruppo = document.getElementById('inputNomeMacrogruppoInline').value.trim();
-  const tipoGruppo = document.querySelector('input[name="tipoMacrogruppo"]:checked')?.value || 'fisso_mensile';
   const errEl = document.getElementById('errNuovoTariffario');
   errEl.style.display = 'none';
-
   if (!nome) {
     errEl.textContent = 'Il nome del tariffario è obbligatorio.';
     errEl.style.display = 'block';
     document.getElementById('inputNomeTariffario').focus();
     return;
   }
-
   try {
-    // 1. Crea il tariffario
-    const tariffario = await api('/api/tariffari', 'POST', { nome, note });
-
-    // 2. Se ha inserito anche il nome del macrogruppo, crealo subito
-    if (nomeGruppo) {
-      await api(`/api/tariffari/${tariffario.id}/macrogruppi`, 'POST', {
-        nome: nomeGruppo,
-        tipo: tipoGruppo
-      });
-    }
-
+    const t = await api('/api/tariffari', 'POST', { nome, note: document.getElementById('inputNoteTariffario').value.trim() });
     closeModal('modalNuovoTariffario');
     await loadTariffari();
-    await selectTariffario(tariffario.id);
+    await selectTariffario(t.id);
     toast('Tariffario creato', 'success');
-
-  } catch (e) {
+  } catch(e) {
     errEl.textContent = e.message || 'Errore nella creazione.';
     errEl.style.display = 'block';
   }
 });
 
-// Enter sul nome tariffario → focus sul macrogruppo
 document.getElementById('inputNomeTariffario').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('inputNomeMacrogruppoInline').focus();
-});
-
-// Enter sul macrogruppo → salva
-document.getElementById('inputNomeMacrogruppoInline').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('btnSalvaNuovoTariffario').click();
 });
 
-// ── ELIMINA TARIFFARIO ────────────────────────────────────────
-document.getElementById('btnDeleteTariffario').addEventListener('click', async () => {
-  if (!activeTariffarioId) return;
-  const t = tariffariGlobali.find(x => x.id === activeTariffarioId);
-  if (!confirm(`Eliminare il tariffario "${t?.nome}" e tutti i suoi macrogruppi?`)) return;
+// ── Bottone Duplica Tariffario ────────────────────────────────
+document.getElementById('btnDuplicaTariffario')?.addEventListener('click', () => {
+  if (!tariffariGlobali.length) { toast('Nessun tariffario da duplicare.', 'error'); return; }
+  const sel = document.getElementById('duplicaSorgente');
+  sel.innerHTML = tariffariGlobali.map(t => `<option value="${t.id}">${t.nome}</option>`).join('');
+  document.getElementById('inputNomeDuplica').value = '';
+  document.getElementById('errDuplicaTariffario').style.display = 'none';
+  openModal('modalDuplicaTariffario');
+  setTimeout(() => document.getElementById('inputNomeDuplica').focus(), 120);
+});
 
+document.getElementById('btnConfermaDuplica')?.addEventListener('click', async () => {
+  const sorgente = document.getElementById('duplicaSorgente').value;
+  const nuovoNome = document.getElementById('inputNomeDuplica').value.trim();
+  const errEl = document.getElementById('errDuplicaTariffario');
+  errEl.style.display = 'none';
+  if (!nuovoNome) {
+    errEl.textContent = 'Inserisci il nome del nuovo tariffario.';
+    errEl.style.display = 'block';
+    document.getElementById('inputNomeDuplica').focus();
+    return;
+  }
   try {
-    await api(`/api/tariffari/${activeTariffarioId}`, 'DELETE');
-    activeTariffarioId = null;
-    document.getElementById('tariffarioPlaceholder').style.display = '';
-    document.getElementById('tariffarioContent').style.display = 'none';
+    const t = await api(`/api/tariffari/${sorgente}/duplica`, 'POST', { nome: nuovoNome });
+    closeModal('modalDuplicaTariffario');
     await loadTariffari();
-    toast('Tariffario eliminato', 'success');
-  } catch (e) {
-    toast('Errore nell\'eliminazione', 'error');
+    await selectTariffario(t.id);
+    toast('Tariffario duplicato e aperto', 'success');
+  } catch(e) {
+    errEl.textContent = e.message || 'Errore nella duplicazione.';
+    errEl.style.display = 'block';
   }
 });
 
-// ── NUOVO MACROGRUPPO ─────────────────────────────────────────
+// ── Bottone + Macrogruppo ─────────────────────────────────────
 document.getElementById('btnNuovoMacrogruppo').addEventListener('click', () => {
+  if (voceInEditing) { toast('Salva o annulla la voce in modifica prima di continuare.', 'error'); return; }
   document.getElementById('inputNomeMacrogruppo').value = '';
   document.getElementById('inputTipoMacrogruppo').value = 'fisso_mensile';
   document.getElementById('errNuovoMacrogruppo').style.display = 'none';
@@ -1388,19 +1655,17 @@ document.getElementById('btnSalvaNuovoMacrogruppo').addEventListener('click', as
   const tipo = document.getElementById('inputTipoMacrogruppo').value;
   const errEl = document.getElementById('errNuovoMacrogruppo');
   errEl.style.display = 'none';
-
   if (!nome) {
     errEl.textContent = 'Il nome del macrogruppo è obbligatorio.';
     errEl.style.display = 'block';
     return;
   }
-
   try {
     await api(`/api/tariffari/${activeTariffarioId}/macrogruppi`, 'POST', { nome, tipo });
     closeModal('modalNuovoMacrogruppo');
     await renderMacrogruppi(activeTariffarioId);
     toast('Macrogruppo aggiunto', 'success');
-  } catch (e) {
+  } catch(e) {
     errEl.textContent = e.message || 'Errore nella creazione.';
     errEl.style.display = 'block';
   }
@@ -1410,92 +1675,24 @@ document.getElementById('inputNomeMacrogruppo').addEventListener('keydown', e =>
   if (e.key === 'Enter') document.getElementById('btnSalvaNuovoMacrogruppo').click();
 });
 
-// ── NUOVA VOCE / MODIFICA VOCE ────────────────────────────────
-function openNuovaVoce(macrogruppoId) {
-  activeMacrogruppoId = macrogruppoId;
-  document.getElementById('voceEditId').value = '';
-  document.getElementById('voceEditMacrogruppoId').value = macrogruppoId;
-  document.getElementById('inputNomeVoce').value = '';
-  document.getElementById('inputPrezzoVoce').value = '';
-  document.getElementById('inputUnitaVoce').value = '';
-  document.getElementById('inputNoteVoce').value = '';
-  document.getElementById('modalNuovaVoceTitolo').textContent = 'Nuova Voce di Costo';
-  document.getElementById('errNuovaVoce').style.display = 'none';
-  openModal('modalNuovaVoce');
-  setTimeout(() => document.getElementById('inputNomeVoce').focus(), 120);
-}
-
-function openEditVoce(macrogruppoId, v) {
-  activeMacrogruppoId = macrogruppoId;
-  document.getElementById('voceEditId').value = v.id;
-  document.getElementById('voceEditMacrogruppoId').value = macrogruppoId;
-  document.getElementById('inputNomeVoce').value = v.nome || '';
-  document.getElementById('inputPrezzoVoce').value = v.prezzo || '';
-  document.getElementById('inputUnitaVoce').value = v.unita || '';
-  document.getElementById('inputNoteVoce').value = v.note || '';
-  document.getElementById('modalNuovaVoceTitolo').textContent = 'Modifica Voce di Costo';
-  document.getElementById('errNuovaVoce').style.display = 'none';
-  openModal('modalNuovaVoce');
-  setTimeout(() => document.getElementById('inputNomeVoce').focus(), 120);
-}
-
-document.getElementById('btnSalvaVoce').addEventListener('click', async () => {
-  const nome = document.getElementById('inputNomeVoce').value.trim();
-  const prezzo = parseFloat(document.getElementById('inputPrezzoVoce').value) || 0;
-  const unita = document.getElementById('inputUnitaVoce').value.trim();
-  const note = document.getElementById('inputNoteVoce').value.trim();
-  const editId = document.getElementById('voceEditId').value;
-  const gid = document.getElementById('voceEditMacrogruppoId').value;
-  const errEl = document.getElementById('errNuovaVoce');
-  errEl.style.display = 'none';
-
-  if (!nome) {
-    errEl.textContent = 'Il nome della voce è obbligatorio.';
-    errEl.style.display = 'block';
-    return;
-  }
-
+// ── Elimina tariffario ────────────────────────────────────────
+document.getElementById('btnDeleteTariffario').addEventListener('click', async () => {
+  if (!activeTariffarioId) return;
+  const t = tariffariGlobali.find(x => x.id === activeTariffarioId);
+  if (!confirm(`Eliminare il tariffario "${t?.nome}"?`)) return;
   try {
-    if (editId) {
-      await api(`/api/voci/${editId}`, 'PUT', { nome, prezzo, unita, note });
-      toast('Voce aggiornata', 'success');
-    } else {
-      await api(`/api/macrogruppi/${gid}/voci`, 'POST', { nome, prezzo, unita, note });
-      toast('Voce aggiunta', 'success');
-    }
-    closeModal('modalNuovaVoce');
-    await renderMacrogruppi(activeTariffarioId);
-  } catch (e) {
-    errEl.textContent = e.message || 'Errore nel salvataggio.';
-    errEl.style.display = 'block';
+    await api(`/api/tariffari/${activeTariffarioId}`, 'DELETE');
+    activeTariffarioId = null;
+    voceInEditing = null;
+    document.getElementById('tariffarioContent').style.display = 'none';
+    document.getElementById('tariffarioPlaceholder').style.display = '';
+    await loadTariffari();
+    toast('Tariffario eliminato', 'success');
+  } catch(e) {
+    toast('Errore nell\'eliminazione', 'error');
   }
 });
 
-// ── ELIMINA MACROGRUPPO ───────────────────────────────────────
-async function deleteMacrogruppo(gid) {
-  if (!confirm('Eliminare questo macrogruppo e tutte le sue voci?')) return;
-  try {
-    await api(`/api/macrogruppi/${gid}`, 'DELETE');
-    await renderMacrogruppi(activeTariffarioId);
-    toast('Macrogruppo eliminato', 'success');
-  } catch (e) {
-    toast('Errore nell\'eliminazione', 'error');
-  }
-}
-
-// ── ELIMINA VOCE ──────────────────────────────────────────────
-async function deleteVoce(vid) {
-  if (!confirm('Eliminare questa voce di costo?')) return;
-  try {
-    await api(`/api/voci/${vid}`, 'DELETE');
-    await renderMacrogruppi(activeTariffarioId);
-    toast('Voce eliminata', 'success');
-  } catch (e) {
-    toast('Errore nell\'eliminazione', 'error');
-  }
-}
-
-// ── Carica tariffari quando si apre il tab ────────────────────
 const _origSwitchTabTariffari = switchTab;
 window.switchTab = function (tabName) {
   _origSwitchTabTariffari(tabName);
