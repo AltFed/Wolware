@@ -172,5 +172,15 @@ def init_db():
     ]:
         if col not in existing_dv_cols:
             c.execute(f'ALTER TABLE ditta_voci ADD COLUMN {col} {typedef}')
+    # --- Tabella storico_tariffari ---
+    c.execute('''CREATE TABLE IF NOT EXISTS storico_tariffari (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        ditta_id        INTEGER NOT NULL REFERENCES ditte(id),
+        tariffario_id   INTEGER REFERENCES tariffari(id),
+        tariffario_nome TEXT,
+        cambiato_il     TEXT DEFAULT (datetime('now','localtime')),
+        note            TEXT
+    )''')
+
     conn.commit()
     conn.close()

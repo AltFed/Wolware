@@ -34,9 +34,12 @@ def _json_str(val):
 def get_ditte():
     conn = get_db()
     try:
-        ditte = conn.execute(
-            'SELECT * FROM ditte ORDER BY ragione_sociale'
-        ).fetchall()
+        ditte = conn.execute('''
+            SELECT d.*, t.nome AS tariffario_nome
+            FROM ditte d
+            LEFT JOIN tariffari t ON d.tariffario_id = t.id
+            ORDER BY d.ragione_sociale
+        ''').fetchall()
         return jsonify([dict(d) for d in ditte])
     finally:
         conn.close()
@@ -162,5 +165,51 @@ def delete_ditta(id):
         conn.commit()
         notify_all('ditta_deleted', {'id': id})
         return jsonify({'ok': True})
+    finally:
+        conn.close()
+
+# ── POST /api/ditte/:id/cambia-tariffario ──────────────────────────────────────
+@ditte_bp.route('/api/ditte/<int:id>/cambia-tariffario', methods=['POST'])
+@login_required
+def cambia_tariffario(id):
+    data = request.get_json()
+    nuovo_tid = data.get('tariffario_id')  # può essere None
+    note = (data.get('note') or '').strip()
+    conn = get_db()
+    try:
+        ditta = conn.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()
+        if not ditta:
+            return jsonify({'error': 'Ditta non trovata'}), 404
+
+        # Nome del nuovo tariffario
+        nome_nuovo = None
+        if nuovo_tid:
+            row = conn.execute('SELECT nome FROM tariffari WHERE id=?', (nuovo_tid,)).fetchone()
+            nome_nuovo = row['nome'] if row else None
+
+        # Salva nello storico
+        conn.execute(
+            'INSERT INTO storico_tariffari (ditta_id, tariffario_id, tariffario_nome, note) VALUES (?,?,?,?)',
+            (id, nuovo_tid, nome_nuovo, note)
+        )
+        # Aggiorna ditta
+        conn.execute('UPDATE ditte SET tariffario_id=? WHERE id=?', (nuovo_tid, id))
+        conn.commit()
+        return jsonify({'ok': True, 'tariffario_nome': nome_nuovo})
+    finally:
+        conn.close()
+
+
+# ── GET /api/ditte/:id/storico-tariffari ──────────────────────────────────────
+@ditte_bp.route('/api/ditte/<int:id>/storico-tariffari', methods=['GET'])
+@login_required
+def storico_tariffari(id):
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            'SELECT * FROM storico_tariffari WHERE ditta_id=? ORDER BY cambiato_il DESC',
+            (id,)
+        ).fetchall()
+        return jsonify([dict(r) for r in rows])
     finally:
         conn.close()

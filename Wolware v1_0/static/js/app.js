@@ -182,7 +182,11 @@ function filterPratiche() {
 /* DITTE TAB */
 let allDitte = [];
 async function loadDitte() {
-  try { allDitte = await api('/api/ditte'); renderDitte(allDitte); }
+  try {
+    allDitte = await api('/api/ditte');
+    renderDitte(allDitte);
+    populateFilterTariffario();
+  }
   catch (e) { toast('Errore nel caricamento ditte', 'error'); }
 }
 function renderDitte(list) {
@@ -213,33 +217,41 @@ function renderDitte(list) {
         ${d.citta ? `<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${d.citta}${d.provincia ? ' (' + d.provincia.toUpperCase() + ')' : ''}</div>` : ''}
         ${d.referente ? `<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${d.referente}</div>` : ''}
         ${d.email ? `<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>${d.email}</div>` : ''}
+        ${d.tariffario_nome ? `<div class="ditta-meta-row" style="margin-top:var(--space-2)"><span style="font-size:10px;padding:2px 8px;border-radius:var(--radius-full);background:var(--color-primary-highlight);color:var(--color-primary);font-weight:600">📊 ${d.tariffario_nome}</span></div>` : ''}
       </div>
     </div>`;
   }).join('');
 }
 document.getElementById('filterDitte').addEventListener('input', filterDitte);
 document.getElementById('filterForma').addEventListener('change', filterDitte);
+document.getElementById('filterTariffario')?.addEventListener('change', filterDitte);
 function filterDitte() {
   const q = document.getElementById('filterDitte').value.toLowerCase();
   const forma = document.getElementById('filterForma').value;
+  const tariffSel = document.getElementById('filterTariffario')?.value || '';
   let f = allDitte;
-  if (q) f = f.filter(d => d.ragione_sociale.toLowerCase().includes(q) || (d.partita_iva || '').toLowerCase().includes(q) || (d.referente || '').toLowerCase().includes(q) || (d.citta || '').toLowerCase().includes(q));
+  if (q) f = f.filter(d =>
+    d.ragione_sociale.toLowerCase().includes(q) ||
+    (d.partita_iva || '').toLowerCase().includes(q) ||
+    (d.referente || '').toLowerCase().includes(q) ||
+    (d.citta || '').toLowerCase().includes(q)
+  );
   if (forma) f = f.filter(d => d.forma_giuridica === forma);
+  if (tariffSel === '__nessuno__') {
+    f = f.filter(d => !d.tariffario_id);
+  } else if (tariffSel) {
+    f = f.filter(d => String(d.tariffario_id) === tariffSel);
+  }
   renderDitte(f);
 }
 
-async function deleteDitta(id) {
-  const ditta = allDitte.find(d => d.id === id);
-  const nome = ditta?.ragione_sociale || 'questa ditta';
-  if (!confirm(`Eliminare "${nome}"?\n\nL'operazione non può essere annullata.`)) return;
-  try {
-    await api(`/api/ditte/${id}`, 'DELETE');
-    toast('Ditta eliminata', 'success');
-    loadDitte();
-    loadStats();
-  } catch(e) {
-    toast('Errore eliminazione: ' + e.message, 'error');
-  }
+function populateFilterTariffario() {
+  const sel = document.getElementById('filterTariffario');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Tutti i tariffari</option>' +
+    '<option value="__nessuno__">— Senza tariffario —</option>' +
+    tariffariGlobali.map(t => `<option value="${t.id}"${String(t.id)===current?' selected':''}>${t.nome}</option>`).join('');
 }
 
 async function deleteDitta(id) {
@@ -1160,6 +1172,7 @@ async function loadTariffari() {
   try {
     tariffariGlobali = await api('/api/tariffari');
     renderTariffariList();
+    populateFilterTariffario();
   } catch(e) {
     toast('Errore nel caricamento tariffari', 'error');
   }
@@ -1898,19 +1911,57 @@ async function loadDittaVoci(dittaId) {
   if (!dittaId) return;
   try {
     const data = await api(`/api/ditte/${dittaId}/tariffario`);
-    // Imposta select tariffario
     await loadTariffariSelectDitta(data.tariffario ? data.tariffario.id : null);
     renderDittaVoci(data.voci);
+    // Mostra bottone Cambia Tariffario solo su ditte esistenti con tariffario
+    const btnCambia = document.getElementById('btnCambiaTariffario');
+    if (btnCambia) {
+      btnCambia.style.display = data.tariffario ? 'flex' : 'none';
+    }
+    // Carica storico
+    await loadStoricoTariffario(dittaId);
   } catch (e) {
     console.error(e);
+  }
+}
+
+async function loadStoricoTariffario(dittaId) {
+  const section = document.getElementById('storicoTariffarioSection');
+  const list    = document.getElementById('storicoTariffarioList');
+  if (!section || !list) return;
+  try {
+    const storico = await api(`/api/ditte/${dittaId}/storico-tariffari`);
+    if (!storico.length) {
+      section.style.display = 'none';
+      return;
+    }
+    section.style.display = '';
+    list.innerHTML = storico.map(s => `
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);
+                  background:var(--color-bg);margin-bottom:var(--space-1)">
+        <div>
+          <span style="font-size:var(--text-sm);font-weight:500;color:var(--color-text)">
+            ${s.tariffario_nome || '— Nessun tariffario —'}
+          </span>
+          ${s.note ? `<span style="font-size:var(--text-xs);color:var(--color-text-muted);margin-left:var(--space-2)">${s.note}</span>` : ''}
+        </div>
+        <span style="font-size:var(--text-xs);color:var(--color-text-muted);flex-shrink:0;margin-left:var(--space-3)">
+          ${s.cambiato_il || ''}
+        </span>
+      </div>`).join('');
+  } catch(e) {
+    section.style.display = 'none';
   }
 }
 
 // Cambia tariffario associato → salva subito
 document.getElementById('dittaTariffarioSelect')?.addEventListener('change', async function () {
   const tid = this.value || null;
+  const btnCambia = document.getElementById('btnCambiaTariffario');
   if (!currentDittaIdForTariff) {
     // Nuova ditta non ancora salvata — mostra anteprima voci
+    if (btnCambia) btnCambia.style.display = 'none';
     if (tid) {
       try {
         const t = await api(`/api/tariffari/${tid}`);
@@ -1934,9 +1985,37 @@ document.getElementById('dittaTariffarioSelect')?.addEventListener('change', asy
   }
   try {
     await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/associa`, 'PUT', { tariffario_id: tid });
+    if (btnCambia) btnCambia.style.display = tid ? 'flex' : 'none';
     toast('Tariffario associato', 'success');
   } catch (e) {
     toast('Errore associazione: ' + e.message, 'error');
+  }
+});
+
+// ── Bottone Cambia Tariffario (con avviso spec §6.2) ─────────
+document.getElementById('btnCambiaTariffario')?.addEventListener('click', async () => {
+  if (!currentDittaIdForTariff) return;
+  const tid = document.getElementById('dittaTariffarioSelect').value || null;
+  const tName = document.getElementById('dittaTariffarioSelect').selectedOptions[0]?.text || '';
+
+  const ok = confirm(
+    '⚠️ Stai per cambiare il tariffario di questa ditta.\n\n' +
+    'Attenzione: i costi e le voci già inseriti manterranno i prezzi del tariffario precedente.\n' +
+    'Il nuovo tariffario verrà applicato solo ai nuovi mesi.\n\n' +
+    'Vuoi procedere?'
+  );
+  if (!ok) return;
+
+  try {
+    await api(`/api/ditte/${currentDittaIdForTariff}/cambia-tariffario`, 'POST', {
+      tariffario_id: tid,
+      note: `Cambiato in: ${tName}`
+    });
+    toast('Tariffario cambiato e registrato nello storico', 'success');
+    await loadDittaVoci(currentDittaIdForTariff);
+    loadDitte();
+  } catch(e) {
+    toast('Errore: ' + (e.message || ''), 'error');
   }
 });
 

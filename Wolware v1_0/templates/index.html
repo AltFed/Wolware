@@ -402,6 +402,9 @@
               <option>Professionista</option>
               <option>Associazione</option>
             </select>
+            <select class="filter-select" id="filterTariffario">
+              <option value="">Tutti i tariffari</option>
+            </select>
           </div>
           <div class="card-grid" id="ditteGrid">
             <div class="empty-state">
@@ -758,13 +761,21 @@
           <!-- Selezione tariffario standard associato -->
           <div class="form-section">
             <div class="form-section-title">Tariffario Standard Associato</div>
-            <div style="display:flex;align-items:center;gap:var(--space-3)">
-              <select id="dittaTariffarioSelect" style="flex:1;padding:var(--space-2) var(--space-3);
+            <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap">
+              <select id="dittaTariffarioSelect" style="flex:1;min-width:180px;padding:var(--space-2) var(--space-3);
                      border-radius:var(--radius-md);border:1px solid var(--color-border);
                      background:var(--color-surface);color:var(--color-text);
                      font-size:var(--text-sm)">
                 <option value="">— Nessun tariffario associato —</option>
               </select>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnCambiaTariffario"
+                style="display:none;align-items:center;gap:var(--space-1)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                  <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                </svg>
+                Cambia Tariffario
+              </button>
               <button type="button" class="btn btn-secondary btn-sm" id="btnSyncTariffario"
                 title="Sincronizza voci dal tariffario standard"
                 style="display:flex;align-items:center;gap:var(--space-2);flex-shrink:0">
@@ -798,6 +809,14 @@
                 Associa un tariffario e clicca <strong>Sincronizza</strong>,
                 oppure aggiungi una <strong>Voce Custom</strong>.
               </div>
+            </div>
+          </div>
+
+          <!-- Storico cambi tariffario -->
+          <div class="form-section" id="storicoTariffarioSection" style="display:none">
+            <div class="form-section-title">📋 Storico Cambi Tariffario</div>
+            <div id="storicoTariffarioList">
+              <div class="list-empty-msg">Nessun cambio registrato.</div>
             </div>
           </div>
 
