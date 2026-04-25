@@ -157,5 +157,20 @@ def init_db():
         FOREIGN KEY (voce_costo_id) REFERENCES voci_costo(id)
     )''')
 
+
+    # --- Migrazione ditte.tariffario_id ---
+    existing_ditte_cols = [row[1] for row in c.execute("PRAGMA table_info(ditte)").fetchall()]
+    if 'tariffario_id' not in existing_ditte_cols:
+        c.execute("ALTER TABLE ditte ADD COLUMN tariffario_id INTEGER REFERENCES tariffari(id)")
+
+    # --- Migrazione ditta_voci (nuovi campi v2) ---
+    existing_dv_cols = [row[1] for row in c.execute("PRAGMA table_info(ditta_voci)").fetchall()]
+    for col, typedef in [
+        ('esente_iva',               'INTEGER DEFAULT 0'),
+        ('richiede_anno_precedente', 'INTEGER DEFAULT 0'),
+        ('mesi_json',                'TEXT'),
+    ]:
+        if col not in existing_dv_cols:
+            c.execute(f'ALTER TABLE ditta_voci ADD COLUMN {col} {typedef}')
     conn.commit()
     conn.close()

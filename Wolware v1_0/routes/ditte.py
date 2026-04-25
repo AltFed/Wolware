@@ -60,8 +60,8 @@ def create_ditta():
                  tel_amministratore, email_amministratore, telefono, email,
                  pec, referente, cedolino_onnicomprensivo,
                  sedi_json, inail_json, inps_json, cc_json, tariff_json,
-                 data_inizio_rapporto, note)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                 data_inizio_rapporto, note, tariffario_id)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ''', (
             data.get('ragione_sociale'),    data.get('partita_iva'),
             data.get('codice_fiscale'),     data.get('forma_giuridica'),
@@ -80,6 +80,7 @@ def create_ditta():
             _json_str(data.get('cc_json')),
             _json_str(data.get('tariff_json')),
             data.get('data_inizio_rapporto'), data.get('note'),
+            data.get('tariffario_id') or None,
         ))
         conn.commit()
         new_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -120,7 +121,7 @@ def update_ditta(id):
                 email_amministratore=?, telefono=?, email=?, pec=?,
                 referente=?, cedolino_onnicomprensivo=?,
                 sedi_json=?, inail_json=?, inps_json=?, cc_json=?,
-                tariff_json=?, data_inizio_rapporto=?, note=?
+                tariff_json=?, data_inizio_rapporto=?, note=?, tariffario_id=?
             WHERE id=?
         ''', (
             data.get('ragione_sociale'),    data.get('partita_iva'),
@@ -140,6 +141,7 @@ def update_ditta(id):
             _json_str(data.get('cc_json')),
             _json_str(data.get('tariff_json')),
             data.get('data_inizio_rapporto'), data.get('note'),
+            data.get('tariffario_id') or None,
             id,
         ))
         conn.commit()

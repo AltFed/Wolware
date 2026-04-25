@@ -518,6 +518,7 @@ document.getElementById('btnSaveDitta').addEventListener('click', async () => {
     resetModalTabs();
     return;
   }
+  const selTariff = document.getElementById('dittaTariffarioSelect');
   const data = {
     ragione_sociale: document.getElementById('ragione_sociale').value.trim(),
     codice_fiscale: document.getElementById('codice_fiscale').value.trim(),
@@ -541,11 +542,22 @@ document.getElementById('btnSaveDitta').addEventListener('click', async () => {
     inps_json: JSON.stringify(inpsList),
     cc_json: JSON.stringify(ccList),
     tariff_json: JSON.stringify(tariffItems),
+    tariffario_id: selTariff?.value ? parseInt(selTariff.value) : null,
   };
   try {
     const id = document.getElementById('dittaId').value;
-    if (id) { await api(`/api/ditte/${id}`, 'PUT', data); toast('Ditta aggiornata'); }
-    else { await api('/api/ditte', 'POST', data); toast('Ditta creata'); }
+    if (id) {
+      await api(`/api/ditte/${id}`, 'PUT', data);
+      toast('Ditta aggiornata');
+    } else {
+      const nuova = await api('/api/ditte', 'POST', data);
+      // Auto-sync tariffario se selezionato
+      if (data.tariffario_id && nuova?.id) {
+        try { await api(`/api/ditte/${nuova.id}/tariffario/sync`, 'POST'); }
+        catch(e) { console.warn('Auto-sync tariffario fallito:', e); }
+      }
+      toast('Ditta creata');
+    }
     closeModal('modalDitta');
     loadDitte(); loadStats();
   } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
@@ -1744,10 +1756,15 @@ function renderDittaVoci(voci) {
   });
 
   const TIPOMETA_DV = {
-    fisso_mensile: { label: 'Fisso Mensile', color: 'var(--color-blue)', bg: 'var(--color-blue-highlight)' },
-    fisso_annuale: { label: 'Fisso Annuale', color: 'var(--color-primary)', bg: 'var(--color-primary-highlight)' },
-    variabile_mensile: { label: 'Variabile Mensile', color: 'var(--color-orange)', bg: 'var(--color-orange-highlight)' },
-    variabile_annuale: { label: 'Variabile Annuale', color: 'var(--color-gold)', bg: 'var(--color-gold-highlight)' },
+    costi_fissi_mensili:     { label: 'Costi Fissi Mensili',     color: 'var(--color-blue)',    bg: 'var(--color-blue-highlight)' },
+    costi_fissi_annuali:     { label: 'Costi Fissi Annuali',     color: 'var(--color-primary)', bg: 'var(--color-primary-highlight)' },
+    costi_variabili_mensili: { label: 'Costi Variabili Mensili', color: 'var(--color-orange)',  bg: 'var(--color-orange-highlight)' },
+    costi_variabili_annuali: { label: 'Costi Variabili Annuali', color: 'var(--color-gold)',    bg: 'var(--color-gold-highlight)' },
+    // legacy
+    fisso_mensile:     { label: 'Fisso Mensile',     color: 'var(--color-blue)',    bg: 'var(--color-blue-highlight)' },
+    fisso_annuale:     { label: 'Fisso Annuale',     color: 'var(--color-primary)', bg: 'var(--color-primary-highlight)' },
+    variabile_mensile: { label: 'Variabile Mensile', color: 'var(--color-orange)',  bg: 'var(--color-orange-highlight)' },
+    variabile_annuale: { label: 'Variabile Annuale', color: 'var(--color-gold)',    bg: 'var(--color-gold-highlight)' },
   };
 
   el.innerHTML = Object.values(gruppi).map(g => {
@@ -1758,8 +1775,9 @@ function renderDittaVoci(voci) {
                   background:var(--color-bg);margin-bottom:var(--space-1)">
         <div style="flex:1;min-width:0">
           <span style="font-size:var(--text-sm);color:var(--color-text)">${v.nome}</span>
-          ${v.unita ? `<span style="font-size:var(--text-xs);color:var(--color-text-muted);margin-left:var(--space-2)">${v.unita}</span>` : ''}
           ${v.custom ? `<span style="font-size:var(--text-xs);color:var(--color-warning);margin-left:var(--space-2);font-style:italic">custom</span>` : ''}
+          ${v.esente_iva ? `<span style="font-size:var(--text-xs);color:var(--color-text-muted);margin-left:var(--space-2)">Esente IVA</span>` : ''}
+          ${v.mesi_json ? (() => { try { const m=['G','F','M','A','M','G','L','A','S','O','N','D']; return JSON.parse(v.mesi_json).map(i=>m[i-1]).join(' ') } catch(e){return''} })() !== '' ? `<span style="font-size:var(--text-xs);color:var(--color-text-muted);margin-left:var(--space-2)">${(() => { try { const m=['G','F','M','A','M','G','L','A','S','O','N','D']; return JSON.parse(v.mesi_json).map(i=>m[i-1]).join(' ') } catch(e){return''} })()}</span>` : '' : ''}
         </div>
         <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0">
           <span style="font-size:var(--text-sm);font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-text)">
@@ -1813,8 +1831,30 @@ async function loadDittaVoci(dittaId) {
 
 // Cambia tariffario associato → salva subito
 document.getElementById('dittaTariffarioSelect')?.addEventListener('change', async function () {
-  if (!currentDittaIdForTariff) return;
   const tid = this.value || null;
+  if (!currentDittaIdForTariff) {
+    // Nuova ditta non ancora salvata — mostra anteprima voci
+    if (tid) {
+      try {
+        const t = await api(`/api/tariffari/${tid}`);
+        const previewVoci = [];
+        (t.macrogruppi || []).forEach(mg => {
+          (mg.voci || []).forEach(v => previewVoci.push({
+            nome: v.nome, prezzo: v.prezzo, macrogruppo_nome: mg.nome,
+            tipo: mg.tipo, custom: 0, esente_iva: v.esente_iva,
+            richiede_anno_precedente: v.richiede_anno_precedente,
+            mesi_json: v.mesi_json
+          }));
+        });
+        renderDittaVoci(previewVoci);
+        const hint = document.getElementById('syncResult');
+        if (hint) { hint.textContent = '👆 Anteprima — le voci verranno salvate insieme alla ditta'; hint.style.display = 'block'; }
+      } catch(e) { console.error(e); }
+    } else {
+      renderDittaVoci([]);
+    }
+    return;
+  }
   try {
     await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/associa`, 'PUT', { tariffario_id: tid });
     toast('Tariffario associato', 'success');
@@ -1825,7 +1865,10 @@ document.getElementById('dittaTariffarioSelect')?.addEventListener('change', asy
 
 // Sincronizza voci dal tariffario standard
 document.getElementById('btnSyncTariffario')?.addEventListener('click', async function () {
-  if (!currentDittaIdForTariff) return;
+  if (!currentDittaIdForTariff) {
+    toast('Salva prima la ditta, poi sincronizza il tariffario', 'error');
+    return;
+  }
   const tid = document.getElementById('dittaTariffarioSelect').value;
   if (!tid) { toast('Seleziona prima un tariffario', 'error'); return; }
   const btn = this;
