@@ -203,14 +203,8 @@ function renderDitte(list) {
           <div><div class="ditta-name">${d.ragione_sociale}</div>
           <div class="ditta-forma">${d.forma_giuridica || ''} ${d.settore_ateco ? '· ' + d.settore_ateco : ''}</div></div>
         </div>
-        <div class="ditta-card-actions" onclick="event.stopPropagation()">
-          <button class="btn btn-icon btn-ghost" title="Modifica" onclick="editDitta(${d.id})">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
-          <button class="btn btn-icon btn-ghost" title="Elimina" onclick="deleteDitta(${d.id})" style="color:var(--color-error)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-          </button>
-        </div>
+        <div class="ditta-card-actions"></div>
+
       </div>
       <div class="ditta-meta">
         ${d.partita_iva ? `<div class="ditta-meta-row"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>P.IVA: ${d.partita_iva}</div>` : ''}
