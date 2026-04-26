@@ -132,6 +132,68 @@ def sync_tariffario(ditta_id):
         db.close()
 
 
+# POST /api/ditte/<id>/tariffario/aggiorna  → soft sync (skip sync_override=1)
+@bp.route('/api/ditte/<int:ditta_id>/tariffario/aggiorna', methods=['POST'])
+@login_required
+def aggiorna_tariffario(ditta_id):
+    db = get_db()
+    try:
+        ditta = db.execute(
+            'SELECT tariffario_id FROM ditte WHERE id=?', (ditta_id,)
+        ).fetchone()
+        if not ditta or not ditta['tariffario_id']:
+            return jsonify({'error': 'Nessun tariffario associato'}), 400
+
+        voci_standard = db.execute(
+            '''SELECT vc.id, vc.nome, vc.prezzo, vc.note,
+                      vc.esente_iva, vc.richiede_anno_precedente, vc.mesi_json,
+                      mg.nome as mg_nome, mg.tipo
+               FROM voci_costo vc
+               JOIN macrogruppi mg ON mg.id = vc.macrogruppo_id
+               WHERE mg.tariffario_id = ?''',
+            (ditta['tariffario_id'],)
+        ).fetchall()
+
+        aggiunte = aggiornate = saltate = 0
+        for v in voci_standard:
+            tipo_mapped = TIPO_MAP.get(v['tipo'], v['tipo'])
+            existing = db.execute(
+                'SELECT id, sync_override FROM ditta_voci WHERE ditta_id=? AND voce_costo_id=?',
+                (ditta_id, v['id'])
+            ).fetchone()
+            if existing:
+                if existing['sync_override'] == 1:
+                    saltate += 1  # voce modificata manualmente — non toccare
+                    continue
+                db.execute(
+                    '''UPDATE ditta_voci
+                       SET nome=?, prezzo=?, macrogruppo_nome=?, tipo=?,
+                           esente_iva=?, richiede_anno_precedente=?, mesi_json=?
+                       WHERE id=?''',
+                    (v['nome'], v['prezzo'], v['mg_nome'], tipo_mapped,
+                     v['esente_iva'], v['richiede_anno_precedente'], v['mesi_json'],
+                     existing['id'])
+                )
+                aggiornate += 1
+            else:
+                db.execute(
+                    '''INSERT INTO ditta_voci
+                       (ditta_id, voce_costo_id, nome, prezzo, note,
+                        macrogruppo_nome, tipo, custom,
+                        esente_iva, richiede_anno_precedente, mesi_json, sync_override)
+                       VALUES (?,?,?,?,?,?,?,0,?,?,?,0)''',
+                    (ditta_id, v['id'], v['nome'], v['prezzo'], v['note'],
+                     v['mg_nome'], tipo_mapped,
+                     v['esente_iva'], v['richiede_anno_precedente'], v['mesi_json'])
+                )
+                aggiunte += 1
+
+        db.commit()
+        return jsonify({'ok': True, 'aggiunte': aggiunte, 'aggiornate': aggiornate, 'saltate': saltate})
+    finally:
+        db.close()
+
+
 # POST /api/ditte/<id>/tariffario/voce  → voce custom
 @bp.route('/api/ditte/<int:ditta_id>/tariffario/voce', methods=['POST'])
 @login_required
@@ -163,7 +225,8 @@ def update_voce(ditta_id, vid):
     try:
         db.execute(
             '''UPDATE ditta_voci
-               SET nome=?, prezzo=?, note=?, macrogruppo_nome=?, tipo=?
+               SET nome=?, prezzo=?, note=?, macrogruppo_nome=?, tipo=?,
+                   sync_override=1
                WHERE id=? AND ditta_id=?''',
             (d.get('nome'), d.get('prezzo', 0), d.get('note', ''),
              d.get('macrogruppo_nome'), d.get('tipo'), vid, ditta_id)
