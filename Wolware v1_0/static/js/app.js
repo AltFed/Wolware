@@ -2065,10 +2065,40 @@ document.getElementById('btnCambiaTariffario')?.addEventListener('click', async 
   }
 });
 
-// Sincronizza voci dal tariffario standard
-document.getElementById('btnSyncTariffario')?.addEventListener('click', async function () {
+// ── Inizializza: sovrascrive tutto (identico al vecchio Sincronizza) ─────────
+document.getElementById('btnInitTariffario')?.addEventListener('click', async function () {
   if (!currentDittaIdForTariff) {
-    toast('Salva prima la ditta, poi sincronizza il tariffario', 'error');
+    toast('Salva prima la ditta', 'error');
+    return;
+  }
+  const tid = document.getElementById('dittaTariffarioSelect').value;
+  if (!tid) { toast('Seleziona prima un tariffario', 'error'); return; }
+  if (!confirm('⚠️ Inizializza: tutte le voci verranno sostituite con quelle del tariffario.\nLe modifiche manuali andranno perse. Continuare?')) return;
+  const btn = this;
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Inizializzazione...';
+  const res_el = document.getElementById('syncResult');
+  try {
+    await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/associa`, 'PUT', { tariffario_id: parseInt(tid) });
+    const r = await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/sync`, 'POST');
+    res_el.textContent = `✓ Inizializzato: ${r.aggiunte} voci aggiunte, ${r.aggiornate} aggiornate`;
+    res_el.style.display = 'block';
+    setTimeout(() => res_el.style.display = 'none', 4000);
+    await loadDittaVoci(currentDittaIdForTariff);
+    toast('Tariffario inizializzato', 'success');
+  } catch (e) {
+    toast('Errore: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+});
+
+// ── Aggiorna: aggiunge nuove voci e aggiorna solo quelle NON modificate manualmente ─
+document.getElementById('btnAggiornaTariffario')?.addEventListener('click', async function () {
+  if (!currentDittaIdForTariff) {
+    toast('Salva prima la ditta', 'error');
     return;
   }
   const tid = document.getElementById('dittaTariffarioSelect').value;
@@ -2076,25 +2106,24 @@ document.getElementById('btnSyncTariffario')?.addEventListener('click', async fu
   const btn = this;
   const orig = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Sincronizzazione...';
+  btn.textContent = 'Aggiornamento...';
   const res_el = document.getElementById('syncResult');
   try {
-    // Prima associa (nel caso non fosse già stato salvato)
     await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/associa`, 'PUT', { tariffario_id: parseInt(tid) });
-    // Poi sincronizza
-    const r = await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/sync`, 'POST');
-    res_el.textContent = `✓ Sincronizzato: ${r.aggiunte} voci aggiunte, ${r.aggiornate} aggiornate`;
+    const r = await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/aggiorna`, 'POST');
+    res_el.textContent = `✓ Aggiornato: ${r.aggiunte} nuove, ${r.aggiornate} aggiornate, ${r.saltate} lasciate invariate`;
     res_el.style.display = 'block';
-    setTimeout(() => res_el.style.display = 'none', 4000);
+    setTimeout(() => res_el.style.display = 'none', 5000);
     await loadDittaVoci(currentDittaIdForTariff);
-    toast('Voci sincronizzate', 'success');
+    toast('Voci aggiornate', 'success');
   } catch (e) {
-    toast('Errore sincronizzazione: ' + e.message, 'error');
+    toast('Errore: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = orig;
   }
 });
+
 
 // Apri modale voce custom (nuova)
 document.getElementById('btnAddVoceCustom')?.addEventListener('click', () => {
