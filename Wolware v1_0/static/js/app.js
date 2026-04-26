@@ -521,7 +521,12 @@ function resetDittaForm() {
   document.getElementById('modalDittaTitle').textContent = 'Nuova Ditta';
   resetModalTabs();
 }
-function openDittaModal() { resetDittaForm(); openModal('modalDitta'); }
+function openDittaModal() {
+  resetDittaForm();
+  const btnDelModal = document.getElementById('btnDeleteDittaModal');
+  if (btnDelModal) btnDelModal.style.display = 'none';
+  openModal('modalDitta');
+}
 
 async function editDitta(id) {
   resetDittaForm();
@@ -545,6 +550,8 @@ async function editDitta(id) {
     renderSedi(); renderInail(); renderInps(); renderCC(); renderTariff();
     currentDittaIdForTariff = d.id;
     await loadDittaVoci(d.id);
+    const btnDelModal = document.getElementById('btnDeleteDittaModal');
+    if (btnDelModal) btnDelModal.style.display = 'flex';
     openModal('modalDitta');
   } catch (e) { toast('Errore nel caricamento ditta', 'error'); }
 }
@@ -1327,7 +1334,7 @@ async function renderMacrogruppi(tariffarioId) {
     const vociHtml = g.voci && g.voci.length ? g.voci.map(v => {
       const isEditing = voceInEditing && voceInEditing.vid === v.id;
       const meseLabels = v.mesi && v.mesi.length
-        ? v.mesi.map(m => MESI_LABELS[m-1]).join(' ')
+        ? (v.mesi.includes(0) ? 'Tutti' : v.mesi.map(m => MESI_LABELS[m-1]).join(' '))
         : null;
 
       if (isEditing) {
@@ -1482,41 +1489,80 @@ async function renderMacrogruppi(tariffarioId) {
 }
 
 // ── Mesi toggle (form aggiunta) ───────────────────────────────
+// ── Helper stile bottone mese ─────────────────────────────────
+function _applyMeseStyle(btn, active) {
+  btn.style.background  = active ? 'var(--color-primary-highlight)' : 'var(--color-surface)';
+  btn.style.borderColor = active ? 'var(--color-primary)' : 'var(--color-border)';
+  btn.style.color       = active ? 'var(--color-primary)' : 'var(--color-text-muted)';
+}
+
+// Se tutti e 12 i mesi individuali sono selezionati → attiva T automaticamente
+function _syncTuttiBtn(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const individuale = [...container.querySelectorAll('button[data-mese]')]
+    .filter(b => parseInt(b.getAttribute('data-mese')) > 0);
+  const tuttiSel = individuale.length > 0 && individuale.every(b => b.getAttribute('data-sel') === '1');
+  const tuttiBtn = container.querySelector('button[data-mese="0"]');
+  if (tuttiBtn) { tuttiBtn.setAttribute('data-sel', tuttiSel ? '1' : '0'); _applyMeseStyle(tuttiBtn, tuttiSel); }
+}
+
 function toggleMeseAdd(gid, mese, btn) {
   const sel = btn.getAttribute('data-sel') === '1';
   btn.setAttribute('data-sel', sel ? '0' : '1');
-  if (!sel) {
-    btn.style.background = 'var(--color-primary-highlight)';
-    btn.style.borderColor = 'var(--color-primary)';
-    btn.style.color = 'var(--color-primary)';
-  } else {
-    btn.style.background = 'var(--color-surface)';
-    btn.style.borderColor = 'var(--color-border)';
-    btn.style.color = 'var(--color-text-muted)';
-  }
+  _applyMeseStyle(btn, !sel);
+  _syncTuttiBtn(`mesi-add-${gid}`);
 }
 
 // ── Mesi toggle (form editing) ────────────────────────────────
 function toggleMeseEdit(vid, mese, btn) {
   const sel = btn.getAttribute('data-sel') === '1';
   btn.setAttribute('data-sel', sel ? '0' : '1');
-  if (!sel) {
-    btn.style.background = 'var(--color-primary-highlight)';
-    btn.style.borderColor = 'var(--color-primary)';
-    btn.style.color = 'var(--color-primary)';
-  } else {
-    btn.style.background = 'var(--color-surface)';
-    btn.style.borderColor = 'var(--color-border)';
-    btn.style.color = 'var(--color-text-muted)';
-  }
+  _applyMeseStyle(btn, !sel);
+  _syncTuttiBtn(`mesi-edit-${vid}`);
+}
+
+// ── Bottone T (Tutti) form aggiunta ───────────────────────────
+function toggleTuttiAdd(gid, btn) {
+  const container = document.getElementById(`mesi-add-${gid}`);
+  const isActive = btn.getAttribute('data-sel') === '1';
+  const newSel = isActive ? 0 : 1;
+  btn.setAttribute('data-sel', newSel);
+  _applyMeseStyle(btn, newSel === 1);
+  container.querySelectorAll('button[data-mese]').forEach(b => {
+    if (parseInt(b.getAttribute('data-mese')) > 0) {
+      b.setAttribute('data-sel', newSel);
+      _applyMeseStyle(b, newSel === 1);
+    }
+  });
+}
+
+// ── Bottone T (Tutti) form editing ────────────────────────────
+function toggleTuttiEdit(vid, btn) {
+  const container = document.getElementById(`mesi-edit-${vid}`);
+  const isActive = btn.getAttribute('data-sel') === '1';
+  const newSel = isActive ? 0 : 1;
+  btn.setAttribute('data-sel', newSel);
+  _applyMeseStyle(btn, newSel === 1);
+  container.querySelectorAll('button[data-mese]').forEach(b => {
+    if (parseInt(b.getAttribute('data-mese')) > 0) {
+      b.setAttribute('data-sel', newSel);
+      _applyMeseStyle(b, newSel === 1);
+    }
+  });
 }
 
 function getMesiSelezionati(containerId) {
   const container = document.getElementById(containerId);
   if (!container) return null;
+  const tuttiBtn = container.querySelector('button[data-mese="0"]');
+  if (tuttiBtn && tuttiBtn.getAttribute('data-sel') === '1') return [0];
   const btns = container.querySelectorAll('button[data-mese]');
   const sel = [];
-  btns.forEach(b => { if (b.getAttribute('data-sel')==='1') sel.push(parseInt(b.getAttribute('data-mese'))); });
+  btns.forEach(b => {
+    const m = parseInt(b.getAttribute('data-mese'));
+    if (m > 0 && b.getAttribute('data-sel') === '1') sel.push(m);
+  });
   return sel.length ? sel : null;
 }
 
@@ -1544,7 +1590,7 @@ async function aggiungiVoce(gid) {
       prezzo,
       esente_iva: esenteEl ? esenteEl.checked : false,
       richiede_anno_precedente: annopEl ? annopEl.checked : false,
-      mesi: isAnnuale(g ? g.tipo : '') ? mesi : null,
+      mesi,
     });
     toast('Voce aggiunta', 'success');
     await renderMacrogruppi(activeTariffarioId);
@@ -1585,7 +1631,7 @@ async function salvaVoceInline(vid) {
       prezzo,
       esente_iva: esente,
       richiede_anno_precedente: annop,
-      mesi: isAnnuale(g ? g.tipo : '') ? mesi : null,
+      mesi,
     });
     voceInEditing = null;
     toast('Voce aggiornata', 'success');
@@ -2140,6 +2186,24 @@ document.getElementById('vcNome')?.addEventListener('keydown', e => {
 function openCambiaPassword() {
   openModal('modalCambiaPassword');
 }
+
+// Elimina ditta dal modal
+document.getElementById('btnDeleteDittaModal')?.addEventListener('click', async () => {
+  const id = parseInt(document.getElementById('dittaId').value);
+  if (!id) return;
+  const ditta = allDitte.find(d => d.id === id);
+  const nome = ditta?.ragione_sociale || 'questa ditta';
+  if (!confirm(`Eliminare "${nome}"?\n\nL'operazione non può essere annullata.`)) return;
+  try {
+    await api(`/api/ditte/${id}`, 'DELETE');
+    closeModal('modalDitta');
+    toast('Ditta eliminata', 'success');
+    loadDitte();
+    loadStats();
+  } catch(e) {
+    toast('Errore: ' + e.message, 'error');
+  }
+});
 
 /* INIT */
 checkAuth();

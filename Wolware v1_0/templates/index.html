@@ -776,15 +776,23 @@
                 </svg>
                 Cambia Tariffario
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btnSyncTariffario"
-                title="Sincronizza voci dal tariffario standard"
+              <button type="button" class="btn btn-secondary btn-sm" id="btnInitTariffario"
+                title="Inizializza: sovrascrive tutte le voci con il tariffario selezionato"
                 style="display:flex;align-items:center;gap:var(--space-2);flex-shrink:0">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="23 4 23 10 17 10" />
                   <polyline points="1 20 1 14 7 14" />
                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                 </svg>
-                Sincronizza
+                Inizializza
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnAggiornaTariffario"
+                title="Aggiorna: aggiunge nuove voci e aggiorna solo quelle non modificate manualmente"
+                style="display:flex;align-items:center;gap:var(--space-2);flex-shrink:0">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3"/>
+                </svg>
+                Aggiorna
               </button>
             </div>
             <div id="syncResult" style="display:none;margin-top:var(--space-2);
@@ -823,6 +831,14 @@
         </div><!-- /mtab-tariffario -->
       </div><!-- chiude modal-body-tabs -->
       <div class="modal-footer">
+        <button class="btn btn-danger" id="btnDeleteDittaModal"
+          style="display:none;margin-right:auto;color:var(--color-error);
+                 background:transparent;border:1px solid var(--color-error)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          </svg>
+          Elimina Ditta
+        </button>
         <button class="btn btn-ghost" data-close="modalDitta">Annulla</button>
         <button class="btn btn-primary" id="btnSaveDitta">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">

@@ -169,6 +169,7 @@ def init_db():
         ('esente_iva',               'INTEGER DEFAULT 0'),
         ('richiede_anno_precedente', 'INTEGER DEFAULT 0'),
         ('mesi_json',                'TEXT'),
+        ('sync_override',            'INTEGER DEFAULT 0'),
     ]:
         if col not in existing_dv_cols:
             c.execute(f'ALTER TABLE ditta_voci ADD COLUMN {col} {typedef}')
