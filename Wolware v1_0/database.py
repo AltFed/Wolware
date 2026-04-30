@@ -258,6 +258,28 @@ def init_db():
         cambiato_il     TEXT DEFAULT (datetime('now','localtime')),
         note            TEXT
     )''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS fatture (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        ditta_id         INTEGER NOT NULL,
+        numero           TEXT,
+        anno             INTEGER,
+        tipo             TEXT DEFAULT 'proforma',
+        stato            TEXT DEFAULT 'bozza',
+        data_emissione   TEXT,
+        periodo_da_anno  INTEGER,
+        periodo_da_mese  INTEGER,
+        periodo_a_anno   INTEGER,
+        periodo_a_mese   INTEGER,
+        imponibile       REAL DEFAULT 0,
+        esente_iva       REAL DEFAULT 0,
+        totale_iva       REAL DEFAULT 0,
+        totale           REAL DEFAULT 0,
+        note             TEXT DEFAULT '',
+        righe_json       TEXT DEFAULT '[]',
+        FOREIGN KEY (ditta_id) REFERENCES ditte(id) ON DELETE CASCADE
+    )
+    ''')
 
     conn.commit()
     conn.close()

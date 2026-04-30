@@ -34,6 +34,12 @@ def create_app():
     from routes.ditta_tariffario import bp as ditta_tariffario_bp
     from routes.pagamenti import pagamenti_bp
     from routes.arrotondamenti import arrotondamenti_bp
+    from routes.strumenti import bp as strumenti_bp
+    from routes.pratiche_richiesta import bp as pratiche_richiesta_bp
+    from routes.fatture             import bp as fatture_bp
+    from routes.estratto            import bp as estratto_bp
+    from routes.previsionale        import bp as previsionale_bp
+    from routes.solleciti           import bp as solleciti_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(events_bp)
@@ -45,6 +51,14 @@ def create_app():
     app.register_blueprint(ditta_tariffario_bp)
     app.register_blueprint(pagamenti_bp)
     app.register_blueprint(arrotondamenti_bp)
+    app.register_blueprint(strumenti_bp)
+    app.register_blueprint(pratiche_richiesta_bp)
+    app.register_blueprint(fatture_bp)
+    app.register_blueprint(estratto_bp)
+    app.register_blueprint(previsionale_bp)
+    app.register_blueprint(solleciti_bp)
+ 
+    
 
     return app
 

@@ -7,6 +7,55 @@ from routes.events import notify_all
 arrotondamenti_bp = Blueprint('arrotondamenti', __name__)
 
 
+# ─── Helper calcolo residuo (usato anche da solleciti.py) ────────────────────
+
+def calcola_residuo(db, ditta_id):
+    """
+    Calcola il saldo attuale del cliente:
+    residuo_iniziale + pratiche (+ IVA su imponibili) - pagamenti - arrotondamenti/addebiti
+    """
+    ditta = db.execute(
+        'SELECT residuo_iniziale FROM ditte WHERE id=?', (ditta_id,)
+    ).fetchone()
+    residuo_iniziale = float(ditta['residuo_iniziale'] or 0) if ditta else 0.0
+
+    tot_pratiche = db.execute(
+        'SELECT COALESCE(SUM(costo), 0) FROM pratiche WHERE ditta_id=?',
+        (ditta_id,)
+    ).fetchone()[0] or 0.0
+
+    iva_pratiche = db.execute(
+        '''SELECT COALESCE(SUM(costo * 0.22), 0)
+           FROM pratiche
+           WHERE ditta_id=? AND (esente_iva IS NULL OR esente_iva = 0)''',
+        (ditta_id,)
+    ).fetchone()[0] or 0.0
+
+    tot_pagamenti = db.execute(
+        'SELECT COALESCE(SUM(importo), 0) FROM pagamenti WHERE ditta_id=?',
+        (ditta_id,)
+    ).fetchone()[0] or 0.0
+
+    # Gli abbuoni riducono il dovuto, gli addebiti lo aumentano
+    # In DB: abbuono → importo positivo (da sottrarre al residuo)
+    #        addebito → importo positivo (da sommare al residuo)
+    # Gestiamo con la colonna tipo
+    tot_abbuoni = db.execute(
+        "SELECT COALESCE(SUM(importo), 0) FROM arrotondamenti WHERE ditta_id=? AND tipo='abbuono'",
+        (ditta_id,)
+    ).fetchone()[0] or 0.0
+
+    tot_addebiti = db.execute(
+        "SELECT COALESCE(SUM(importo), 0) FROM arrotondamenti WHERE ditta_id=? AND tipo='addebito'",
+        (ditta_id,)
+    ).fetchone()[0] or 0.0
+
+    totale_dovuto = residuo_iniziale + tot_pratiche + iva_pratiche + tot_addebiti
+    return round(totale_dovuto - tot_pagamenti - tot_abbuoni, 2)
+
+
+# ─── GET lista arrotondamenti cliente ────────────────────────────────────────
+
 @arrotondamenti_bp.route('/api/arrotondamenti', methods=['GET'])
 @login_required
 def get_arrotondamenti():
@@ -24,6 +73,45 @@ def get_arrotondamenti():
         conn.close()
 
 
+# ─── GET anteprima residuo (live modal) ──────────────────────────────────────
+
+@arrotondamenti_bp.route('/api/arrotondamenti/anteprima', methods=['GET'])
+@login_required
+def anteprima_arrotondamento():
+    """
+    Calcola il nuovo residuo PRIMA di salvare → per l'anteprima live nel modal.
+    Parametri query: ditta_id, tipo (abbuono|addebito), importo
+    """
+    ditta_id = request.args.get('ditta_id', type=int)
+    tipo     = request.args.get('tipo', 'abbuono')
+    importo  = abs(float(request.args.get('importo', 0)))
+
+    if not ditta_id:
+        return jsonify({'error': 'ditta_id obbligatorio'}), 400
+    if tipo not in ('abbuono', 'addebito'):
+        return jsonify({'error': "tipo deve essere 'abbuono' o 'addebito'"}), 400
+
+    conn = get_db()
+    try:
+        residuo_attuale = calcola_residuo(conn, ditta_id)
+
+        if tipo == 'abbuono':
+            nuovo_residuo = round(residuo_attuale - importo, 2)
+        else:  # addebito
+            nuovo_residuo = round(residuo_attuale + importo, 2)
+
+        return jsonify({
+            'residuo_attuale':   residuo_attuale,
+            'tipo':              tipo,
+            'importo_applicato': importo,
+            'nuovo_residuo':     nuovo_residuo,
+        })
+    finally:
+        conn.close()
+
+
+# ─── POST crea arrotondamento ────────────────────────────────────────────────
+
 @arrotondamenti_bp.route('/api/arrotondamenti', methods=['POST'])
 @login_required
 def create_arrotondamento():
@@ -36,6 +124,7 @@ def create_arrotondamento():
     importo = float(data['importo'])
     if importo < 0:
         return jsonify({'error': 'importo deve essere >= 0'}), 400
+
     conn = get_db()
     try:
         conn.execute(
@@ -44,21 +133,39 @@ def create_arrotondamento():
         )
         conn.commit()
         new_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
-        row = conn.execute('SELECT * FROM arrotondamenti WHERE id=?', (new_id,)).fetchone()
-        notify_all('arrotondamento_created', dict(row))
-        return jsonify(dict(row)), 201
+        row    = conn.execute('SELECT * FROM arrotondamenti WHERE id=?', (new_id,)).fetchone()
+
+        # Calcola e allega il nuovo residuo nella notifica SSE
+        nuovo_residuo = calcola_residuo(conn, data['ditta_id'])
+        payload = dict(row)
+        payload['nuovo_residuo'] = nuovo_residuo
+
+        notify_all('arrotondamento_created', payload)
+        return jsonify(payload), 201
     finally:
         conn.close()
 
+
+# ─── DELETE annulla arrotondamento ───────────────────────────────────────────
 
 @arrotondamenti_bp.route('/api/arrotondamenti/<int:id>', methods=['DELETE'])
 @login_required
 def delete_arrotondamento(id):
     conn = get_db()
     try:
+        # Recupera ditta_id prima di cancellare per ricalcolare residuo
+        row = conn.execute(
+            'SELECT ditta_id FROM arrotondamenti WHERE id=?', (id,)
+        ).fetchone()
         conn.execute('DELETE FROM arrotondamenti WHERE id=?', (id,))
         conn.commit()
-        notify_all('arrotondamento_deleted', {'id': id})
+
+        payload = {'id': id}
+        if row:
+            payload['nuovo_residuo'] = calcola_residuo(conn, row['ditta_id'])
+            payload['ditta_id']      = row['ditta_id']
+
+        notify_all('arrotondamento_deleted', payload)
         return jsonify({'ok': True})
     finally:
         conn.close()

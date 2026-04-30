@@ -198,5 +198,14 @@ def clienti_riepilogo():
                 'residuo_iniziale': r['residuo_iniziale'],
                 'residuo':          r['residuo'],
             })
+            
+        return jsonify(risultati), 200
 
-        # 
+    except Exception as e:
+        return jsonify({'error': f'Errore nel recupero dei dati: {str(e)}'}), 500
+
+    finally:
+        # Assicura che la connessione al database venga chiusa in ogni caso
+        if conn:
+            conn.close()
+     
