@@ -5,7 +5,7 @@
 # orchestra soltanto i moduli. Viene importato da main.py per l'exe.
 
 import os
-from flask import Flask
+from flask import Flask, app
 from config import SECRET_KEY
 from database import init_db
 from routes.stats import stats_bp
@@ -32,6 +32,8 @@ def create_app():
     from routes.users   import users_bp
     from routes.tariffari import tariffari_bp
     from routes.ditta_tariffario import bp as ditta_tariffario_bp
+    from routes.pagamenti import pagamenti_bp
+    from routes.arrotondamenti import arrotondamenti_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(events_bp)
@@ -41,6 +43,8 @@ def create_app():
     app.register_blueprint(stats_bp)
     app.register_blueprint(tariffari_bp)
     app.register_blueprint(ditta_tariffario_bp)
+    app.register_blueprint(pagamenti_bp)
+    app.register_blueprint(arrotondamenti_bp)
 
     return app
 

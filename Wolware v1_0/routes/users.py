@@ -121,3 +121,47 @@ def change_password(id):
         return jsonify({'ok': True})
     finally:
         conn.close()
+
+# ── PUT /api/users/<id>/role ───────────────────────────────────────────────────
+@users_bp.route('/api/users/<int:id>/role', methods=['PUT'])
+@login_required
+@admin_required
+def change_role(id):
+    if id == session.get('user_id'):
+        return jsonify({'error': 'Non puoi cambiare il tuo stesso ruolo'}), 400
+    data = request.get_json()
+    role = data.get('role', '')
+    if role not in VALID_ROLES:
+        return jsonify({'error': f'Ruolo non valido. Valori ammessi: {", ".join(VALID_ROLES)}'}), 400
+    conn = get_db()
+    try:
+        conn.execute('UPDATE users SET role=? WHERE id=?', (role, id))
+        conn.commit()
+        u = conn.execute(
+            'SELECT id, username, role, created_at FROM users WHERE id=?', (id,)
+        ).fetchone()
+        return jsonify(dict(u))
+    finally:
+        conn.close()
+        
+# ── PUT /api/users/<id>/username ───────────────────────────────────────────────
+@users_bp.route('/api/users/<int:id>/username', methods=['PUT'])
+@login_required
+@admin_required
+def change_username(id):
+    data = request.get_json()
+    username = (data.get('username') or '').strip()
+    if not username:
+        return jsonify({'error': 'Username obbligatorio'}), 400
+    conn = get_db()
+    try:
+        conn.execute('UPDATE users SET username=? WHERE id=?', (username, id))
+        conn.commit()
+        u = conn.execute(
+            'SELECT id, username, role, created_at FROM users WHERE id=?', (id,)
+        ).fetchone()
+        return jsonify(dict(u))
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Username già esistente'}), 409
+    finally:
+        conn.close()

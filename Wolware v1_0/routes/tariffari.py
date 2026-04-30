@@ -5,7 +5,13 @@ from auth.decorators import login_required
 
 tariffari_bp = Blueprint('tariffari', __name__)
 
-TIPI_VALIDI = ['fisso_mensile', 'fisso_annuale', 'variabile_mensile', 'variabile_annuale']
+TIPI_VALIDI = [
+    'fisso_mensile', 'fisso_annuale',
+    'variabile_mensile', 'variabile_annuale',
+    # alias lunghi (usati da ditta_tariffario)
+    'costi_fissi_mensili', 'costi_fissi_annuali',
+    'costi_variabili_mensili', 'costi_variabili_annuali',
+]
 
 # ── Helpers ──────────────────────────────────────────────────
 def _parse_mesi(raw):
@@ -50,8 +56,8 @@ def create_tariffario():
     try:
         cur = db.execute('INSERT INTO tariffari (nome, note) VALUES (?,?)',
                          (nome, data.get('note', '')))
+        db.commit()   # ← commit PRIMA del fetch
         row = db.execute('SELECT * FROM tariffari WHERE id=?', (cur.lastrowid,)).fetchone()
-        db.commit()
         return jsonify(dict(row)), 201
     finally:
         db.close()
@@ -73,11 +79,33 @@ def update_tariffario(tid):
     finally:
         db.close()
 
+@tariffari_bp.route('/api/tariffari/<int:tid>', methods=['GET'])
+@login_required
+def get_tariffario(tid):
+    db = get_db()
+    try:
+        row = db.execute('SELECT * FROM tariffari WHERE id=?', (tid,)).fetchone()
+        if not row:
+            return jsonify({'error': 'Tariffario non trovato'}), 404
+        t = dict(row)
+        t['voci_count'] = db.execute(
+            'SELECT COUNT(*) FROM voci_costo WHERE macrogruppo_id IN '
+            '(SELECT id FROM macrogruppi WHERE tariffario_id=?)', (tid,)
+        ).fetchone()[0]
+        return jsonify(t)
+    finally:
+        db.close()
+
 @tariffari_bp.route('/api/tariffari/<int:tid>', methods=['DELETE'])
 @login_required
 def delete_tariffario(tid):
     db = get_db()
     try:
+        # Sgancia le ditte che usavano questo tariffario
+        db.execute(
+            "UPDATE ditte SET tariffario_id=NULL, tariffario_nome=NULL WHERE tariffario_id=?",
+            (tid,)
+        )
         db.execute('DELETE FROM voci_costo WHERE macrogruppo_id IN '
                    '(SELECT id FROM macrogruppi WHERE tariffario_id=?)', (tid,))
         db.execute('DELETE FROM macrogruppi WHERE tariffario_id=?', (tid,))
