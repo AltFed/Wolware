@@ -239,7 +239,7 @@ function renderDitte(list) {
       ? `<span class="badge-cadenza">${d.cadenza}</span>`
       : '<span style="color:var(--color-text-faint)">—</span>';
 
-    return `<tr class="cliente-row" onclick="editDitta(${d.id})" title="${d.ragione_sociale}">
+    return `<tr class="cliente-row" onclick="openDettaglioDitta(${d.id})" title="${d.ragione_sociale}">
       <td class="col-denom">
         <div class="denom-wrap">
           <div class="ditta-avatar ditta-avatar-sm">${d.ragione_sociale.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
@@ -2376,3 +2376,237 @@ document.getElementById('btnDeleteDittaModal')?.addEventListener('click', async 
 
 /* INIT */
 checkAuth();
+
+/* ══════════════════════════════════════════════════════════
+   BLOCCO 3 — MODAL DETTAGLIO CLIENTE
+══════════════════════════════════════════════════════════ */
+let currentDettaglioId = null;
+const MESI_NOMI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const fmt€ = v => (v == null ? '—' : (parseFloat(v) >= 0 ? '' : '−') + Math.abs(parseFloat(v)).toFixed(2).replace('.', ',') + ' €');
+
+function openDettaglioDitta(id) {
+  currentDettaglioId = id;
+  const d = allDitte.find(x => x.id === id);
+  if (!d) return;
+
+  // Header
+  const initials = d.ragione_sociale.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('dettaglioAvatar').textContent = initials;
+  document.getElementById('dettaglioNome').textContent   = d.ragione_sociale;
+  document.getElementById('dettaglioSub').textContent    = [d.partita_iva, d.tariffario_nome].filter(Boolean).join(' · ') || '';
+
+  // KPI
+  document.getElementById('kpiDovuto').textContent  = fmt€(d.totale_dovuto);
+  document.getElementById('kpiPagato').textContent  = fmt€(d.totale_pagato);
+  const resEl = document.getElementById('kpiResiduo');
+  resEl.textContent = fmt€(d.totale_residuo);
+  resEl.style.color = parseFloat(d.totale_residuo) > 0 ? 'var(--color-error)' : parseFloat(d.totale_residuo) < 0 ? 'var(--color-success)' : 'var(--color-text)';
+
+  // Btn modifica
+  document.getElementById('btnDettaglioModifica').onclick = () => { closeModal('modalDettaglioDitta'); editDitta(id); };
+
+  // Attiva primo tab
+  document.querySelectorAll('[data-dtab]').forEach(b => b.classList.toggle('active', b.dataset.dtab === 'pratiche'));
+  document.querySelectorAll('.modal-tab-panel[id^="dtab-"]').forEach(p => p.classList.toggle('active', p.id === 'dtab-pratiche'));
+
+  openModal('modalDettaglioDitta');
+  // data default = oggi
+  const todayStr = new Date().toISOString().split('T')[0];
+  const pagDataEl = document.getElementById('pagData');
+  if (pagDataEl && !pagDataEl.value) pagDataEl.value = todayStr;
+  loadDettaglioPratiche(id);
+}
+
+async function loadDettaglioPratiche(id) {
+  const container = document.getElementById('dettaglioPraticheList');
+  container.innerHTML = '<div class="list-empty-msg">Caricamento…</div>';
+  try {
+    const anno = ditteAnno;
+    const pratiche = await api(`/api/ditte/${id}/pratiche-richiesta?anno=${anno}`);
+    const vociDitta = await api(`/api/ditte/${id}/voci-per-tipo`).catch(() => ({}));
+
+    if (!pratiche.length && Object.keys(vociDitta).length === 0) {
+      container.innerHTML = '<div class="list-empty-msg">Nessuna pratica per questo anno.</div>';
+      return;
+    }
+
+    // Raggruppa per tipo macrogruppo: CF, Variabili, Richiesta
+    const gruppi = {
+      'Costi Fissi': [],
+      'Variabili': [],
+      'A Richiesta': []
+    };
+
+    // vociDitta è { tipo_nome: [voci] } — aggiungi come pratiche di tariffario (sola lettura)
+    if (vociDitta && typeof vociDitta === 'object') {
+      Object.entries(vociDitta).forEach(([tipo, voci]) => {
+        const label = tipo === 'costo_fisso' ? 'Costi Fissi' : tipo === 'variabile' ? 'Variabili' : 'Costi Fissi';
+        if (!gruppi[label]) gruppi[label] = [];
+        (voci || []).forEach(v => gruppi[label].push({ ...v, _readonly: true, _fonte: 'tariffario' }));
+      });
+    }
+
+    // Pratiche a richiesta
+    pratiche.forEach(p => gruppi['A Richiesta'].push(p));
+
+    let html = '';
+    const COLORI_GRUPPO = {
+      'Costi Fissi': 'var(--color-primary)',
+      'Variabili': 'var(--color-blue)',
+      'A Richiesta': 'var(--color-orange)'
+    };
+    Object.entries(gruppi).forEach(([nome, items]) => {
+      if (!items.length) return;
+      html += `<div class="pratiche-gruppo">
+        <div class="pratiche-gruppo-title" style="color:${COLORI_GRUPPO[nome]}">
+          <span>${nome}</span>
+          <span class="pratiche-gruppo-badge">${items.length}</span>
+        </div>`;
+      items.forEach(p => {
+        const imp = p.importo != null ? fmt€(p.importo) : (p.prezzo != null ? fmt€(p.prezzo) : '—');
+        const mese = p.mese ? MESI_NOMI[p.mese - 1] : '';
+        const nota = p.nota || p.descrizione || p.nome || '';
+        html += `<div class="pratica-row">
+          <svg class="pratica-edit-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <div class="pratica-voce">${nota}</div>
+          <div class="pratica-mese">${mese}</div>
+          <div class="pratica-importo">${imp}</div>
+        </div>`;
+      });
+      html += '</div>';
+    });
+    container.innerHTML = html || '<div class="list-empty-msg">Nessuna pratica.</div>';
+  } catch(e) {
+    container.innerHTML = `<div class="list-empty-msg">Errore: ${e.message}</div>`;
+  }
+}
+
+async function loadDettaglioPagamenti(id) {
+  const container = document.getElementById('dettaglioPagamentiList');
+  container.innerHTML = '<div class="list-empty-msg">Caricamento…</div>';
+  try {
+    const pags = await api(`/api/ditte/${id}/pagamenti`);
+    if (!pags.length) {
+      container.innerHTML = '<div class="list-empty-msg">Nessun pagamento registrato.</div>';
+      return;
+    }
+    container.innerHTML = pags.map(p => `
+      <div class="pag-row">
+        <div class="pag-data">${p.data || '—'}</div>
+        <div class="pag-metodo">${p.metodo || '—'}</div>
+        <div class="pag-nota">${p.nota || ''}</div>
+        <div class="pag-importo">+${fmt€(p.importo)}</div>
+        <button class="pag-delete btn-icon" title="Elimina" onclick="deletePagamento(${p.id})">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+      </div>`).join('');
+  } catch(e) {
+    container.innerHTML = `<div class="list-empty-msg">Errore: ${e.message}</div>`;
+  }
+}
+
+function renderDettaglioMesi(d) {
+  const container = document.getElementById('dettaglioMesiGrid');
+  const anno = ditteAnno;
+  let html = '';
+
+  // CF row
+  html += `<div style="margin-bottom:var(--space-4)">
+    <div style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-primary);margin-bottom:var(--space-2)">Costi Fissi (CF)</div>
+    <div class="mesi-dettaglio-grid">`;
+  for (let m = 1; m <= 12; m++) {
+    const attivo = d[`cf_mese_${m}_${anno}`];
+    html += `<div class="mesi-dettaglio-cell">
+      <div class="mesi-dettaglio-label">${MESI_NOMI[m-1]}</div>
+      <div class="mesi-dettaglio-dot ${attivo ? 'attivo-cf' : ''}">${attivo ? '✓' : ''}</div>
+    </div>`;
+  }
+  html += '</div></div>';
+
+  // VR row
+  html += `<div>
+    <div style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-blue);margin-bottom:var(--space-2)">Costi Variabili (VR)</div>
+    <div class="mesi-dettaglio-grid">`;
+  for (let m = 1; m <= 12; m++) {
+    const attivo = d[`vr_mese_${m}_${anno}`];
+    html += `<div class="mesi-dettaglio-cell">
+      <div class="mesi-dettaglio-label">${MESI_NOMI[m-1]}</div>
+      <div class="mesi-dettaglio-dot ${attivo ? 'attivo-vr' : ''}">${attivo ? '✓' : ''}</div>
+    </div>`;
+  }
+  html += '</div></div>';
+  container.innerHTML = html;
+}
+
+// Listener tab dettaglio
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-dtab]');
+  if (!btn) return;
+  const tab = btn.dataset.dtab;
+  document.querySelectorAll('[data-dtab]').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.modal-tab-panel[id^="dtab-"]').forEach(p => p.classList.toggle('active', p.id === `dtab-${tab}`));
+  if (!currentDettaglioId) return;
+  if (tab === 'pagamenti') loadDettaglioPagamenti(currentDettaglioId);
+  if (tab === 'mesi') {
+    const d = allDitte.find(x => x.id === currentDettaglioId);
+    if (d) renderDettaglioMesi(d);
+  }
+});
+
+// Salva pagamento
+document.getElementById('btnSalvaPagamento')?.addEventListener('click', async () => {
+  const importo = parseFloat(document.getElementById('pagImporto').value);
+  if (!importo || importo <= 0) { toast('Importo non valido', 'error'); return; }
+  const data   = document.getElementById('pagData').value;
+  const metodo = document.getElementById('pagMetodo').value;
+  const nota   = document.getElementById('pagNota').value;
+  try {
+    await api(`/api/ditte/${currentDettaglioId}/pagamenti`, 'POST', { importo, data, metodo, nota });
+    toast('Pagamento registrato', 'success');
+    document.getElementById('pagImporto').value = '';
+    document.getElementById('pagNota').value = '';
+    loadDettaglioPagamenti(currentDettaglioId);
+    loadDitte(); // aggiorna KPI nella lista
+    // Aggiorna KPI nel modal
+    setTimeout(async () => {
+      await loadDitte();
+      const d = allDitte.find(x => x.id === currentDettaglioId);
+      if (d) {
+        document.getElementById('kpiDovuto').textContent = fmt€(d.totale_dovuto);
+        document.getElementById('kpiPagato').textContent = fmt€(d.totale_pagato);
+        const resEl = document.getElementById('kpiResiduo');
+        resEl.textContent = fmt€(d.totale_residuo);
+        resEl.style.color = parseFloat(d.totale_residuo) > 0 ? 'var(--color-error)' : parseFloat(d.totale_residuo) < 0 ? 'var(--color-success)' : 'var(--color-text)';
+      }
+    }, 300);
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+});
+
+async function deletePagamento(id) {
+  if (!confirm('Eliminare questo pagamento?')) return;
+  try {
+    await api(`/api/pagamenti/${id}`, 'DELETE');
+    toast('Pagamento eliminato', 'success');
+    loadDettaglioPagamenti(currentDettaglioId);
+    loadDitte();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+}
+
+// Estratto conto PDF
+document.getElementById('btnDettaglioEC')?.addEventListener('click', async () => {
+  if (!currentDettaglioId) return;
+  try {
+    toast('Generazione estratto conto…', 'info');
+    const res = await fetch(`/api/ditte/${currentDettaglioId}/estratto/pdf`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ formato: 'completo', periodo: 'anno', anno: ditteAnno })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `estratto_${currentDettaglioId}_${ditteAnno}.pdf`; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { toast('Errore EC: ' + e.message, 'error'); }
+});
+
