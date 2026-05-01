@@ -185,7 +185,8 @@ let ditteAnno = new Date().getFullYear();
 
 async function loadDitte() {
   try {
-    allDitte = await api(`/api/ditte?anno=${ditteAnno}`);
+    const mostraArch = document.getElementById('filterArchiviati')?.checked ? 1 : 0;
+    allDitte = await api(`/api/ditte?anno=${ditteAnno}&archiviati=${mostraArch}`);
     populateAnnoFilter();
     populateFilterTariffario();
     renderDitte(allDitte);
@@ -275,7 +276,7 @@ document.getElementById('filterDitte')?.addEventListener('input', filterDitte);
 document.getElementById('filterForma')?.addEventListener('change', filterDitte);
 document.getElementById('filterTariffario')?.addEventListener('change', filterDitte);
 document.getElementById('filterAnno')?.addEventListener('change', e => { ditteAnno = +e.target.value; loadDitte(); });
-document.getElementById('filterArchiviati')?.addEventListener('change', filterDitte);
+document.getElementById('filterArchiviati')?.addEventListener('change', loadDitte);
 
 // Ctrl+F focalizza la ricerca
 document.addEventListener('keydown', e => {
