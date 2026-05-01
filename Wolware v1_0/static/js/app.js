@@ -239,7 +239,7 @@ function renderDitte(list) {
       ? `<span class="badge-cadenza">${d.cadenza}</span>`
       : '<span style="color:var(--color-text-faint)">—</span>';
 
-    return `<tr class="cliente-row" onclick="editDitta(${d.id})" title="${d.ragione_sociale}">
+    return `<tr class="cliente-row" onclick="openDettaglioCliente(${d.id})" title="${d.ragione_sociale}">
       <td class="col-denom">
         <div class="denom-wrap">
           <div class="ditta-avatar ditta-avatar-sm">${d.ragione_sociale.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
@@ -2373,6 +2373,784 @@ document.getElementById('btnDeleteDittaModal')?.addEventListener('click', async 
     toast('Errore: ' + e.message, 'error');
   }
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BLOCCO 3 — MODAL DETTAGLIO CLIENTE
+══════════════════════════════════════════════════════════════════════════ */
+
+const MESI_NOMI_DET = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                        'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+let currentDetId   = null;
+let currentDetAnno = new Date().getFullYear();
+
+async function openDettaglioCliente(id) {
+  currentDetId   = id;
+  currentDetAnno = ditteAnno;
+  _buildDetAnnoSel();
+  openModal('modalDettaglioCliente');
+  await _loadDettaglio();
+}
+
+function _buildDetAnnoSel() {
+  const sel = document.getElementById('dettaglioAnnoSel');
+  const cur = currentDetAnno;
+  const now = new Date().getFullYear();
+  sel.innerHTML = '';
+  for (let y = now + 2; y >= now - 5; y--) {
+    sel.innerHTML += `<option value="${y}"${y===cur?' selected':''}>${y}</option>`;
+  }
+}
+
+document.getElementById('dettaglioAnnoSel')?.addEventListener('change', async e => {
+  currentDetAnno = +e.target.value;
+  await _loadDettaglio(false);
+});
+
+async function _loadDettaglio(fullLoad = true) {
+  try {
+    if (fullLoad) {
+      const d = await api(`/api/ditte/${currentDetId}`);
+      _renderDetHeader(d);
+    }
+    const [stats, pratiche, arrot, pag] = await Promise.all([
+      api(`/api/stats/ditta/${currentDetId}?anno=${currentDetAnno}`),
+      api(`/api/pratiche?ditta_id=${currentDetId}&anno=${currentDetAnno}`),
+      api(`/api/arrotondamenti?ditta_id=${currentDetId}`),
+      api(`/api/pagamenti?ditta_id=${currentDetId}&anno=${currentDetAnno}`),
+    ]);
+    _renderDetRiepilogo(stats);
+    _renderDetPratiche(pratiche);
+    _renderDetArrot(arrot);
+    _renderDetPag(pag);
+    document.getElementById('dettaglioPraticheHdr').textContent = `Pratiche ${currentDetAnno}`;
+    document.getElementById('dettaglioPagHdr').textContent = `Pagamenti ${currentDetAnno}`;
+  } catch(e) { toast('Errore caricamento dettaglio: ' + e.message, 'error'); }
+}
+
+function _renderDetHeader(d) {
+  document.getElementById('dettaglioTitle').textContent = d.ragione_sociale;
+  document.getElementById('dettaglioBadgeArch').style.display = d.archiviato ? '' : 'none';
+
+  const pagheStr = _dateRange(d.inizio_paghe, d.fine_paghe);
+  const contabStr = _dateRange(d.inizio_contabilita, d.fine_contabilita);
+
+  document.getElementById('dettaglioAnagraficaInfo').innerHTML = `
+    ${d.partita_iva || d.codice_fiscale ? `<div class="dettaglio-info-row"><span class="dettaglio-info-label">P.IVA/CF</span><span class="dettaglio-info-val">${d.partita_iva || d.codice_fiscale}</span></div>` : ''}
+    ${d.email ? `<div class="dettaglio-info-row"><span class="dettaglio-info-label">Email</span><span class="dettaglio-info-val">${d.email}</span></div>` : ''}
+    ${d.telefono ? `<div class="dettaglio-info-row"><span class="dettaglio-info-label">Tel.</span><span class="dettaglio-info-val">${d.telefono}</span></div>` : ''}
+    ${pagheStr  ? `<div class="dettaglio-info-row"><span class="dettaglio-info-label">Paghe</span><span class="dettaglio-info-val">${pagheStr}</span></div>` : ''}
+    ${contabStr ? `<div class="dettaglio-info-row"><span class="dettaglio-info-label">Contab.</span><span class="dettaglio-info-val">${contabStr}</span></div>` : ''}
+    ${d.cadenza_pagamenti ? `<div class="dettaglio-info-row"><span class="dettaglio-info-label">Cadenza</span><span class="dettaglio-info-val">${d.cadenza_pagamenti}</span></div>` : ''}
+    ${d.tariffario_nome ? `<div class="dettaglio-info-row"><span class="dettaglio-info-label">Tariffario</span><span class="dettaglio-info-val" style="color:var(--color-primary)">${d.tariffario_nome}</span></div>` : ''}
+  `;
+
+  const btnArch = document.getElementById('btnDetArchivia');
+  btnArch.textContent = d.archiviato ? '↩ Ripristina' : '📦 Archivia';
+  btnArch.dataset.archiviato = d.archiviato ? '1' : '0';
+
+  const annotEl = document.getElementById('dettaglioAnnotazioni');
+  if (annotEl) annotEl.value = d.annotazioni || '';
+
+  // Date gestione
+  ['inizio_paghe','fine_paghe','inizio_contabilita','fine_contabilita'].forEach(f => {
+    const el = document.getElementById('dg_' + f);
+    if (el) el.value = d[f] || '';
+  });
+}
+
+function _dateRange(inizio, fine) {
+  if (!inizio) return '';
+  const ini = inizio.slice(0, 10).split('-').reverse().join('/');
+  const fin = fine ? fine.slice(0, 10).split('-').reverse().join('/') : 'In corso';
+  return `${ini} → ${fin}`;
+}
+
+function _renderDetRiepilogo(s) {
+  const imponibile = s.dovuto - (s.dovuto * 0); // usa dovuto direttamente
+  const saldo = s.residuo;
+  const saldoColor = saldo > 0 ? 'var(--color-error)' : saldo < 0 ? 'var(--color-success)' : 'var(--color-text)';
+  const saldoLabel = saldo > 0 ? 'DEBITO' : saldo < 0 ? 'CREDITO' : 'IN PARI';
+  document.getElementById('dettaglioRiepilogo').innerHTML = `
+    <div class="dettaglio-stat-card">
+      <div class="dettaglio-stat-label">Resid. prec.</div>
+      <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.residuo_iniziale)}</div>
+    </div>
+    <div class="dettaglio-stat-card">
+      <div class="dettaglio-stat-label">Dovuto</div>
+      <div class="dettaglio-stat-val">${formatEur(s.dovuto)}</div>
+    </div>
+    <div class="dettaglio-stat-card">
+      <div class="dettaglio-stat-label">Pagato</div>
+      <div class="dettaglio-stat-val" style="color:var(--color-success)">${formatEur(s.pagato)}</div>
+    </div>
+    ${s.abbuoni || s.addebiti ? `
+    <div class="dettaglio-stat-card">
+      <div class="dettaglio-stat-label">Arrotondamenti</div>
+      <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.abbuoni - s.addebiti)}</div>
+    </div>` : ''}
+    <div class="dettaglio-stat-card" style="border-left:2px solid var(--color-border);padding-left:var(--space-3)">
+      <div class="dettaglio-stat-label">Saldo</div>
+      <div class="dettaglio-stat-val" style="color:${saldoColor}">${formatEur(Math.abs(saldo))}</div>
+      <div style="font-size:9px;font-weight:700;color:${saldoColor};margin-top:2px">${saldoLabel}</div>
+    </div>
+  `;
+}
+
+function _renderDetPratiche(list) {
+  const el = document.getElementById('dettaglioPraticheBody');
+  if (!list.length) {
+    el.innerHTML = `<p style="color:var(--color-text-muted);font-size:var(--text-sm);padding:var(--space-3) 0">Nessuna pratica per il ${currentDetAnno}.</p>`;
+    return;
+  }
+  const byMese = {};
+  list.forEach(p => {
+    if (!byMese[p.mese]) byMese[p.mese] = [];
+    byMese[p.mese].push(p);
+  });
+  const mesiOrd = Object.keys(byMese).map(Number).sort((a,b) => b - a);
+  el.innerHTML = mesiOrd.map(m => {
+    const righe = byMese[m];
+    const tot = righe.reduce((s, p) => s + (p.importo || 0), 0);
+    const rows = righe.map(p => {
+      const tipoClass = p.tipo === 'richiesta' ? 'richiesta' :
+                        (p.tipo||'').includes('variabil') ? 'variabile' : 'fisso';
+      const tipoLabel = p.tipo === 'richiesta' ? 'A Richiesta' :
+                        (p.tipo||'').includes('variabil') ? 'Variabile' : 'Costo Fisso';
+      const mg = p.macrogruppo_nome ? `<span style="color:var(--color-text-muted)"> · ${p.macrogruppo_nome}</span>` : '';
+      const dettaglio = p.quantita && p.prezzo
+        ? `${p.nome}${mg} &nbsp;<span style="color:var(--color-text-faint)">${p.quantita} × ${formatEur(p.prezzo)}</span>`
+        : `${p.nome}${mg}`;
+      const esente = p.esente_iva ? `<span class="badge-tipo esente">ESENTE IVA</span>` : '';
+      return `<tr>
+        <td><span class="badge-tipo ${tipoClass}">${tipoLabel}</span>${esente}</td>
+        <td>${dettaglio}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${formatEur(p.importo)}</td>
+        <td style="text-align:center">
+          <button class="btn btn-icon btn-ghost" style="color:var(--color-error);font-size:12px"
+            onclick="deletePraticaDet(${p.id})">🗑</button>
+        </td>
+      </tr>`;
+    }).join('');
+    return `
+      <div class="pratiche-mese-card">
+        <div class="pratiche-mese-hdr" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.acc-icon').textContent=this.nextElementSibling.classList.contains('open')?'▲':'▼'">
+          <span class="pratiche-mese-nome">${MESI_NOMI_DET[m]}</span>
+          <span style="display:flex;align-items:center;gap:var(--space-3)">
+            <span class="pratiche-mese-tot">${formatEur(tot)}</span>
+            <span class="acc-icon" style="font-size:10px;color:var(--color-text-faint)">▼</span>
+          </span>
+        </div>
+        <div class="pratiche-mese-body">
+          <table class="pratiche-table">
+            <thead><tr>
+              <th>Tipo</th><th>Dettaglio</th>
+              <th style="text-align:right">Importo</th><th></th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function deletePraticaDet(id) {
+  if (!confirm('Eliminare questa pratica?')) return;
+  try {
+    await api(`/api/pratiche/${id}`, 'DELETE');
+    toast('Pratica eliminata', 'success');
+    const [stats, pratiche] = await Promise.all([
+      api(`/api/stats/ditta/${currentDetId}?anno=${currentDetAnno}`),
+      api(`/api/pratiche?ditta_id=${currentDetId}&anno=${currentDetAnno}`),
+    ]);
+    _renderDetRiepilogo(stats);
+    _renderDetPratiche(pratiche);
+    loadDitte();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+}
+
+function _renderDetArrot(list) {
+  const el = document.getElementById('dettaglioArrotBody');
+  if (!list.length) {
+    el.innerHTML = `<p style="color:var(--color-text-muted);font-size:var(--text-sm);padding:var(--space-2) 0">Nessun arrotondamento.</p>`;
+    return;
+  }
+  const rows = list.map(a => {
+    const isAbbuono = a.tipo === 'abbuono';
+    const segno = isAbbuono ? '+' : '-';
+    const col   = isAbbuono ? 'var(--color-success)' : 'var(--color-error)';
+    return `<tr>
+      <td>${a.data ? a.data.slice(0,10).split('-').reverse().join('/') : '—'}</td>
+      <td>${a.note || '—'}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;color:${col};font-weight:600">
+        ${segno}${formatEur(a.importo)}</td>
+      <td style="text-align:center">
+        <button class="btn btn-icon btn-ghost" style="color:var(--color-error);font-size:12px"
+          onclick="deleteArrotDet(${a.id})">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<div class="dettaglio-mini-table-wrap">
+    <table class="dettaglio-mini-table">
+      <thead><tr><th>Data</th><th>Note</th><th style="text-align:right">Importo</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+async function deleteArrotDet(id) {
+  if (!confirm('Eliminare questo arrotondamento?')) return;
+  try {
+    await api(`/api/arrotondamenti/${id}`, 'DELETE');
+    toast('Arrotondamento eliminato', 'success');
+    const arrot = await api(`/api/arrotondamenti?ditta_id=${currentDetId}`);
+    _renderDetArrot(arrot);
+    const stats = await api(`/api/stats/ditta/${currentDetId}?anno=${currentDetAnno}`);
+    _renderDetRiepilogo(stats);
+    loadDitte();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+}
+
+function _renderDetPag(list) {
+  const el = document.getElementById('dettaglioPagBody');
+  if (!list.length) {
+    el.innerHTML = `<p style="color:var(--color-text-muted);font-size:var(--text-sm);padding:var(--space-2) 0">Nessun pagamento per il ${currentDetAnno}.</p>`;
+    return;
+  }
+  const rows = list.map(p => `<tr>
+    <td>${p.data ? p.data.slice(0,10).split('-').reverse().join('/') : '—'}</td>
+    <td>${p.metodo || '—'}</td>
+    <td>${p.note || '—'}</td>
+    <td style="text-align:right;font-variant-numeric:tabular-nums;color:var(--color-success);font-weight:600">${formatEur(p.importo)}</td>
+  </tr>`).join('');
+  el.innerHTML = `<div class="dettaglio-mini-table-wrap">
+    <table class="dettaglio-mini-table">
+      <thead><tr><th>Data</th><th>Metodo</th><th>Note</th><th style="text-align:right">Importo</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+/* ── Bottoni azioni header dettaglio ─────────────────────────────────────── */
+
+document.getElementById('btnDetModifica')?.addEventListener('click', () => {
+  closeModal('modalDettaglioCliente');
+  editDitta(currentDetId);
+});
+
+document.getElementById('btnDetDate')?.addEventListener('click', () => {
+  openModal('modalDateGestione');
+});
+
+document.getElementById('btnDetArchivia')?.addEventListener('click', async () => {
+  const archiviato = document.getElementById('btnDetArchivia').dataset.archiviato === '1';
+  const url = `/api/ditte/${currentDetId}/${archiviato ? 'ripristina' : 'archivia'}`;
+  if (!archiviato && !confirm(`Archiviare il cliente?`)) return;
+  try {
+    await api(url, 'PATCH');
+    toast(archiviato ? 'Cliente ripristinato' : 'Cliente archiviato', 'success');
+    const d = await api(`/api/ditte/${currentDetId}`);
+    _renderDetHeader(d);
+    loadDitte();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+});
+
+document.getElementById('btnDetElimina')?.addEventListener('click', async () => {
+  if (!confirm('Eliminare definitivamente questo cliente? Verranno eliminate anche tutte le pratiche e i pagamenti associati.')) return;
+  try {
+    await api(`/api/ditte/${currentDetId}`, 'DELETE');
+    closeModal('modalDettaglioCliente');
+    toast('Cliente eliminato', 'success');
+    loadDitte(); loadStats();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+});
+
+/* Annotazioni — salvataggio al blur */
+document.getElementById('dettaglioAnnotazioni')?.addEventListener('blur', async () => {
+  const val = document.getElementById('dettaglioAnnotazioni').value;
+  try {
+    await api(`/api/ditte/${currentDetId}/annotazioni`, 'PATCH', { annotazioni: val });
+  } catch(e) { /* silent */ }
+});
+
+/* ── Modal Date Gestione ─────────────────────────────────────────────────── */
+document.getElementById('btnSalvaDateGestione')?.addEventListener('click', async () => {
+  const body = {
+    inizio_paghe:        document.getElementById('dg_inizio_paghe').value || null,
+    fine_paghe:          document.getElementById('dg_fine_paghe').value || null,
+    inizio_contabilita:  document.getElementById('dg_inizio_contabilita').value || null,
+    fine_contabilita:    document.getElementById('dg_fine_contabilita').value || null,
+  };
+  try {
+    await api(`/api/ditte/${currentDetId}/date-gestione`, 'PATCH', body);
+    toast('Date aggiornate', 'success');
+    closeModal('modalDateGestione');
+    const d = await api(`/api/ditte/${currentDetId}`);
+    _renderDetHeader(d);
+    loadDitte();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+});
+
+/* ── Modal Arrotondamento ────────────────────────────────────────────────── */
+document.getElementById('modalArrotondamento')?.addEventListener('transitionend', () => {
+  const today = new Date().toISOString().slice(0,10);
+  if (!document.getElementById('arrot_data').value)
+    document.getElementById('arrot_data').value = today;
+});
+
+['arrot_importo','arrot_tipo'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', _aggiornAAnteprimaArrot);
+});
+
+async function _aggiornAAnteprimaArrot() {
+  const imp  = parseFloat(document.getElementById('arrot_importo').value) || 0;
+  const tipo = document.getElementById('arrot_tipo').value;
+  if (!imp || !currentDetId) { document.getElementById('arrotAnteprima').style.display = 'none'; return; }
+  try {
+    const res = await api(`/api/arrotondamenti/anteprima?ditta_id=${currentDetId}&importo=${imp}&tipo=${tipo}`);
+    const box = document.getElementById('arrotAnteprima');
+    box.style.display = '';
+    box.innerHTML = `Residuo attuale: <strong>${formatEur(res.residuo_attuale)}</strong>
+      &nbsp;→&nbsp; Nuovo residuo: <strong>${formatEur(res.nuovo_residuo)}</strong>`;
+  } catch(e) { /* silent */ }
+}
+
+document.getElementById('btnSalvaArrotondamento')?.addEventListener('click', async () => {
+  const data   = document.getElementById('arrot_data').value;
+  const tipo   = document.getElementById('arrot_tipo').value;
+  const imp    = parseFloat(document.getElementById('arrot_importo').value);
+  const note   = document.getElementById('arrot_note').value;
+  if (!data || !imp) { toast('Compila data e importo', 'error'); return; }
+  try {
+    await api('/api/arrotondamenti', 'POST', { ditta_id: currentDetId, data, tipo, importo: imp, note });
+    toast('Arrotondamento salvato', 'success');
+    closeModal('modalArrotondamento');
+    document.getElementById('arrot_importo').value = '';
+    document.getElementById('arrot_note').value = '';
+    const [arrot, stats] = await Promise.all([
+      api(`/api/arrotondamenti?ditta_id=${currentDetId}`),
+      api(`/api/stats/ditta/${currentDetId}?anno=${currentDetAnno}`),
+    ]);
+    _renderDetArrot(arrot);
+    _renderDetRiepilogo(stats);
+    loadDitte();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+});
+
+/* ── Modal Inserisci Pratiche ────────────────────────────────────────────── */
+let prRigheData = [];
+
+function _buildPrAnnoSel() {
+  const sel = document.getElementById('pr_anno');
+  const now = new Date().getFullYear();
+  sel.innerHTML = '';
+  for (let y = now + 1; y >= now - 3; y--)
+    sel.innerHTML += `<option value="${y}"${y===currentDetAnno?' selected':''}>${y}</option>`;
+  document.getElementById('pr_mese').value = String(new Date().getMonth() + 1);
+}
+
+function _renderPrRighe() {
+  const el = document.getElementById('prRighe');
+  if (!prRigheData.length) { el.innerHTML = ''; return; }
+  el.innerHTML = prRigheData.map((r, i) => `
+    <div style="display:grid;grid-template-columns:130px 1fr 90px 120px 32px;gap:var(--space-2);align-items:center;margin-bottom:var(--space-2)">
+      <input type="date" value="${r.data}" oninput="prRigheData[${i}].data=this.value" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm)" />
+      <input type="text" value="${r.descrizione}" placeholder="Descrizione" oninput="prRigheData[${i}].descrizione=this.value" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm)" />
+      <input type="number" value="${r.costo}" placeholder="€" min="0" step="0.01" oninput="prRigheData[${i}].costo=parseFloat(this.value)||0" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm)" />
+      <label class="filter-check" style="white-space:nowrap">
+        <input type="checkbox" ${r.esente ? 'checked' : ''} onchange="prRigheData[${i}].esente=this.checked" />
+        Esente IVA
+      </label>
+      <button class="btn btn-icon btn-ghost" style="color:var(--color-error)" onclick="prRigheData.splice(${i},1);_renderPrRighe()">✕</button>
+    </div>`).join('');
+}
+
+document.getElementById('btnDetPratiche')?.addEventListener('click', () => {
+  prRigheData = [];
+  _buildPrAnnoSel();
+  _renderPrRighe();
+  openModal('modalInserisciPratiche');
+});
+
+document.getElementById('btnAddPraticaRichiesta')?.addEventListener('click', () => {
+  const today = new Date().toISOString().slice(0,10);
+  prRigheData.push({ data: today, descrizione: '', costo: 0, esente: false });
+  _renderPrRighe();
+});
+
+document.getElementById('btnSalvaPratiche')?.addEventListener('click', async () => {
+  const anno = +document.getElementById('pr_anno').value;
+  const mese = +document.getElementById('pr_mese').value;
+  const valide = prRigheData.filter(r => r.descrizione && r.costo > 0);
+  if (!valide.length) { toast('Aggiungi almeno una pratica con descrizione e costo', 'error'); return; }
+  try {
+    await Promise.all(valide.map(r => api('/api/pratiche', 'POST', {
+      ditta_id: currentDetId, anno, mese,
+      tipo: 'richiesta',
+      nome: r.descrizione,
+      quantita: 1,
+      prezzo: r.costo,
+      importo: r.costo,
+      esente_iva: r.esente ? 1 : 0,
+      data_esecuzione: r.data,
+    })));
+    toast('Pratiche salvate', 'success');
+    closeModal('modalInserisciPratiche');
+    const [stats, pratiche] = await Promise.all([
+      api(`/api/stats/ditta/${currentDetId}?anno=${currentDetAnno}`),
+      api(`/api/pratiche?ditta_id=${currentDetId}&anno=${currentDetAnno}`),
+    ]);
+    _renderDetRiepilogo(stats);
+    _renderDetPratiche(pratiche);
+    loadDitte();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+});
+
+/* ── Bottoni strumenti top-right dettaglio ───────────────────────────────── */
+document.getElementById('btnDetEstratto')?.addEventListener('click', () => {
+  // usa modalEstratto esistente se presente, altrimenti download diretto
+  if (document.getElementById('modalEstratto')) {
+    openModal('modalEstratto');
+  } else {
+    window.open(`/api/ditte/${currentDetId}/estratto/pdf?anno=${currentDetAnno}`, '_blank');
+  }
+});
+
+document.getElementById('btnDetSollecito')?.addEventListener('click', async () => {
+  if (!confirm('Generare il PDF di sollecito per questo cliente?')) return;
+  try {
+    const res = await fetch(`/api/ditte/${currentDetId}/sollecito/pdf`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ anno: currentDetAnno }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'sollecito.pdf'; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { toast('Errore generazione sollecito: ' + e.message, 'error'); }
+});
+
+document.getElementById('btnDetArrotondamento')?.addEventListener('click', () => {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('arrot_data').value = today;
+  document.getElementById('arrot_importo').value = '';
+  document.getElementById('arrot_note').value = '';
+  document.getElementById('arrotAnteprima').style.display = 'none';
+  openModal('modalArrotondamento');
+});
+
+/* Fattura e previsionale — apre modal esistente se disponibile */
+document.getElementById('btnDetFattura')?.addEventListener('click', () => {
+  if (document.getElementById('modalFattura')) openModal('modalFattura');
+  else toast('Modal fattura non ancora implementato', 'info');
+});
+document.getElementById('btnDetPrevisionale')?.addEventListener('click', () => {
+  if (document.getElementById('modalPrevisionale')) openModal('modalPrevisionale');
+  else toast('Modal previsionale non ancora implementato', 'info');
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BLOCCO 4 — STRUMENTI TRASVERSALI
+══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 4.1 Importa Excel ───────────────────────────────────────────────────── */
+document.getElementById('btnImportaExcel')?.addEventListener('click', () => {
+  document.getElementById('importFile').value = '';
+  document.getElementById('importPreview').style.display = 'none';
+  document.getElementById('btnImportaEsegui').disabled = true;
+  _populateTariffSelect('importTariffario');
+  openModal('modalImportaExcel');
+});
+
+let _importPreviewData = null;
+document.getElementById('importFile')?.addEventListener('change', async () => {
+  const file = document.getElementById('importFile').files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/strumenti/import/preview', { method: 'POST', body: fd });
+    const data = await res.json();
+    _importPreviewData = data;
+    const box = document.getElementById('importPreviewContent');
+    const ok  = (data.ok || []).length;
+    const err = (data.errori || []).length;
+    box.innerHTML = `<strong style="color:var(--color-success)">✅ ${ok} clienti pronti per l'import</strong>
+      ${err ? `<br><strong style="color:var(--color-error)">⚠️ ${err} righe con errori (saltate):</strong>
+        <ul style="margin:var(--space-1) 0 0 var(--space-4)">${(data.errori||[]).map(e=>`<li>${e}</li>`).join('')}</ul>` : ''}`;
+    document.getElementById('importPreview').style.display = '';
+    document.getElementById('btnImportaEsegui').disabled = !ok;
+  } catch(e) { toast('Errore anteprima: ' + e.message, 'error'); }
+});
+
+document.getElementById('btnImportaEsegui')?.addEventListener('click', async () => {
+  const file = document.getElementById('importFile').files[0];
+  const tariffId = document.getElementById('importTariffario').value || null;
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  if (tariffId) fd.append('tariffario_id', tariffId);
+  try {
+    const res = await fetch('/api/strumenti/import/esegui', { method: 'POST', body: fd });
+    const data = await res.json();
+    toast(`Importati ${data.importati || 0} clienti`, 'success');
+    closeModal('modalImportaExcel');
+    loadDitte();
+  } catch(e) { toast('Errore import: ' + e.message, 'error'); }
+});
+
+/* ── 4.2 Costi Massivi ───────────────────────────────────────────────────── */
+document.getElementById('btnCostiMassivi')?.addEventListener('click', () => {
+  const now = new Date();
+  document.getElementById('cm_anno').value = now.getFullYear();
+  document.getElementById('cm_mese').value = now.getMonth() + 1;
+  document.getElementById('cm_qta').value = 1;
+  document.getElementById('cm_descrizione').value = '';
+  document.getElementById('cm_importo').value = '';
+  document.getElementById('cm_esente_iva').checked = false;
+  document.getElementById('cm_sel_tutti').checked = true;
+  document.getElementById('cm_tariff_sel_wrap').style.display = 'none';
+  document.getElementById('cm_manuale_wrap').style.display = 'none';
+  document.getElementById('cmAnteprima').textContent = 'Clienti selezionati: —';
+  _populateTariffSelect('cm_tariff_sel');
+  _loadCmManualeList();
+  openModal('modalCostiMassivi');
+});
+
+async function _loadCmManualeList() {
+  const list = allDitte.filter(d => !d.archiviato);
+  document.getElementById('cm_manuale_list').innerHTML = list.map(d =>
+    `<label class="filter-check" style="padding:2px 0">
+      <input type="checkbox" class="cm-check" value="${d.id}" />
+      ${d.ragione_sociale}${d.tariffario_nome ? ` <span style="color:var(--color-text-faint)">(${d.tariffario_nome})</span>` : ''}
+    </label>`
+  ).join('');
+}
+
+document.querySelectorAll('input[name="cm_sel"]').forEach(r => {
+  r.addEventListener('change', () => {
+    document.getElementById('cm_tariff_sel_wrap').style.display = r.value === 'tariffario' ? '' : 'none';
+    document.getElementById('cm_manuale_wrap').style.display   = r.value === 'manuale' ? '' : 'none';
+    _updateCmAnteprima();
+  });
+});
+
+['cm_importo','cm_qta','cm_tariff_sel'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', _updateCmAnteprima);
+});
+
+function _updateCmAnteprima() {
+  const sel   = document.querySelector('input[name="cm_sel"]:checked')?.value || 'tutti';
+  const imp   = parseFloat(document.getElementById('cm_importo').value) || 0;
+  const qta   = parseInt(document.getElementById('cm_qta').value) || 1;
+  let n = 0;
+  if (sel === 'tutti')      n = allDitte.filter(d => !d.archiviato).length;
+  else if (sel === 'tariffario') {
+    const tid = document.getElementById('cm_tariff_sel').value;
+    n = tid ? allDitte.filter(d => !d.archiviato && String(d.tariffario_id) === tid).length : 0;
+  } else {
+    n = document.querySelectorAll('.cm-check:checked').length;
+  }
+  const tot = formatEur(imp * qta * n);
+  document.getElementById('cmAnteprima').textContent = `Clienti selezionati: ${n}  ·  Totale: ${tot}`;
+}
+document.addEventListener('change', e => {
+  if (e.target.classList.contains('cm-check')) _updateCmAnteprima();
+});
+
+document.getElementById('btnApplicaCostiMassivi')?.addEventListener('click', async () => {
+  const descrizione = document.getElementById('cm_descrizione').value.trim();
+  const importo     = parseFloat(document.getElementById('cm_importo').value);
+  const qta         = parseInt(document.getElementById('cm_qta').value) || 1;
+  const mese        = +document.getElementById('cm_mese').value;
+  const anno        = +document.getElementById('cm_anno').value;
+  const esente      = document.getElementById('cm_esente_iva').checked;
+  if (!descrizione || !importo) { toast('Compila descrizione e importo', 'error'); return; }
+  const sel  = document.querySelector('input[name="cm_sel"]:checked')?.value || 'tutti';
+  const body = { descrizione, importo, qta, mese, anno, esente_iva: esente ? 1 : 0, selezione: sel };
+  if (sel === 'tariffario') body.tariffario_id = document.getElementById('cm_tariff_sel').value;
+  if (sel === 'manuale')    body.ditta_ids = [...document.querySelectorAll('.cm-check:checked')].map(c => +c.value);
+  try {
+    const res = await api('/api/strumenti/costi-massivi', 'POST', body);
+    toast(`Costo applicato a ${res.n_clienti || '?'} clienti`, 'success');
+    closeModal('modalCostiMassivi');
+    loadDitte();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+});
+
+/* ── 4.3 Inserimento Costi Variabili ─────────────────────────────────────── */
+let ivTabData = null;
+
+document.getElementById('btnInserimentoCostiVariabili')?.addEventListener('click', () => {
+  const now = new Date();
+  _buildAnnoSel('iv_anno', now.getFullYear());
+  document.getElementById('iv_mese').value = now.getMonth() + 1;
+  ivTabData = null;
+  document.getElementById('ivTabella').innerHTML =
+    '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Seleziona anno e mese e clicca "Carica".</p>';
+  openModal('modalInserimentoVariabili');
+  _loadIvTabella();
+});
+
+['iv_anno','iv_mese'].forEach(id =>
+  document.getElementById(id)?.addEventListener('change', _loadIvTabella));
+
+async function _loadIvTabella() {
+  const anno = document.getElementById('iv_anno').value;
+  const mese = document.getElementById('iv_mese').value;
+  if (!anno || !mese) return;
+  try {
+    ivTabData = await api(`/api/strumenti/variabili/tabella?anno=${anno}&mese=${mese}`);
+    _renderIvTabella();
+  } catch(e) { toast('Errore caricamento tabella: ' + e.message, 'error'); }
+}
+
+function _renderIvTabella() {
+  const { colonne, righe } = ivTabData;
+  const el = document.getElementById('ivTabella');
+  if (!colonne.length) {
+    el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Nessuna voce variabile disponibile per questo mese.</p>';
+    return;
+  }
+  const ths = colonne.map(c =>
+    `<th title="${c.mg_nome}">${c.nome}</th>`).join('');
+  const trs = righe.map(r => {
+    const celle = colonne.map(c => {
+      const cella = r.celle[c.voce_id];
+      if (!cella || !cella.applicabile)
+        return `<td><span class="variabili-cell-na">×</span></td>`;
+      return `<td><input type="number" min="0" step="1" value="${cella.qta ?? 0}"
+        data-ditta="${r.ditta_id}" data-voce="${c.voce_id}"
+        class="iv-input" /></td>`;
+    }).join('');
+    return `<tr><td class="col-cliente">${r.ditta_nome}</td>${celle}</tr>`;
+  }).join('');
+  el.innerHTML = `<table class="variabili-table">
+    <thead><tr><th>Cliente</th>${ths}</tr></thead>
+    <tbody>${trs}</tbody>
+  </table>`;
+}
+
+document.getElementById('btnCaricaVariabili')?.addEventListener('click', async () => {
+  const anno = +document.getElementById('iv_anno').value;
+  const mese = +document.getElementById('iv_mese').value;
+  const inputs = [...document.querySelectorAll('.iv-input')];
+  const righe = inputs
+    .filter(i => parseFloat(i.value) > 0)
+    .map(i => ({ ditta_id: +i.dataset.ditta, voce_id: +i.dataset.voce, qta: +i.value }));
+  if (!righe.length) { toast('Nessuna quantità inserita', 'error'); return; }
+  try {
+    const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, righe });
+    toast(`Costi variabili caricati (${res.aggiunte || righe.length} voci)`, 'success');
+    closeModal('modalInserimentoVariabili');
+    loadDitte();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+});
+
+/* ── 4.4 Contabilizza Costi Fissi ────────────────────────────────────────── */
+let ccfPreviewData = null;
+
+document.getElementById('btnContabilizzaCostiFissi')?.addEventListener('click', () => {
+  const now = new Date();
+  _buildAnnoSel('ccf_anno', now.getFullYear());
+  document.getElementById('ccf_mese_da').value = now.getMonth() + 1;
+  document.getElementById('ccf_mese_a').value  = now.getMonth() + 1;
+  ccfPreviewData = null;
+  document.getElementById('ccfRiepilogo').style.display = 'none';
+  document.getElementById('ccfTabella').innerHTML = '';
+  document.getElementById('btnContabilizzaEsegui').disabled = true;
+  _populateCcfDitta();
+  openModal('modalContabilizzaCostiFissi');
+});
+
+async function _populateCcfDitta() {
+  const sel = document.getElementById('ccf_ditta');
+  sel.innerHTML = '<option value="">— Tutti i clienti —</option>' +
+    allDitte.filter(d => !d.archiviato).map(d =>
+      `<option value="${d.id}">${d.ragione_sociale}</option>`).join('');
+}
+
+document.getElementById('btnCcfPreview')?.addEventListener('click', async () => {
+  const anno    = document.getElementById('ccf_anno').value;
+  const meseDa  = document.getElementById('ccf_mese_da').value;
+  const meseA   = document.getElementById('ccf_mese_a').value;
+  const dittaId = document.getElementById('ccf_ditta').value;
+  try {
+    const qs = `anno=${anno}&mese_da=${meseDa}&mese_a=${meseA}${dittaId?`&ditta_id=${dittaId}`:''}`;
+    ccfPreviewData = await api(`/api/strumenti/contabilizza/preview?${qs}`);
+    _renderCcfPreview();
+    document.getElementById('btnContabilizzaEsegui').disabled = !ccfPreviewData.tot_da_fare;
+  } catch(e) { toast('Errore anteprima: ' + e.message, 'error'); }
+});
+
+function _renderCcfPreview() {
+  const { righe, tot_da_fare, tot_gia_ok, tot_importo } = ccfPreviewData;
+  const riep = document.getElementById('ccfRiepilogo');
+  riep.style.display = '';
+  riep.innerHTML = `Voci da contabilizzare: <strong>${tot_da_fare}</strong>
+    &nbsp;·&nbsp; Già contabilizzate: <strong>${tot_gia_ok}</strong>
+    &nbsp;·&nbsp; Totale da fare: <strong>${formatEur(tot_importo)}</strong>`;
+
+  const rows = righe.map(r => {
+    const statoHtml = r.stato === 'ok'
+      ? `<span class="ccf-badge-ok">✓ Già contabilizzato</span>`
+      : `<span class="ccf-badge-da">Da contabilizzare</span>`;
+    return `<tr class="${r.stato === 'ok' ? 'ccf-row-ok' : ''}">
+      <td>${r.ditta_nome}</td>
+      <td>${r.voce_nome}</td>
+      <td>${r.mese_nome} ${r.anno}</td>
+      <td>${r.qta}</td>
+      <td style="text-align:right">${formatEur(r.prezzo)}</td>
+      <td style="text-align:right">${formatEur(r.totale)}</td>
+      <td>${statoHtml}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('ccfTabella').innerHTML = `
+    <table class="ccf-table">
+      <thead><tr>
+        <th>Cliente</th><th>Voce</th><th>Mese</th>
+        <th>Qta</th><th style="text-align:right">Prezzo</th>
+        <th style="text-align:right">Totale</th><th>Stato</th>
+      </tr></thead>
+      <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:var(--color-text-muted)">Nessuna voce trovata</td></tr>'}</tbody>
+    </table>`;
+}
+
+document.getElementById('btnContabilizzaEsegui')?.addEventListener('click', async () => {
+  const anno   = +document.getElementById('ccf_anno').value;
+  const meseDa = +document.getElementById('ccf_mese_da').value;
+  const meseA  = +document.getElementById('ccf_mese_a').value;
+  const dittaId = document.getElementById('ccf_ditta').value || null;
+  try {
+    const res = await api('/api/strumenti/contabilizza', 'POST',
+      { anno, mese_da: meseDa, mese_a: meseA, ...(dittaId ? { ditta_id: +dittaId } : {}) });
+    toast(`Contabilizzate ${res.aggiunte} voci (${res.saltate} già presenti)`, 'success');
+    closeModal('modalContabilizzaCostiFissi');
+    loadDitte();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+});
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+function _populateTariffSelect(selId) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Nessun tariffario —</option>' +
+    tariffariGlobali.map(t =>
+      `<option value="${t.id}"${String(t.id)===cur?' selected':''}>${t.nome}</option>`).join('');
+}
+
+function _buildAnnoSel(selId, defaultAnno) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const now = new Date().getFullYear();
+  sel.innerHTML = '';
+  for (let y = now + 2; y >= now - 5; y--)
+    sel.innerHTML += `<option value="${y}"${y===defaultAnno?' selected':''}>${y}</option>`;
+}
 
 /* INIT */
 checkAuth();

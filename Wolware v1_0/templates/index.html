@@ -1815,6 +1815,440 @@
     </div>
   </div>
 
+<!-- ══════════════════════════════════════════════════════════
+     BLOCCO 3 — MODAL DETTAGLIO CLIENTE
+══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalDettaglioCliente">
+  <div class="modal modal-xxl" style="max-width:980px;height:90vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:var(--space-3)">
+        <h2 class="modal-title" id="dettaglioTitle">Cliente</h2>
+        <span id="dettaglioBadgeArch" class="badge-arch" style="display:none">ARCHIVIATO</span>
+      </div>
+      <button class="modal-close" data-close="modalDettaglioCliente">&#x2715;</button>
+    </div>
+    <div class="modal-body" style="flex:1;overflow-y:auto;padding:0">
+      <!-- TOP ROW: anagrafica + azioni anno -->
+      <div class="dettaglio-top-row">
+        <div class="dettaglio-anagrafica-panel">
+          <div id="dettaglioAnagraficaInfo" class="dettaglio-info-list"><!-- JS --></div>
+          <div class="dettaglio-azioni-row">
+            <button class="btn btn-secondary btn-sm" id="btnDetModifica">✏️ Modifica</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetDate">📅 Date</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetArchivia">📦 Archivia</button>
+            <button class="btn btn-sm" id="btnDetElimina" style="color:var(--color-error);border:1px solid var(--color-border)">🗑 Elimina</button>
+          </div>
+        </div>
+        <div class="dettaglio-strumenti-panel">
+          <div class="dettaglio-anno-row">
+            <label style="font-size:var(--text-xs);color:var(--color-text-muted)">Anno</label>
+            <select id="dettaglioAnnoSel" class="dettaglio-anno-sel"></select>
+          </div>
+          <div class="dettaglio-btn-grid">
+            <button class="btn btn-primary btn-sm" id="btnDetPratiche">+ Pratiche</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetEstratto">📄 Estratto</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetFattura">🧾 Fattura</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetPrevisionale">📈 Previsionale</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetArrotondamento">⚖️ Arrotondamento</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetSollecito">📬 Sollecito</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:0 var(--space-6) var(--space-6)">
+        <!-- Riepilogo finanziario -->
+        <div id="dettaglioRiepilogo" class="dettaglio-riepilogo-row"><!-- JS --></div>
+
+        <!-- Pratiche -->
+        <div class="dettaglio-section">
+          <div class="dettaglio-section-hdr" id="dettaglioPraticheHdr">Pratiche</div>
+          <div id="dettaglioPraticheBody"><!-- JS --></div>
+        </div>
+
+        <!-- Arrotondamenti -->
+        <div class="dettaglio-section">
+          <div class="dettaglio-section-hdr" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Arrotondamenti</span>
+            <button class="btn btn-secondary btn-sm" onclick="openModal('modalArrotondamento')">+ Nuovo</button>
+          </div>
+          <div id="dettaglioArrotBody"><!-- JS --></div>
+        </div>
+
+        <!-- Pagamenti -->
+        <div class="dettaglio-section">
+          <div class="dettaglio-section-hdr" id="dettaglioPagHdr">Pagamenti</div>
+          <div id="dettaglioPagBody"><!-- JS --></div>
+        </div>
+
+        <!-- Annotazioni -->
+        <div class="dettaglio-section">
+          <div class="dettaglio-section-hdr">Annotazioni</div>
+          <textarea id="dettaglioAnnotazioni" class="dettaglio-textarea"
+            placeholder="Note sul cliente..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUB-MODAL: Date Gestione -->
+<div class="modal-overlay" id="modalDateGestione">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2 class="modal-title">Date Gestione</h2>
+      <button class="modal-close" data-close="modalDateGestione">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-section-title">Gestione Paghe</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Data Inizio</label>
+            <input type="date" id="dg_inizio_paghe" />
+          </div>
+          <div class="form-field">
+            <label>Data Fine</label>
+            <input type="date" id="dg_fine_paghe" />
+          </div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Gestione Contabilità</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Data Inizio</label>
+            <input type="date" id="dg_inizio_contabilita" />
+          </div>
+          <div class="form-field">
+            <label>Data Fine</label>
+            <input type="date" id="dg_fine_contabilita" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalDateGestione">Annulla</button>
+      <button class="btn btn-primary" id="btnSalvaDateGestione">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUB-MODAL: Cambia Tariffario -->
+<div class="modal-overlay" id="modalCambiaTariffario">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2 class="modal-title">Cambia Tariffario</h2>
+      <button class="modal-close" data-close="modalCambiaTariffario">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <p id="tariffarioAttualeLbl" style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-4)"></p>
+      <div class="form-field">
+        <label>Nuovo Tariffario</label>
+        <select id="selNuovoTariffario"></select>
+      </div>
+      <div class="form-error" style="margin-top:var(--space-3);background:var(--color-warning-light);color:var(--color-warning);border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-xs)">
+        ⚠️ I costi e le pratiche già inseriti manterranno i prezzi del tariffario precedente. Il nuovo tariffario verrà applicato solo ai nuovi mesi.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalCambiaTariffario">Annulla</button>
+      <button class="btn btn-primary" id="btnConfermaCambiaTariff">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUB-MODAL: Arrotondamento -->
+<div class="modal-overlay" id="modalArrotondamento">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2 class="modal-title">Nuovo Arrotondamento</h2>
+      <button class="modal-close" data-close="modalArrotondamento">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Data</label>
+          <input type="date" id="arrot_data" />
+        </div>
+        <div class="form-field">
+          <label>Tipo</label>
+          <select id="arrot_tipo">
+            <option value="abbuono">Arrotondamento (diminuisce residuo)</option>
+            <option value="addebito">Addebito (aumenta residuo)</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Importo (€)</label>
+          <input type="number" id="arrot_importo" min="0.01" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="form-field">
+          <label>Note</label>
+          <input type="text" id="arrot_note" placeholder="es. Arrot. fattura" />
+        </div>
+      </div>
+      <div id="arrotAnteprima" class="dettaglio-anteprima-box" style="display:none"><!-- JS --></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalArrotondamento">Annulla</button>
+      <button class="btn btn-primary" id="btnSalvaArrotondamento">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUB-MODAL: Inserisci Pratiche a Richiesta -->
+<div class="modal-overlay" id="modalInserisciPratiche">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <h2 class="modal-title">Inserisci Pratiche a Richiesta</h2>
+      <button class="modal-close" data-close="modalInserisciPratiche">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="margin-bottom:var(--space-4)">
+        <div class="form-field">
+          <label>Anno</label>
+          <select id="pr_anno"></select>
+        </div>
+        <div class="form-field">
+          <label>Mese</label>
+          <select id="pr_mese">
+            <option value="1">Gennaio</option><option value="2">Febbraio</option>
+            <option value="3">Marzo</option><option value="4">Aprile</option>
+            <option value="5">Maggio</option><option value="6">Giugno</option>
+            <option value="7">Luglio</option><option value="8">Agosto</option>
+            <option value="9">Settembre</option><option value="10">Ottobre</option>
+            <option value="11">Novembre</option><option value="12">Dicembre</option>
+          </select>
+        </div>
+      </div>
+      <div id="prRighe"></div>
+      <button class="btn btn-secondary btn-sm" id="btnAddPraticaRichiesta" style="margin-top:var(--space-3)">
+        + Aggiungi pratica a richiesta
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalInserisciPratiche">Annulla</button>
+      <button class="btn btn-primary" id="btnSalvaPratiche">Salva Pratiche</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     BLOCCO 4 — STRUMENTI TRASVERSALI
+══════════════════════════════════════════════════════════ -->
+
+<!-- 4.1 Importa Clienti da Excel -->
+<div class="modal-overlay" id="modalImportaExcel">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <h2 class="modal-title">Importa Clienti da Excel</h2>
+      <button class="modal-close" data-close="modalImportaExcel">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-error" style="background:var(--color-blue-light);color:var(--color-blue);border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-xs);margin-bottom:var(--space-4)">
+        ℹ️ 1. Scarica il template · 2. Compilalo con i dati · 3. Caricalo qui sotto
+      </div>
+      <div style="margin-bottom:var(--space-4)">
+        <a id="btnDownloadTemplate" href="/api/strumenti/import/template" class="btn btn-secondary btn-sm">
+          📥 Scarica Template Excel
+        </a>
+      </div>
+      <div class="form-grid">
+        <div class="form-field col-span-2">
+          <label>File Excel (.xlsx)</label>
+          <input type="file" id="importFile" accept=".xlsx" />
+        </div>
+        <div class="form-field col-span-2">
+          <label>Tariffario da assegnare ai nuovi clienti</label>
+          <select id="importTariffario">
+            <option value="">— Nessun tariffario —</option>
+          </select>
+        </div>
+      </div>
+      <div id="importPreview" style="display:none;margin-top:var(--space-4)">
+        <div id="importPreviewContent" class="dettaglio-anteprima-box"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalImportaExcel">Annulla</button>
+      <button class="btn btn-primary" id="btnImportaEsegui" disabled>Importa Clienti</button>
+    </div>
+  </div>
+</div>
+
+<!-- 4.2 Costi Massivi -->
+<div class="modal-overlay" id="modalCostiMassivi">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <h2 class="modal-title">Costi Massivi</h2>
+      <button class="modal-close" data-close="modalCostiMassivi">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-section-title">Definizione Costo</div>
+        <div class="form-grid">
+          <div class="form-field col-span-2">
+            <label>Descrizione <span class="required">*</span></label>
+            <input type="text" id="cm_descrizione" placeholder="es. Invio CU 2026" />
+          </div>
+          <div class="form-field">
+            <label>Importo € <span class="required">*</span></label>
+            <input type="number" id="cm_importo" min="0" step="0.01" placeholder="25.00" />
+          </div>
+          <div class="form-field">
+            <label>Quantità</label>
+            <input type="number" id="cm_qta" min="1" value="1" />
+          </div>
+          <div class="form-field">
+            <label>Mese</label>
+            <select id="cm_mese">
+              <option value="1">Gennaio</option><option value="2">Febbraio</option>
+              <option value="3">Marzo</option><option value="4">Aprile</option>
+              <option value="5">Maggio</option><option value="6">Giugno</option>
+              <option value="7">Luglio</option><option value="8">Agosto</option>
+              <option value="9">Settembre</option><option value="10">Ottobre</option>
+              <option value="11">Novembre</option><option value="12">Dicembre</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Anno</label>
+            <input type="number" id="cm_anno" min="2020" max="2035" />
+          </div>
+          <div class="form-field col-span-2">
+            <label class="filter-check">
+              <input type="checkbox" id="cm_esente_iva" />
+              Esente IVA
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">Selezione Clienti</div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);margin-bottom:var(--space-3)">
+          <label class="filter-check">
+            <input type="radio" name="cm_sel" value="tutti" id="cm_sel_tutti" checked />
+            Tutti i clienti attivi
+          </label>
+          <label class="filter-check">
+            <input type="radio" name="cm_sel" value="tariffario" id="cm_sel_tariff" />
+            Per tariffario applicato
+          </label>
+          <div id="cm_tariff_sel_wrap" style="display:none;padding-left:var(--space-6)">
+            <select id="cm_tariff_sel" style="width:100%;max-width:300px">
+              <option value="">— seleziona tariffario —</option>
+            </select>
+          </div>
+          <label class="filter-check">
+            <input type="radio" name="cm_sel" value="manuale" id="cm_sel_man" />
+            Selezione manuale
+          </label>
+          <div id="cm_manuale_wrap" style="display:none;max-height:200px;overflow-y:auto;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-2)">
+            <div id="cm_manuale_list"><!-- JS --></div>
+          </div>
+        </div>
+        <div id="cmAnteprima" class="dettaglio-anteprima-box">Clienti selezionati: —</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalCostiMassivi">Annulla</button>
+      <button class="btn btn-primary" id="btnApplicaCostiMassivi">Applica</button>
+    </div>
+  </div>
+</div>
+
+<!-- 4.3 Inserimento Costi Variabili -->
+<div class="modal-overlay" id="modalInserimentoVariabili">
+  <div class="modal modal-xxl" style="max-width:1100px">
+    <div class="modal-header">
+      <h2 class="modal-title">Inserimento Costi Variabili</h2>
+      <button class="modal-close" data-close="modalInserimentoVariabili">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="max-width:320px;margin-bottom:var(--space-4)">
+        <div class="form-field">
+          <label>Anno</label>
+          <select id="iv_anno"></select>
+        </div>
+        <div class="form-field">
+          <label>Mese</label>
+          <select id="iv_mese">
+            <option value="1">Gennaio</option><option value="2">Febbraio</option>
+            <option value="3">Marzo</option><option value="4">Aprile</option>
+            <option value="5">Maggio</option><option value="6">Giugno</option>
+            <option value="7">Luglio</option><option value="8">Agosto</option>
+            <option value="9">Settembre</option><option value="10">Ottobre</option>
+            <option value="11">Novembre</option><option value="12">Dicembre</option>
+          </select>
+        </div>
+      </div>
+      <div id="ivTabella" style="overflow-x:auto">
+        <p style="color:var(--color-text-muted);font-size:var(--text-sm)">Seleziona anno e mese per caricare la tabella.</p>
+      </div>
+      <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-3)">
+        Legenda: <strong>[N]</strong> = quantità &nbsp;·&nbsp; <strong>×</strong> = voce non applicabile a questo cliente
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalInserimentoVariabili">Annulla</button>
+      <button class="btn btn-primary" id="btnCaricaVariabili">Caricamento su Scheda Cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- 4.4 Contabilizza Costi Fissi -->
+<div class="modal-overlay" id="modalContabilizzaCostiFissi">
+  <div class="modal modal-xxl" style="max-width:1100px">
+    <div class="modal-header">
+      <h2 class="modal-title">Contabilizza Costi Fissi</h2>
+      <button class="modal-close" data-close="modalContabilizzaCostiFissi">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="max-width:640px;margin-bottom:var(--space-4)">
+        <div class="form-field">
+          <label>Anno</label>
+          <select id="ccf_anno"></select>
+        </div>
+        <div class="form-field">
+          <label>Da Mese</label>
+          <select id="ccf_mese_da">
+            <option value="1">Gennaio</option><option value="2">Febbraio</option>
+            <option value="3">Marzo</option><option value="4">Aprile</option>
+            <option value="5">Maggio</option><option value="6">Giugno</option>
+            <option value="7">Luglio</option><option value="8">Agosto</option>
+            <option value="9">Settembre</option><option value="10">Ottobre</option>
+            <option value="11">Novembre</option><option value="12">Dicembre</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>A Mese</label>
+          <select id="ccf_mese_a">
+            <option value="1">Gennaio</option><option value="2">Febbraio</option>
+            <option value="3">Marzo</option><option value="4">Aprile</option>
+            <option value="5">Maggio</option><option value="6">Giugno</option>
+            <option value="7">Luglio</option><option value="8">Agosto</option>
+            <option value="9">Settembre</option><option value="10">Ottobre</option>
+            <option value="11">Novembre</option><option value="12">Dicembre</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Cliente</label>
+          <select id="ccf_ditta">
+            <option value="">— Tutti i clienti —</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btnCcfPreview" style="margin-bottom:var(--space-4)">
+        🔍 Anteprima
+      </button>
+      <div id="ccfRiepilogo" style="display:none" class="dettaglio-anteprima-box"></div>
+      <div id="ccfTabella" style="overflow-x:auto;margin-top:var(--space-4)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalContabilizzaCostiFissi">Annulla</button>
+      <button class="btn btn-primary" id="btnContabilizzaEsegui" disabled>Contabilizza</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
   <script src="/static/js/app.js" defer></script>
 </body>
