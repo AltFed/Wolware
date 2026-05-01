@@ -702,7 +702,7 @@
             <div class="form-grid">
               <div class="form-field">
                 <label>Data inizio</label>
-                <input type="date" id="data_inizio_rapporto" />
+                <input type="date" id="data_inizio_rapporto" value="" />
               </div>
             </div>
           </div>
@@ -713,19 +713,19 @@
             <div class="form-grid">
               <div class="form-field">
                 <label>Inizio Paghe</label>
-                <input type="date" id="inizio_paghe" />
+                <input type="date" id="inizio_paghe" value="" />
               </div>
               <div class="form-field">
                 <label>Fine Paghe</label>
-                <input type="date" id="fine_paghe" />
+                <input type="date" id="fine_paghe" value="" />
               </div>
               <div class="form-field">
                 <label>Inizio Contabilità</label>
-                <input type="date" id="inizio_contabilita" />
+                <input type="date" id="inizio_contabilita" value="" />
               </div>
               <div class="form-field">
                 <label>Fine Contabilità</label>
-                <input type="date" id="fine_contabilita" />
+                <input type="date" id="fine_contabilita" value="" />
               </div>
             </div>
           </div>
@@ -912,15 +912,6 @@
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           </svg>
           Elimina Ditta
-        </button>
-        <button class="btn" id="btnArchiviaDittaModal"
-          style="display:none;color:var(--color-warning);
-                 background:transparent;border:1px solid var(--color-warning)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
-            <line x1="10" y1="12" x2="14" y2="12"/>
-          </svg>
-          <span id="btnArchiviaDittaLabel">Archivia</span>
         </button>
         <button class="btn btn-ghost" data-close="modalDitta">Annulla</button>
         <button class="btn btn-primary" id="btnSaveDitta">
