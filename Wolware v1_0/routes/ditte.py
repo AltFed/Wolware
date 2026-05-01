@@ -55,10 +55,10 @@ def get_ditte():
             # ── Totale dovuto (pratiche + IVA + residuo_iniziale + addebiti) ──
             res_iniziale = float(d['residuo_iniziale'] or 0)
             tot_pratiche = conn.execute(
-                'SELECT COALESCE(SUM(costo),0) FROM pratiche WHERE ditta_id=?', (did,)
+                'SELECT COALESCE(SUM(importo),0) FROM pratiche WHERE ditta_id=?', (did,)
             ).fetchone()[0] or 0.0
             iva_pratiche = conn.execute(
-                '''SELECT COALESCE(SUM(costo*0.22),0) FROM pratiche
+                '''SELECT COALESCE(SUM(importo*0.22),0) FROM pratiche
                    WHERE ditta_id=? AND (esente_iva IS NULL OR esente_iva=0)''', (did,)
             ).fetchone()[0] or 0.0
             tot_addebiti = conn.execute(
