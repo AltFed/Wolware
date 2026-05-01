@@ -1,3 +1,4 @@
+
 # routes/ditte.py
 # Blueprint 'ditte' — API REST per la gestione delle ditte.
 # GET    /api/ditte        → lista tutte le ditte
@@ -33,24 +34,84 @@ def _json_str(val):
 @login_required
 def get_ditte():
     mostra_archiviati = request.args.get('archiviati', '0') == '1'
+    import datetime
+    anno = request.args.get('anno', type=int) or datetime.date.today().year
     conn = get_db()
     try:
-        if mostra_archiviati:
-            ditte = conn.execute('''
-                SELECT d.*, t.nome AS tariffario_nome_join
-                FROM ditte d
-                LEFT JOIN tariffari t ON d.tariffario_id = t.id
-                ORDER BY d.ragione_sociale COLLATE NOCASE
-            ''').fetchall()
-        else:
-            ditte = conn.execute('''
-                SELECT d.*, t.nome AS tariffario_nome_join
-                FROM ditte d
-                LEFT JOIN tariffari t ON d.tariffario_id = t.id
-                WHERE d.archiviato = 0
-                ORDER BY d.ragione_sociale COLLATE NOCASE
-            ''').fetchall()
-        return jsonify([dict(d) for d in ditte])
+        where = "" if mostra_archiviati else "WHERE d.archiviato = 0"
+        ditte = conn.execute(f'''
+            SELECT d.*, t.nome AS tariffario_nome_join
+            FROM ditte d
+            LEFT JOIN tariffari t ON d.tariffario_id = t.id
+            {where}
+            ORDER BY d.ragione_sociale COLLATE NOCASE
+        ''').fetchall()
+
+        result = []
+        for d in ditte:
+            row = dict(d)
+            did = d['id']
+
+            # ── Totale dovuto (pratiche + IVA + residuo_iniziale + addebiti) ──
+            res_iniziale = float(d['residuo_iniziale'] or 0)
+            tot_pratiche = conn.execute(
+                'SELECT COALESCE(SUM(costo),0) FROM pratiche WHERE ditta_id=?', (did,)
+            ).fetchone()[0] or 0.0
+            iva_pratiche = conn.execute(
+                '''SELECT COALESCE(SUM(costo*0.22),0) FROM pratiche
+                   WHERE ditta_id=? AND (esente_iva IS NULL OR esente_iva=0)''', (did,)
+            ).fetchone()[0] or 0.0
+            tot_addebiti = conn.execute(
+                "SELECT COALESCE(SUM(importo),0) FROM arrotondamenti WHERE ditta_id=? AND tipo='addebito'", (did,)
+            ).fetchone()[0] or 0.0
+            tot_abbuoni = conn.execute(
+                "SELECT COALESCE(SUM(importo),0) FROM arrotondamenti WHERE ditta_id=? AND tipo='abbuono'", (did,)
+            ).fetchone()[0] or 0.0
+            tot_pagamenti = conn.execute(
+                'SELECT COALESCE(SUM(importo),0) FROM pagamenti WHERE ditta_id=?', (did,)
+            ).fetchone()[0] or 0.0
+
+            totale_dovuto  = round(res_iniziale + tot_pratiche + iva_pratiche + tot_addebiti, 2)
+            totale_pagato  = round(tot_pagamenti + tot_abbuoni, 2)
+            totale_residuo = round(totale_dovuto - totale_pagato, 2)
+
+            row['totale_dovuto']  = totale_dovuto
+            row['totale_pagato']  = totale_pagato
+            row['totale_residuo'] = totale_residuo
+
+            # ── Indicatori mesi CF e VR per l'anno richiesto ──
+            mesi_cf = conn.execute(
+                "SELECT DISTINCT mese FROM pratiche WHERE ditta_id=? AND anno=? AND tipo='costo_fisso'",
+                (did, anno)
+            ).fetchall()
+            mesi_vr = conn.execute(
+                """SELECT DISTINCT mese FROM pratiche
+                   WHERE ditta_id=? AND anno=?
+                   AND tipo IN ('variabile','variabile_mensile','variabile_annuale')""",
+                (did, anno)
+            ).fetchall()
+
+            cf_set = {r[0] for r in mesi_cf}
+            vr_set = {r[0] for r in mesi_vr}
+            for m in range(1, 13):
+                row[f'cf_mese_{m}_{anno}'] = 1 if m in cf_set else 0
+                row[f'vr_mese_{m}_{anno}'] = 1 if m in vr_set else 0
+
+            # ── Ultimo estratto conto e ultimo pagamento ──
+            ult_ec = conn.execute(
+                "SELECT MAX(data_emissione) FROM fatture WHERE ditta_id=? AND stato != 'annullata'",
+                (did,)
+            ).fetchone()[0]
+            ult_pag = conn.execute(
+                'SELECT MAX(data) FROM pagamenti WHERE ditta_id=?', (did,)
+            ).fetchone()[0]
+
+            row['ultimo_ec']  = ult_ec  or None
+            row['ultimo_pag'] = ult_pag or None
+
+            result.append(row)
+
+        return jsonify(result)
     finally:
         conn.close()
 
@@ -202,64 +263,13 @@ def update_ditta(id):
 def delete_ditta(id):
     conn = get_db()
     try:
-        # Eliminazione a cascata (FK non enforced in SQLite di default)
-        conn.execute('DELETE FROM pratiche        WHERE ditta_id=?', (id,))
-        conn.execute('DELETE FROM pagamenti       WHERE ditta_id=?', (id,))
-        conn.execute('DELETE FROM arrotondamenti  WHERE ditta_id=?', (id,))
-        conn.execute('DELETE FROM ditta_voci      WHERE ditta_id=?', (id,))
-        conn.execute('DELETE FROM storico_tariffari WHERE ditta_id=?', (id,))
-        conn.execute('DELETE FROM ditte           WHERE id=?', (id,))
+        conn.execute('DELETE FROM ditte WHERE id=?', (id,))
         conn.commit()
         notify_all('ditta_deleted', {'id': id})
         return jsonify({'ok': True})
     finally:
         conn.close()
 
-# ── POST /api/ditte/:id/cambia-tariffario ──────────────────────────────────────
-@ditte_bp.route('/api/ditte/<int:id>/cambia-tariffario', methods=['POST'])
-@login_required
-def cambia_tariffario(id):
-    data = request.get_json()
-    nuovo_tid = data.get('tariffario_id')  # può essere None
-    note = (data.get('note') or '').strip()
-    conn = get_db()
-    try:
-        ditta = conn.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()
-        if not ditta:
-            return jsonify({'error': 'Ditta non trovata'}), 404
-
-        # Nome del nuovo tariffario
-        nome_nuovo = None
-        if nuovo_tid:
-            row = conn.execute('SELECT nome FROM tariffari WHERE id=?', (nuovo_tid,)).fetchone()
-            nome_nuovo = row['nome'] if row else None
-
-        # Salva nello storico
-        conn.execute(
-            'INSERT INTO storico_tariffari (ditta_id, tariffario_id, tariffario_nome, note) VALUES (?,?,?,?)',
-            (id, nuovo_tid, nome_nuovo, note)
-        )
-        # Aggiorna ditta
-        conn.execute('UPDATE ditte SET tariffario_id=? WHERE id=?', (nuovo_tid, id))
-        conn.commit()
-        return jsonify({'ok': True, 'tariffario_nome': nome_nuovo})
-    finally:
-        conn.close()
-
-
-# ── GET /api/ditte/:id/storico-tariffari ──────────────────────────────────────
-@ditte_bp.route('/api/ditte/<int:id>/storico-tariffari', methods=['GET'])
-@login_required
-def storico_tariffari(id):
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            'SELECT * FROM storico_tariffari WHERE ditta_id=? ORDER BY cambiato_il DESC',
-            (id,)
-        ).fetchall()
-        return jsonify([dict(r) for r in rows])
-    finally:
-        conn.close()
 
 # ── PATCH /api/ditte/<id>/archivia ────────────────────────────────────────────
 @ditte_bp.route('/api/ditte/<int:id>/archivia', methods=['PATCH'])
