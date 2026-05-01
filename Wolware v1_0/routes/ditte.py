@@ -257,6 +257,33 @@ def update_ditta(id):
         conn.close()
 
 
+
+# ── PATCH /api/ditte/<id> — aggiornamento parziale (archivia, singoli campi) ──
+@ditte_bp.route('/api/ditte/<int:id>', methods=['PATCH'])
+@login_required
+def patch_ditta(id):
+    data = request.get_json()
+    conn = get_db()
+    try:
+        allowed = {
+            'archiviato', 'cadenza_pagamenti', 'residuo_iniziale', 'annotazioni',
+            'inizio_paghe', 'fine_paghe', 'inizio_contabilita', 'fine_contabilita',
+            'note', 'tariffario_id', 'tariffario_nome'
+        }
+        fields = {k: v for k, v in data.items() if k in allowed}
+        if not fields:
+            return jsonify({'error': 'Nessun campo valido'}), 400
+        set_clause = ', '.join(f'{k}=?' for k in fields)
+        values = list(fields.values()) + [id]
+        conn.execute(f'UPDATE ditte SET {set_clause} WHERE id=?', values)
+        conn.commit()
+        d = conn.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()
+        notify_all('ditta_updated', dict(d))
+        return jsonify(dict(d))
+    finally:
+        conn.close()
+
+
 # ── DELETE /api/ditte/<id> ─────────────────────────────────────────────────────
 @ditte_bp.route('/api/ditte/<int:id>', methods=['DELETE'])
 @login_required
