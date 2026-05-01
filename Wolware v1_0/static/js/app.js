@@ -185,7 +185,7 @@ let ditteAnno = new Date().getFullYear();
 
 async function loadDitte() {
   try {
-    allDitte = await api('/api/ditte');
+    allDitte = await api(`/api/ditte?anno=${ditteAnno}`);
     populateAnnoFilter();
     populateFilterTariffario();
     renderDitte(allDitte);
@@ -274,7 +274,7 @@ function formatEur(val) {
 document.getElementById('filterDitte')?.addEventListener('input', filterDitte);
 document.getElementById('filterForma')?.addEventListener('change', filterDitte);
 document.getElementById('filterTariffario')?.addEventListener('change', filterDitte);
-document.getElementById('filterAnno')?.addEventListener('change', e => { ditteAnno = +e.target.value; filterDitte(); });
+document.getElementById('filterAnno')?.addEventListener('change', e => { ditteAnno = +e.target.value; loadDitte(); });
 document.getElementById('filterArchiviati')?.addEventListener('change', filterDitte);
 
 // Ctrl+F focalizza la ricerca
