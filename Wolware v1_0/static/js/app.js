@@ -585,6 +585,19 @@ function resetDittaForm() {
   renderDittaVoci([]);
   document.getElementById('formDittaError').style.display = 'none';
   document.getElementById('modalDittaTitle').textContent = 'Nuova Ditta';
+  // Reset nuovi campi Blocco 2
+  ['inizio_paghe','fine_paghe','inizio_contabilita','fine_contabilita'].forEach(f => {
+    const el = document.getElementById(f); if (el) el.value = '';
+  });
+  const residuoEl = document.getElementById('residuo_iniziale');
+  if (residuoEl) residuoEl.value = '0';
+  const cadenzaEl = document.getElementById('cadenza_pagamenti');
+  if (cadenzaEl) cadenzaEl.value = 'libero';
+  document.querySelectorAll('.cadenza-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.val === 'libero');
+  });
+  const annotEl = document.getElementById('annotazioni');
+  if (annotEl) annotEl.value = '';
   resetModalTabs();
 }
 function openDittaModal() {
@@ -603,11 +616,24 @@ async function editDitta(id) {
     ['ragione_sociale', 'codice_fiscale', 'partita_iva', 'indirizzo', 'cap', 'citta',
       'provincia', 'cod_catastale', 'amministratore', 'cf_amministratore',
       'tel_amministratore', 'email_amministratore', 'data_inizio_rapporto',
-      'email', 'pec', 'telefono'].forEach(f => {
+      'email', 'pec', 'telefono',
+      'inizio_paghe', 'fine_paghe', 'inizio_contabilita', 'fine_contabilita'].forEach(f => {
         const el = document.getElementById(f);
         if (el && d[f]) el.value = d[f];
       });
     document.getElementById('cedolino_onnicomprensivo').checked = !!d.cedolino_onnicomprensivo;
+    // Carica cadenza pagamenti
+    const cadVal = d.cadenza_pagamenti || 'libero';
+    const cadHidden = document.getElementById('cadenza_pagamenti');
+    if (cadHidden) cadHidden.value = cadVal;
+    document.querySelectorAll('.cadenza-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.val === cadVal);
+    });
+    // Carica residuo iniziale e annotazioni
+    const residEl = document.getElementById('residuo_iniziale');
+    if (residEl) residEl.value = d.residuo_iniziale ?? 0;
+    const annotEl2 = document.getElementById('annotazioni');
+    if (annotEl2) annotEl2.value = d.annotazioni || '';
     if (d.sedi_json) { try { sedi = JSON.parse(d.sedi_json); sedeIdx = 0; } catch (e) { } }
     if (d.inail_json) { try { inailList = JSON.parse(d.inail_json); } catch (e) { } }
     if (d.inps_json) { try { inpsList = JSON.parse(d.inps_json); } catch (e) { } }
@@ -656,6 +682,13 @@ document.getElementById('btnSaveDitta').addEventListener('click', async () => {
     cc_json: JSON.stringify(ccList),
     tariff_json: JSON.stringify(tariffItems),
     tariffario_id: selTariff?.value ? parseInt(selTariff.value) : null,
+    inizio_paghe: document.getElementById('inizio_paghe')?.value || null,
+    fine_paghe: document.getElementById('fine_paghe')?.value || null,
+    inizio_contabilita: document.getElementById('inizio_contabilita')?.value || null,
+    fine_contabilita: document.getElementById('fine_contabilita')?.value || null,
+    cadenza_pagamenti: document.getElementById('cadenza_pagamenti')?.value || 'libero',
+    residuo_iniziale: parseFloat(document.getElementById('residuo_iniziale')?.value || 0),
+    annotazioni: document.getElementById('annotazioni')?.value?.trim() || '',
   };
   try {
     const id = document.getElementById('dittaId').value;
@@ -680,6 +713,16 @@ document.getElementById('btnSaveDitta').addEventListener('click', async () => {
 /* BINDINGS */
 document.getElementById('btnNuovaDitta').addEventListener('click', openDittaModal);
 document.getElementById('btnNuovaDitta2').addEventListener('click', openDittaModal);
+
+// Cadenza pagamenti — toggle bottoni
+document.getElementById('cadenzaBtnGroup')?.addEventListener('click', e => {
+  const btn = e.target.closest('.cadenza-btn');
+  if (!btn) return;
+  document.querySelectorAll('.cadenza-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const hidden = document.getElementById('cadenza_pagamenti');
+  if (hidden) hidden.value = btn.dataset.val;
+});
 function openPraticaModal(tipo) {
   if (tipo === 'Assunzione') { openAssunzioneModal(); return; }
   const wip = ['Cessazione', 'Trasformazione Contratto', 'Proroga Contratto',
