@@ -954,7 +954,7 @@ document.getElementById('btnArchiviaDittaModal')?.addEventListener('click', asyn
   const azione = isArch ? 'Ripristinare' : 'Archiviare';
   if (!confirm(`${azione} "${nome}"?`)) return;
   try {
-    await api(`/api/ditte/${id}`, 'PUT', { archiviato: isArch ? 0 : 1 });
+    await api(`/api/ditte/${id}`, 'PATCH', { archiviato: isArch ? 0 : 1 });
     closeModal('modalDitta');
     toast(isArch ? 'Ditta ripristinata' : 'Ditta archiviata', 'success');
     loadDitte();
