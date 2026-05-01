@@ -171,20 +171,14 @@ let abbuoniClienti = {};
 let datiCaricati = false;
 var ultimiEstrattiConto = {};
 
-var macrogruppiDefault = [
-    { id: 1, nome: 'Costi Fissi Mensili', voci: [
-        { id: 1001, descrizione: 'Cedolini', prezzo: '', mesi: [0], esenteIva: false }
-    ] },
-    { id: 2, nome: 'Costi Variabili Mensili Paghe', voci: [
-        { id: 2001, descrizione: 'Assunzione', prezzo: '', mesi: [0], esenteIva: false },
-        { id: 2002, descrizione: 'Variazione', prezzo: '', mesi: [0], esenteIva: false },
-        { id: 2003, descrizione: 'Cessazione', prezzo: '', mesi: [0], esenteIva: false }
-    ] },
-    { id: 3, nome: 'Costi Fissi Annuali Paghe', voci: [] },
-    { id: 4, nome: 'Costi Fissi Annuali Contabilita', voci: [] },
-    { id: 5, nome: 'Pratiche a Richiesta', voci: [] },
-    { id: 6, nome: 'Costi Variabili Annuali Paghe', voci: [] }
+var TIPOLOGIE_MACROGRUPPI = [
+    'Costi Fissi Mensili',
+    'Costi Fissi Annuali',
+    'Costi Variabili Mensili',
+    'Costi Variabili Annuali'
 ];
+
+var macrogruppiDefault = [];
 
 var tariffarioCorrenteId = null;
 
@@ -324,8 +318,8 @@ function generaIndicatoriMesi(clienteId, anno, mesiAbbr) {
     }
     html += '</div>';
     
-    // Riga 2: Variabili Paghe (assunzioni, cessazioni, trasformazioni, ecc.)
-    html += '<div style="display:flex;gap:1px;align-items:center;" title="Variabili Paghe">';
+    // Riga 2: Inserimento Costi Variabili (assunzioni, cessazioni, trasformazioni, ecc.)
+    html += '<div style="display:flex;gap:1px;align-items:center;" title="Inserimento Costi Variabili">';
     html += '<span style="font-size:8px;font-weight:bold;color:#64748b;width:18px;">VP</span>';
     for (var m = 1; m <= 12; m++) {
         var chiaveMese = anno + '-' + (m < 10 ? '0' : '') + m;
@@ -857,7 +851,8 @@ function aggiornaDettaglioCliente() {
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px;">' +
         '<h3 style="margin:0;">Tariffario</h3>' +
         '<button class="btn-secondary" onclick="apriModalCambiaTariffario(' + cliente.id + ')">' + icon('refresh-cw', 13) + ' Cambia Tariffario</button>' +
-        '</div>';
+'<button class="btn-secondary" onclick="sincronizzaTariffarioCliente(' + cliente.id + ')">' + icon('zap', 13) + ' Sincronizza da base</button>' +
+'</div>';
     
     // Cronologia cambi tariffario
     if (cliente.storicoTariffari && cliente.storicoTariffari.length > 0) {
@@ -895,7 +890,7 @@ function apriModalCambiaTariffario(clienteId) {
         '<div class="form-group"><label>Nuovo Tariffario</label>' +
         '<select id="nuovo-tariffario" class="form-select">' + opt + '</select></div>' +
         '<div style="background:#fef3c7;border-radius:8px;padding:12px;margin-top:16px;">' +
-        '<p style="color:#92400e;font-size:13px;margin:0;">️ <strong>Attenzione:</strong> I costi e le pratiche già inseriti manterranno i prezzi del tariffario precedente. Il nuovo tariffario verrà applicato solo ai nuovi mesi.</p>' +
+        '<p style="color:#92400e;font-size:13px;margin:0;">️ <strong>Attenzione:</strong> I costi e le pratiche già inseriti manterranno i prezzi del tariffario precedente. Il nuovo tariffario verrà applicato solo ai nuovi mesi. Inoltre il nuovo tariffario sostituirà tutte le voci del cliente. Usa "Sincronizza da base" per aggiungere solo le voci mancanti senza perdere le personalizzazioni.</p>' +
         '</div>';
     
     document.getElementById('modal-pdf').querySelector('.modal-header h2').textContent = 'Cambia Tariffario';
@@ -949,7 +944,41 @@ async function confermaCambioTariffario(clienteId) {
     showToast('Tariffario cambiato! Da: ' + cliente.storicoTariffari[cliente.storicoTariffari.length - 1].da + ' → ' + nuovoTariffario.nome, 'success', 4000);
     aggiornaDettaglioCliente();
 }
+async function sincronizzaTariffarioCliente(clienteId) {
+    var cliente = clienti.find(c => c.id === clienteId);
+    var base = tariffariBase.find(t => t.id === cliente.tariffarioBaseId);
+    if (!base) return;
 
+    var vociEsistenti = cliente.tariffario.map(v => v.descrizione.toLowerCase());
+    var vociNuove = [];
+
+    // Scorre il tariffario base e aggiunge solo le voci mancanti
+    for (var mg of base.macrogruppi) {
+        for (var v of mg.voci) {
+            if (!vociEsistenti.includes(v.descrizione.toLowerCase())) {
+                vociNuove.push({
+                    id: Date.now() + Math.random(),
+                    descrizione: v.descrizione,
+                    prezzo: v.prezzo,
+                    categoriaId: mg.id,
+                    categoriaNome: mg.nome,
+                    mesi: v.mesi ? v.mesi.slice() : [],
+                    esenteIva: v.esenteIva || false
+                });
+            }
+        }
+    }
+
+    if (vociNuove.length === 0) {
+        showToast('Nessuna voce nuova da sincronizzare', 'info');
+        return;
+    }
+
+    cliente.tariffario = cliente.tariffario.concat(vociNuove);
+    await dbSalvaCliente(cliente);
+    showToast(`Aggiunte ${vociNuove.length} voci nuove dal tariffario base`, 'success');
+    aggiornaDettaglioCliente();
+}
 async function salvaAnnotazioni(clienteId) {
     var annotazioni = document.getElementById('cliente-annotazioni').value;
     for (var i = 0; i < clienti.length; i++) {
@@ -3531,14 +3560,24 @@ function renderMacrogruppiModal(macrogruppi) {
     var mesiLabels = ['T', 'G', 'F', 'M', 'A', 'M', 'G', 'L', 'A', 'S', 'O', 'N', 'D'];
     var mesiTitles = ['Tutti', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
     var html = '';
+    
+    // Barra aggiungi macrogruppo
+    var optTipologie = TIPOLOGIE_MACROGRUPPI.map(function(t) {
+    return '<option value="' + t + '">' + t + '</option>';
+        }).join('');
+        html += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;padding:12px;background:#f3f0ec;border-radius:8px;flex-wrap:wrap;">' +
+    '<span style="font-size:13px;font-weight:600;">Aggiungi macrogruppo:</span>' +
+    '<select id="select-nuova-tipologia" class="form-select" style="flex:1;min-width:180px;">' + optTipologie + '</select>' +
+    '<button class="btn-secondary" onclick="aggiungiMacrogruppoModal()">+ Aggiungi</button>' +
+    '</div>';
+
     for (var i = 0; i < macrogruppi.length; i++) {
         var mg = macrogruppi[i];
-        html += '<div class="macrogruppo-card" data-mg-id="' + mg.id + '">' +
-            '<div class="macrogruppo-header">' +
-            '<div class="macrogruppo-nome"><input type="text" value="' + mg.nome + '" style="background:rgba(255,255,255,0.12);border:none;border-bottom:1.5px solid rgba(255,255,255,0.3);padding:4px 8px;border-radius:4px;font-weight:700;text-transform:uppercase;color:white;font-size:12px;letter-spacing:0.7px;width:200px;" onchange="rinominaMacrogruppoModal(' + mg.id + ', this.value)" /></div>' +
-            '<button class="btn-elimina" style="background:rgba(220,38,38,0.25);border-color:rgba(220,38,38,0.4);color:#fca5a5;" onclick="eliminaMacrogruppoModal(' + mg.id + ')" title="Elimina macrogruppo">&times;</button>' +
-            '</div>' +
-            '<div class="macrogruppo-body">'+
+        html += '<div class="macrogruppo-header" style="display:flex;justify-content:space-between;align-items:center;">' +
+'<span class="macrogruppo-nome">' + mg.nome.toUpperCase() + '</span>' +
+'<button class="btn-danger" style="padding:3px 10px;font-size:11px;" onclick="rimuoviMacrogruppoModal(' + mg.id + ')">✕ Rimuovi</button>' +
+'</div>' +
+            '<div class="macrogruppo-body">' +
             '<div class="aggiungi-voce-row" style="flex-wrap:wrap;">' +
             '<div style="display:flex;gap:12px;width:100%;margin-bottom:8px;align-items:center;">' +
             '<input type="text" class="form-input voce-desc" placeholder="Descrizione voce..." data-new-desc="' + mg.id + '">' +
@@ -3584,7 +3623,22 @@ function renderMacrogruppiModal(macrogruppi) {
     container.innerHTML = html;
     container.dataset.macrogruppi = JSON.stringify(macrogruppi);
 }
+function aggiungiMacrogruppoModal() {
+    var tipologia = document.getElementById('select-nuova-tipologia').value;
+    if (!tipologia) return;
+    var container = document.getElementById('modal-tariffario-container');
+    var macrogruppi = JSON.parse(container.dataset.macrogruppi || '[]');
+    macrogruppi.push({ id: Date.now(), nome: tipologia, voci: [] });
+    renderMacrogruppiModal(macrogruppi);
+}
 
+function rimuoviMacrogruppoModal(mgId) {
+    if (!confirm('Rimuovere questo macrogruppo e tutte le sue voci?')) return;
+    var container = document.getElementById('modal-tariffario-container');
+    var macrogruppi = JSON.parse(container.dataset.macrogruppi || '[]');
+    macrogruppi = macrogruppi.filter(function(mg) { return mg.id !== mgId; });
+    renderMacrogruppiModal(macrogruppi);
+}
 function toggleEsenteVoce(mgId, voceId, checked) {
     mgId = typeof mgId === 'string' ? parseFloat(mgId) : mgId;
     voceId = typeof voceId === 'string' ? parseFloat(voceId) : voceId;
@@ -7086,9 +7140,6 @@ function aggiornaAnteprimaCostiFissi() {
     
     var mesiNomi = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
     
-    // Voci da escludere (gestite da Variabili Paghe)
-    var vociEscluse = ['cedolini', 'assunzione', 'variazione', 'cessazione'];
-    
     // Clienti da processare
     var clientiDaProcessare = [];
     if (clienteSelezionato) {
@@ -7104,7 +7155,7 @@ function aggiornaAnteprimaCostiFissi() {
         });
     }
     
-    var html = '<table class="cf-table"><thead><tr><th>Cliente</th><th>Voce</th><th>Mese</th><th style="text-align:center;">Qta</th><th style="text-align:right;">Prezzo</th><th style="text-align:right;">Totale</th><th style="text-align:center;">Stato</th></tr></thead><tbody>';
+    var html = '<table class="cf-table"><thead><tr><th>Cliente</th><th>Macrogruppo</th><th>Voce</th><th>Mese</th><th style="text-align:center;">Qta</th><th style="text-align:right;">Prezzo</th><th style="text-align:right;">Totale</th><th style="text-align:center;">Stato</th></tr></thead><tbody>';
     
     var grandTotale = 0;
     var vociDaContabilizzare = 0;
@@ -7112,71 +7163,88 @@ function aggiornaAnteprimaCostiFissi() {
     
     for (var ci = 0; ci < clientiDaProcessare.length; ci++) {
         var cliente = clientiDaProcessare[ci];
-        var tariffario = cliente.tariffario || [];
         var contabCliente = contabilizzazioni[cliente.id] || [];
+
+        // Recupera i macrogruppi: prima cerca nel tariffario base collegato,
+        // poi fallback sull'array piatto legacy sul cliente
+        var macrogruppi = [];
+        if (cliente.tariffaribaseid) {
+            for (var t = 0; t < tariffariBase.length; t++) {
+                if (tariffariBase[t].id === cliente.tariffaribaseid) {
+                    macrogruppi = tariffariBase[t].macrogruppi || [];
+                    break;
+                }
+            }
+        }
+        // Fallback: tariffario piatto legacy (array di voci senza macrogruppo)
+        if (macrogruppi.length === 0 && Array.isArray(cliente.tariffario) && cliente.tariffario.length > 0) {
+            // Wrappa le voci legacy in un macrogruppo fittizio di tipo Fisso Mensile
+            macrogruppi = [{ id: 0, nome: 'Costi Fissi Mensili', voci: cliente.tariffario }];
+        }
         
         for (var mese = meseDa; mese <= meseA; mese++) {
             var chiaveMese = anno + '-' + (mese < 10 ? '0' : '') + mese;
             
-            for (var vi = 0; vi < tariffario.length; vi++) {
-                var voce = tariffario[vi];
-                var descLower = (voce.descrizione || '').toLowerCase();
-                
-                // Salta voci escluse
-                var esclusa = false;
-                for (var e = 0; e < vociEscluse.length; e++) {
-                    if (descLower.indexOf(vociEscluse[e]) >= 0) { esclusa = true; break; }
-                }
-                if (esclusa) continue;
-                
-                // Verifica se la voce si applica a questo mese
-                var mesiVoce = voce.mesi || [];
-                var siApplica = mesiVoce.indexOf(0) >= 0 || mesiVoce.indexOf(mese) >= 0;
-                if (!siApplica) continue;
-                
-                // Controlla flag "Richiede anno precedente"
-                var annoPrecedente = parseInt(anno) - 1;
-                if (voce.richiedeAnnoPrecedente) {
-                    var clienteAttivoAnnoPrecedente = verificaClienteAttivoAnno(cliente, annoPrecedente);
-                    if (!clienteAttivoAnnoPrecedente) {
-                        continue; // Salta questa voce - cliente non attivo anno precedente
+            for (var mi = 0; mi < macrogruppi.length; mi++) {
+                var mg = macrogruppi[mi];
+                var tipoMg = mg.nome || '';
+
+                // Solo Costi Fissi vanno nel form Contabilizza
+                var isFissoMensile = tipoMg === 'Costi Fissi Mensili';
+                var isFissoAnnuale = tipoMg === 'Costi Fissi Annuali';
+                if (!isFissoMensile && !isFissoAnnuale) continue;
+
+                for (var vi = 0; vi < mg.voci.length; vi++) {
+                    var voce = mg.voci[vi];
+
+                    // Fissi Annuali: solo nei mesi configurati sulla voce
+                    if (isFissoAnnuale) {
+                        var mesiVoce = voce.mesi || [];
+                        var siApplica = mesiVoce.indexOf(0) >= 0 || mesiVoce.indexOf(mese) >= 0;
+                        if (!siApplica) continue;
                     }
+                    // Fissi Mensili: nessun filtro mese, disponibili sempre
+
+                    // Controlla flag "Richiede anno precedente"
+                    var annoPrecedente = parseInt(anno) - 1;
+                    if (voce.richiedeAnnoPrecedente) {
+                        if (!verificaClienteAttivoAnno(cliente, annoPrecedente)) continue;
+                    }
+                    
+                    var qta = voce.quantita !== undefined ? parseInt(voce.quantita) : 1;
+                    if (qta < 1) qta = 1;
+                    var prezzo = parseFloat((voce.prezzo || '0').toString().replace(',', '.')) || 0;
+                    var totale = qta * prezzo;
+                    
+                    var voceGiaContabilizzata = isVoceContabilizzata(contabCliente, chiaveMese, voce.descrizione);
+                    
+                    var statoClass = voceGiaContabilizzata ? 'stato-contabilizzato' : 'stato-da-fare';
+                    var statoText = voceGiaContabilizzata ? icon('check', 14, 'color:#1a7a4a') + ' Già contabilizzato' : 'Da contabilizzare';
+                    
+                    if (voceGiaContabilizzata) {
+                        vociGiaContabilizzate++;
+                    } else {
+                        vociDaContabilizzare++;
+                        grandTotale += totale;
+                    }
+                    
+                    html += '<tr class="' + (voceGiaContabilizzata ? 'riga-contabilizzata' : '') + '">' +
+                        '<td>' + cliente.denominazione + '</td>' +
+                        '<td style="font-size:11px;color:#64748b;">' + tipoMg + '</td>' +
+                        '<td>' + voce.descrizione + '</td>' +
+                        '<td>' + mesiNomi[mese] + ' ' + anno + '</td>' +
+                        '<td style="text-align:center;">' + qta + '</td>' +
+                        '<td style="text-align:right;">' + formatoEuro(prezzo) + '</td>' +
+                        '<td style="text-align:right;">' + formatoEuro(totale) + '</td>' +
+                        '<td style="text-align:center;"><span class="' + statoClass + '">' + statoText + '</span></td>' +
+                        '</tr>';
                 }
-                
-                var qta = voce.quantita !== undefined ? parseInt(voce.quantita) : 1;
-                if (qta < 1) qta = 1;
-                var prezzo = parseFloat((voce.prezzo || '0').toString().replace(',', '.')) || 0;
-                var totale = qta * prezzo;
-                
-                // Verifica se questa specifica voce è già contabilizzata
-                var voceGiaContabilizzata = isVoceContabilizzata(contabCliente, chiaveMese, voce.descrizione);
-                
-                var statoClass = voceGiaContabilizzata ? 'stato-contabilizzato' : 'stato-da-fare';
-                var statoText = voceGiaContabilizzata ? icon('check', 14, 'color:#1a7a4a') + ' Già contabilizzato' : 'Da contabilizzare';
-                
-                if (voceGiaContabilizzata) {
-                    vociGiaContabilizzate++;
-                } else {
-                    vociDaContabilizzare++;
-                    grandTotale += totale;
-                }
-                
-                html += '<tr class="' + (voceGiaContabilizzata ? 'riga-contabilizzata' : '') + '">' +
-                    '<td>' + cliente.denominazione + '</td>' +
-                    '<td>' + voce.descrizione + '</td>' +
-                    '<td>' + mesiNomi[mese] + ' ' + anno + '</td>' +
-                    '<td style="text-align:center;">' + qta + '</td>' +
-                    '<td style="text-align:right;">' + formatoEuro(prezzo) + '</td>' +
-                    '<td style="text-align:right;">' + formatoEuro(totale) + '</td>' +
-                    '<td style="text-align:center;"><span class="' + statoClass + '">' + statoText + '</span></td>' +
-                    '</tr>';
             }
         }
     }
     
     html += '</tbody></table>';
     
-    // Riepilogo
     var riepilogoHtml = '<div class="cf-riepilogo">' +
         '<div class="cf-stat"><span class="cf-stat-label">Voci da contabilizzare:</span><span class="cf-stat-value">' + vociDaContabilizzare + '</span></div>' +
         '<div class="cf-stat"><span class="cf-stat-label">Già contabilizzate:</span><span class="cf-stat-value">' + vociGiaContabilizzate + '</span></div>' +
