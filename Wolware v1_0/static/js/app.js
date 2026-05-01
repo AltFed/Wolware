@@ -604,6 +604,8 @@ function openDittaModal() {
   resetDittaForm();
   const btnDelModal = document.getElementById('btnDeleteDittaModal');
   if (btnDelModal) btnDelModal.style.display = 'none';
+  const btnArchModal2 = document.getElementById('btnArchiviaDittaModal');
+  if (btnArchModal2) btnArchModal2.style.display = 'none';
   openModal('modalDitta');
 }
 
@@ -644,6 +646,14 @@ async function editDitta(id) {
     await loadDittaVoci(d.id);
     const btnDelModal = document.getElementById('btnDeleteDittaModal');
     if (btnDelModal) btnDelModal.style.display = 'flex';
+    const btnArchModal = document.getElementById('btnArchiviaDittaModal');
+    const lblArch = document.getElementById('btnArchiviaDittaLabel');
+    if (btnArchModal) {
+      btnArchModal.style.display = 'flex';
+      if (lblArch) lblArch.textContent = d.archiviato ? 'Ripristina' : 'Archivia';
+      btnArchModal.style.color = d.archiviato ? 'var(--color-success)' : 'var(--color-warning)';
+      btnArchModal.style.borderColor = d.archiviato ? 'var(--color-success)' : 'var(--color-warning)';
+    }
     openModal('modalDitta');
   } catch (e) { toast('Errore nel caricamento ditta', 'error'); }
 }
@@ -933,6 +943,26 @@ document.getElementById('btnAssumiBtn').addEventListener('click', () => {
 
 setupDropdown('btnNuovaPratica', 'dropdownPratica', openPraticaModal);
 setupDropdown('btnNuovaPratica2', 'dropdownPratica2', openPraticaModal);
+
+// Archivia / Ripristina ditta dal modal
+document.getElementById('btnArchiviaDittaModal')?.addEventListener('click', async () => {
+  const id = parseInt(document.getElementById('dittaId').value);
+  if (!id) return;
+  const ditta = allDitte.find(d => d.id === id);
+  const nome = ditta?.ragione_sociale || 'questa ditta';
+  const isArch = !!ditta?.archiviato;
+  const azione = isArch ? 'Ripristinare' : 'Archiviare';
+  if (!confirm(`${azione} "${nome}"?`)) return;
+  try {
+    await api(`/api/ditte/${id}`, 'PUT', { archiviato: isArch ? 0 : 1 });
+    closeModal('modalDitta');
+    toast(isArch ? 'Ditta ripristinata' : 'Ditta archiviata', 'success');
+    loadDitte();
+    loadStats();
+  } catch(e) {
+    toast('Errore: ' + e.message, 'error');
+  }
+});
 
 /* INIT */
 loadStats(); loadHomePratiche();
