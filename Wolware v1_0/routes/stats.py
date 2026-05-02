@@ -121,7 +121,7 @@ def stats_ditta(ditta_id):
                 (ditta_id, anno, mese)
             ).fetchone()
             row_p = conn.execute(
-                'SELECT COALESCE(SUM(importo), 0.0) FROM pagamenti WHERE ditta_id=? AND anno=? AND mese(data)=?',
+                "SELECT COALESCE(SUM(importo), 0.0) FROM pagamenti WHERE ditta_id=? AND anno=? AND CAST(strftime('%m', data) AS INTEGER)=?",
                 (ditta_id, anno, mese)
             ).fetchone()
             mesi.append({
