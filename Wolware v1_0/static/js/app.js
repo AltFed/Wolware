@@ -2756,9 +2756,9 @@ function _renderPrRighe() {
   if (!prRigheData.length) { el.innerHTML = ''; return; }
   el.innerHTML = prRigheData.map((r, i) => `
     <div style="display:grid;grid-template-columns:130px 1fr 90px 120px 32px;gap:var(--space-2);align-items:center;margin-bottom:var(--space-2)">
-      <input type="date" value="${r.data}" oninput="prRigheData[${i}].data=this.value" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm)" />
-      <input type="text" value="${r.descrizione}" placeholder="Descrizione" oninput="prRigheData[${i}].descrizione=this.value" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm)" />
-      <input type="number" value="${r.costo}" placeholder="€" min="0" step="0.01" oninput="prRigheData[${i}].costo=parseFloat(this.value)||0" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm)" />
+      <input type="date" value="${r.data}" oninput="prRigheData[${i}].data=this.value" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
+      <input type="text" value="${r.descrizione}" placeholder="Descrizione" oninput="prRigheData[${i}].descrizione=this.value" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
+      <input type="number" value="${r.costo}" placeholder="€" min="0" step="0.01" oninput="prRigheData[${i}].costo=parseFloat(this.value)||0" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
       <label class="filter-check" style="white-space:nowrap">
         <input type="checkbox" ${r.esente ? 'checked' : ''} onchange="prRigheData[${i}].esente=this.checked" />
         Esente IVA

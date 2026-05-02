@@ -83,7 +83,7 @@ def get_previsionale(ditta_id, anno):
             'ditta_id':         ditta_id,
             'anno':             anno,
             'tariffario_nome':  ditta['tariffario_nome'],
-            'cadenza':          ditta.get('cadenza_pagamenti', 'libero'),
+            'cadenza':          ditta['cadenza_pagamenti'] or 'libero',
             'mesi':             risultato,
             'totale_previsto':  totale_previsto,
             'totale_effettivo': totale_effettivo,
