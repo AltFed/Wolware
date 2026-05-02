@@ -19,15 +19,9 @@ def calcola_residuo(db, ditta_id):
     ).fetchone()
     residuo_iniziale = float(ditta['residuo_iniziale'] or 0) if ditta else 0.0
 
+    # La colonna corretta nella tabella pratiche è 'importo' (prezzo × quantità)
     tot_pratiche = db.execute(
-        'SELECT COALESCE(SUM(costo), 0) FROM pratiche WHERE ditta_id=?',
-        (ditta_id,)
-    ).fetchone()[0] or 0.0
-
-    iva_pratiche = db.execute(
-        '''SELECT COALESCE(SUM(costo * 0.22), 0)
-           FROM pratiche
-           WHERE ditta_id=? AND (esente_iva IS NULL OR esente_iva = 0)''',
+        'SELECT COALESCE(SUM(importo), 0) FROM pratiche WHERE ditta_id=?',
         (ditta_id,)
     ).fetchone()[0] or 0.0
 
@@ -36,10 +30,6 @@ def calcola_residuo(db, ditta_id):
         (ditta_id,)
     ).fetchone()[0] or 0.0
 
-    # Gli abbuoni riducono il dovuto, gli addebiti lo aumentano
-    # In DB: abbuono → importo positivo (da sottrarre al residuo)
-    #        addebito → importo positivo (da sommare al residuo)
-    # Gestiamo con la colonna tipo
     tot_abbuoni = db.execute(
         "SELECT COALESCE(SUM(importo), 0) FROM arrotondamenti WHERE ditta_id=? AND tipo='abbuono'",
         (ditta_id,)
@@ -50,8 +40,8 @@ def calcola_residuo(db, ditta_id):
         (ditta_id,)
     ).fetchone()[0] or 0.0
 
-    totale_dovuto = residuo_iniziale + tot_pratiche + iva_pratiche + tot_addebiti
-    return round(totale_dovuto - tot_pagamenti - tot_abbuoni, 2)
+    totale_dovuto = residuo_iniziale + float(tot_pratiche) + float(tot_addebiti)
+    return round(totale_dovuto - float(tot_pagamenti) - float(tot_abbuoni), 2)
 
 
 # ─── GET lista arrotondamenti cliente ────────────────────────────────────────
