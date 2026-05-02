@@ -76,7 +76,7 @@ def _gestione_attiva(ditta, anno: int, tipo_gestione: str) -> bool:
 def _gia_contabilizzata(db, ditta_id: int, voce_id: int, anno: int, mese: int) -> bool:
     row = db.execute(
         '''SELECT id FROM pratiche
-           WHERE ditta_id=? AND voce_costo_id=? AND anno=? AND mese=?
+           WHERE ditta_id=? AND voce_id=? AND anno=? AND mese=?
              AND tipo IN ('costi_fissi_mensili','costi_fissi_annuali')''',
         (ditta_id, voce_id, anno, mese)
     ).fetchone()
@@ -104,7 +104,7 @@ def contabilizza_preview():
             ).fetchall()
         else:
             ditte = db.execute(
-                'SELECT * FROM ditte WHERE archiviato=0 ORDER BY denominazione COLLATE NOCASE'
+                'SELECT * FROM ditte WHERE archiviato=0 ORDER BY ragione_sociale COLLATE NOCASE'
             ).fetchall()
 
         righe = []
@@ -139,7 +139,7 @@ def contabilizza_preview():
 
                     righe.append({
                         'ditta_id':   ditta['id'],
-                        'ditta_nome': ditta['denominazione'],
+                        'ditta_nome': ditta['ragione_sociale'],
                         'voce_id':    voce['voce_costo_id'] or voce['id'],
                         'voce_nome':  voce['nome'],
                         'macrogruppo_nome': voce['macrogruppo_nome'],
@@ -223,9 +223,9 @@ def contabilizza_esegui():
 
                     db.execute(
                         '''INSERT INTO pratiche
-                           (ditta_id, voce_costo_id, anno, mese, descrizione,
-                            qta, prezzo, importo, tipo,
-                            macrogruppo_nome, esente_iva, data_inserimento)
+                           (ditta_id, voce_id, anno, mese, nome,
+                            quantita, prezzo, importo, tipo,
+                            macrogruppo_nome, esente_iva, data_esecuzione)
                            VALUES (?,?,?,?,?,1,?,?,?,?,?,date('now'))''',
                         (
                             ditta['id'],
@@ -294,7 +294,7 @@ def variabili_tabella():
 
         # Per ogni ditta costruisce il record riga
         ditte = db.execute(
-            'SELECT * FROM ditte WHERE archiviato=0 ORDER BY denominazione COLLATE NOCASE'
+            'SELECT * FROM ditte WHERE archiviato=0 ORDER BY ragione_sociale COLLATE NOCASE'
         ).fetchall()
 
         righe = []
@@ -315,15 +315,15 @@ def variabili_tabella():
                 if dv and _voce_attiva_nel_mese(dict(dv), mese, col['tipo']):
                     # Cerca quantità già inserita per questo mese
                     esistente = db.execute(
-                        '''SELECT qta FROM pratiche
-                           WHERE ditta_id=? AND voce_costo_id=? AND anno=? AND mese=?
+                        '''SELECT quantita FROM pratiche
+                           WHERE ditta_id=? AND voce_id=? AND anno=? AND mese=?
                              AND tipo IN (?,?)''',
                         (ditta['id'], col['voce_id'], anno, mese,
                          'costi_variabili_mensili', 'costi_variabili_annuali')
                     ).fetchone()
                     celle[col['voce_id']] = {
                         'attiva':  True,
-                        'qta':     esistente['qta'] if esistente else 0,
+                        'qta':     esistente['quantita'] if esistente else 0,
                         'prezzo':  float(dv['prezzo'] or 0),
                     }
                 else:
@@ -331,7 +331,7 @@ def variabili_tabella():
 
             righe.append({
                 'ditta_id':   ditta['id'],
-                'ditta_nome': ditta['denominazione'],
+                'ditta_nome': ditta['ragione_sociale'],
                 'celle':      celle,
             })
 
@@ -365,7 +365,7 @@ def variabili_carica():
 
             esistente = db.execute(
                 '''SELECT id FROM pratiche
-                   WHERE ditta_id=? AND voce_costo_id=? AND anno=? AND mese=?
+                   WHERE ditta_id=? AND voce_id=? AND anno=? AND mese=?
                      AND tipo IN (?,?)''',
                 (ditta_id, voce_id, anno, mese,
                  'costi_variabili_mensili', 'costi_variabili_annuali')
@@ -393,15 +393,15 @@ def variabili_carica():
 
             if esistente:
                 db.execute(
-                    'UPDATE pratiche SET qta=?, importo=? WHERE id=?',
+                    'UPDATE pratiche SET quantita=?, importo=? WHERE id=?',
                     (qta, importo, esistente['id'])
                 )
             else:
                 db.execute(
                     '''INSERT INTO pratiche
-                       (ditta_id, voce_costo_id, anno, mese, descrizione,
-                        qta, prezzo, importo, tipo, macrogruppo_nome,
-                        esente_iva, data_inserimento)
+                       (ditta_id, voce_id, anno, mese, nome,
+                        quantita, prezzo, importo, tipo, macrogruppo_nome,
+                        esente_iva, data_esecuzione)
                        VALUES (?,?,?,?,?,?,?,?,?,?,?,date('now'))''',
                     (ditta_id, voce_id, anno, mese,
                      voce_info['nome'], qta,
@@ -468,10 +468,10 @@ def costi_massivi():
         for ditta in ditte:
             db.execute(
                 '''INSERT INTO pratiche
-                   (ditta_id, anno, mese, descrizione,
-                    qta, prezzo, importo, tipo,
-                    esente_iva, data_inserimento)
-                   VALUES (?,?,?,?,?,?,?,'a_richiesta',?,date('now'))''',
+                   (ditta_id, anno, mese, nome,
+                    quantita, prezzo, importo, tipo,
+                    esente_iva, data_esecuzione)
+                   VALUES (?,?,?,?,?,?,?,'richiesta',?,date('now'))''',
                 (ditta['id'], anno, mese, descrizione,
                  qta, importo_unit, importo_tot, esente_iva)
             )
@@ -574,8 +574,8 @@ def import_preview():
     db = get_db()
     try:
         denom_esistenti = {
-            r['denominazione'].lower()
-            for r in db.execute('SELECT denominazione FROM ditte').fetchall()
+            r['ragione_sociale'].lower()
+            for r in db.execute('SELECT ragione_sociale FROM ditte').fetchall()
         }
 
         headers = None
@@ -654,7 +654,7 @@ def import_esegui():
         for c in clienti:
             db.execute(
                 '''INSERT INTO ditte
-                   (denominazione, codice_fiscale, email, telefono,
+                   (ragione_sociale, codice_fiscale, email, telefono,
                     indirizzo, residuo_iniziale, cadenza_pagamenti,
                     inizio_paghe, fine_paghe,
                     inizio_contabilita, fine_contabilita,
