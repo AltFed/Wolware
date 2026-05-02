@@ -2381,8 +2381,9 @@ document.getElementById('btnDeleteDittaModal')?.addEventListener('click', async 
 const MESI_NOMI_DET = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
                         'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 
-let currentDetId   = null;
-let currentDetAnno = new Date().getFullYear();
+let currentDetId    = null;
+let currentDetAnno  = new Date().getFullYear();
+let currentDetStats = null;  // ultimo riepilogo caricato, usato da sollecito/fattura
 
 async function openDettaglioCliente(id) {
   currentDetId   = id;
@@ -2419,6 +2420,7 @@ async function _loadDettaglio(fullLoad = true) {
       api(`/api/arrotondamenti?ditta_id=${currentDetId}`),
       api(`/api/pagamenti?ditta_id=${currentDetId}&anno=${currentDetAnno}`),
     ]);
+    currentDetStats = stats;
     _renderDetRiepilogo(stats);
     _renderDetPratiche(pratiche);
     _renderDetArrot(arrot);
@@ -2808,28 +2810,11 @@ document.getElementById('btnSalvaPratiche')?.addEventListener('click', async () 
 
 /* ── Bottoni strumenti top-right dettaglio ───────────────────────────────── */
 document.getElementById('btnDetEstratto')?.addEventListener('click', () => {
-  // usa modalEstratto esistente se presente, altrimenti download diretto
-  if (document.getElementById('modalEstratto')) {
-    openModal('modalEstratto');
-  } else {
-    window.open(`/api/ditte/${currentDetId}/estratto/pdf?anno=${currentDetAnno}`, '_blank');
-  }
+  _openEstrattoPdf();
 });
 
-document.getElementById('btnDetSollecito')?.addEventListener('click', async () => {
-  if (!confirm('Generare il PDF di sollecito per questo cliente?')) return;
-  try {
-    const res = await fetch(`/api/ditte/${currentDetId}/sollecito/pdf`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ anno: currentDetAnno }),
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'sollecito.pdf'; a.click();
-    URL.revokeObjectURL(url);
-  } catch(e) { toast('Errore generazione sollecito: ' + e.message, 'error'); }
+document.getElementById('btnDetSollecito')?.addEventListener('click', () => {
+  _openSollecito();
 });
 
 document.getElementById('btnDetArrotondamento')?.addEventListener('click', () => {
@@ -2841,14 +2826,11 @@ document.getElementById('btnDetArrotondamento')?.addEventListener('click', () =>
   openModal('modalArrotondamento');
 });
 
-/* Fattura e previsionale — apre modal esistente se disponibile */
 document.getElementById('btnDetFattura')?.addEventListener('click', () => {
-  if (document.getElementById('modalFattura')) openModal('modalFattura');
-  else toast('Modal fattura non ancora implementato', 'info');
+  _openFattura();
 });
 document.getElementById('btnDetPrevisionale')?.addEventListener('click', () => {
-  if (document.getElementById('modalPrevisionale')) openModal('modalPrevisionale');
-  else toast('Modal previsionale non ancora implementato', 'info');
+  _openPrevisionale();
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -3151,6 +3133,360 @@ function _buildAnnoSel(selId, defaultAnno) {
   for (let y = now + 2; y >= now - 5; y--)
     sel.innerHTML += `<option value="${y}"${y===defaultAnno?' selected':''}>${y}</option>`;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BLOCCO 5 — FATTURA, ESTRATTO, PREVISIONALE, SOLLECITO
+══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 5.2 Fattura ─────────────────────────────────────────────────────────── */
+let fatRighe = [];
+
+function _openFattura() {
+  const anno = currentDetAnno;
+  document.getElementById('fatturaTitle').textContent = `Fattura — ${anno}`;
+  _buildAnnoSel('fat_anno', anno);
+  _buildAnnoSel('fat_da_anno', anno);
+  _buildAnnoSel('fat_a_anno', anno);
+  const now = new Date();
+  document.getElementById('fat_da_mese').value = 1;
+  document.getElementById('fat_a_mese').value = now.getMonth() + 1;
+  document.getElementById('fat_note').value = '';
+  fatRighe = [];
+  _renderFatRighe();
+  _loadFatStorico();
+  openModal('modalFattura');
+}
+
+function _renderFatRighe() {
+  const tbody = document.getElementById('fatRigheTbody');
+  if (!fatRighe.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--color-text-muted);padding:var(--space-3)">Nessuna riga. Importa da pratiche o aggiungi manualmente.</td></tr>';
+    _updateFatTotali();
+    return;
+  }
+  tbody.innerHTML = fatRighe.map((r, i) => `
+    <tr>
+      <td><input class="fat-riga-input" data-i="${i}" data-f="descrizione" value="${(r.descrizione||'').replace(/"/g,'&quot;')}" placeholder="Descrizione"></td>
+      <td><input class="fat-riga-input" data-i="${i}" data-f="mese_label" value="${(r.mese_label||'').replace(/"/g,'&quot;')}" placeholder="Periodo" style="width:90px"></td>
+      <td><input class="fat-riga-input" data-i="${i}" data-f="qta" type="number" min="0.01" step="0.01" value="${r.qta||1}" style="width:55px"></td>
+      <td><input class="fat-riga-input" data-i="${i}" data-f="prezzo" type="number" min="0" step="0.01" value="${r.prezzo||0}" style="width:75px"></td>
+      <td><select class="fat-riga-sel" data-i="${i}" style="width:65px">
+        <option value="22"${!r.esente_iva?' selected':''}>22%</option>
+        <option value="0"${r.esente_iva?' selected':''}>Esente</option>
+      </select></td>
+      <td style="text-align:right;font-weight:600;white-space:nowrap">${formatEur(r.totale||0)}</td>
+      <td><button class="btn-icon" onclick="fatRemoveRiga(${i})">🗑</button></td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('.fat-riga-input').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const i = +inp.dataset.i, f = inp.dataset.f;
+      fatRighe[i][f] = inp.type === 'number' ? +inp.value : inp.value;
+      if (f === 'qta' || f === 'prezzo') {
+        fatRighe[i].totale = _round2(fatRighe[i].qta * fatRighe[i].prezzo);
+      }
+      _renderFatRighe();
+    });
+  });
+  tbody.querySelectorAll('.fat-riga-sel').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const i = +sel.dataset.i;
+      fatRighe[i].esente_iva = sel.value === '0';
+      fatRighe[i].aliquota_iva = +sel.value;
+      _renderFatRighe();
+    });
+  });
+  _updateFatTotali();
+}
+
+function fatRemoveRiga(i) {
+  fatRighe.splice(i, 1);
+  _renderFatRighe();
+}
+
+function _round2(v) { return Math.round(v * 100) / 100; }
+
+function _updateFatTotali() {
+  const imponibile = fatRighe.filter(r => !r.esente_iva).reduce((s, r) => s + (r.totale || 0), 0);
+  const esente     = fatRighe.filter(r =>  r.esente_iva).reduce((s, r) => s + (r.totale || 0), 0);
+  const iva        = _round2(imponibile * 0.22);
+  const totale     = _round2(imponibile + iva + esente);
+  document.getElementById('fatTotImponibile').textContent = formatEur(imponibile);
+  document.getElementById('fatTotEsente').textContent     = formatEur(esente);
+  document.getElementById('fatTotIva').textContent        = formatEur(iva);
+  document.getElementById('fatTotTotale').textContent     = formatEur(totale);
+}
+
+async function _loadFatStorico() {
+  const el = document.getElementById('fatStoricoList');
+  el.innerHTML = '<p style="color:var(--color-text-muted)">Caricamento...</p>';
+  try {
+    const list = await api(`/api/ditte/${currentDetId}/fatture?anno=${currentDetAnno}`);
+    if (!list.length) {
+      el.innerHTML = '<p style="color:var(--color-text-muted)">Nessuna fattura per questo anno.</p>';
+      return;
+    }
+    const STATI_LABEL = {
+      bozza:     '🟡 Bozza',
+      emessa:    '🔵 Emessa',
+      inviata:   '📤 Inviata',
+      incassata: '✅ Incassata',
+      annullata: '❌ Annullata',
+    };
+    const STATI_SUCC = { bozza: 'emessa', emessa: 'inviata', inviata: 'incassata' };
+    el.innerHTML = list.map(f => `
+      <div class="fat-storico-row">
+        <span class="fat-stato-badge fat-stato-${f.stato}">${STATI_LABEL[f.stato] || f.stato}</span>
+        <span class="fat-numero">${f.numero}</span>
+        <span class="fat-data">${f.data_emissione || ''}</span>
+        <span class="fat-totale">${formatEur(f.totale)}</span>
+        <div class="fat-storico-azioni">
+          <button class="btn btn-ghost btn-sm" onclick="fatDownloadPdf(${f.id})">📄 PDF</button>
+          ${STATI_SUCC[f.stato] ? `<button class="btn btn-ghost btn-sm" onclick="fatAvanzaStato(${f.id},'${f.stato}')">→ ${STATI_SUCC[f.stato]}</button>` : ''}
+          ${f.stato === 'bozza' ? `<button class="btn btn-ghost btn-sm" style="color:var(--color-error)" onclick="fatAnnulla(${f.id})">Annulla</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--color-danger, var(--color-error))">Errore: ${e.message}</p>`;
+  }
+}
+
+async function fatDownloadPdf(fid) {
+  try {
+    const res = await fetch(`/api/ditte/${currentDetId}/fatture/${fid}/pdf`);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText); }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `fattura_${fid}.pdf`; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { toast('Errore PDF: ' + e.message, 'error'); }
+}
+
+async function fatAvanzaStato(fid, statoCorrente) {
+  const SUCC = { bozza: 'emessa', emessa: 'inviata', inviata: 'incassata' };
+  const nuovoStato = SUCC[statoCorrente];
+  if (!nuovoStato) return;
+  try {
+    await api(`/api/ditte/${currentDetId}/fatture/${fid}`, 'PUT', { stato: nuovoStato });
+    toast(`Stato aggiornato → ${nuovoStato}`, 'success');
+    _loadFatStorico();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+}
+
+async function fatAnnulla(fid) {
+  if (!confirm('Annullare questa fattura?')) return;
+  try {
+    await api(`/api/ditte/${currentDetId}/fatture/${fid}`, 'DELETE');
+    toast('Fattura annullata', 'success');
+    _loadFatStorico();
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+}
+
+document.getElementById('btnFatImportaPratiche')?.addEventListener('click', async () => {
+  const daMese = +document.getElementById('fat_da_mese').value;
+  const daAnno = +document.getElementById('fat_da_anno').value;
+  const aMese  = +document.getElementById('fat_a_mese').value;
+  const aAnno  = +document.getElementById('fat_a_anno').value;
+  try {
+    const righe = await api(
+      `/api/ditte/${currentDetId}/fatture/importa-righe?da_anno=${daAnno}&da_mese=${daMese}&a_anno=${aAnno}&a_mese=${aMese}`
+    );
+    fatRighe = righe;
+    _renderFatRighe();
+    toast(`Importate ${righe.length} righe dalle pratiche`, 'success');
+  } catch(e) { toast('Errore importazione: ' + e.message, 'error'); }
+});
+
+document.getElementById('btnFatAddRiga')?.addEventListener('click', () => {
+  fatRighe.push({ descrizione: '', mese_label: '', qta: 1, prezzo: 0, totale: 0, esente_iva: false, aliquota_iva: 22 });
+  _renderFatRighe();
+});
+
+async function _saveFattura(stato) {
+  if (!fatRighe.length) { toast('Aggiungi almeno una riga', 'error'); return; }
+  const anno = +document.getElementById('fat_anno').value;
+  const tipo = document.getElementById('fat_tipo').value;
+  const body = {
+    anno, tipo, stato,
+    periodo_da_anno: +document.getElementById('fat_da_anno').value,
+    periodo_da_mese: +document.getElementById('fat_da_mese').value,
+    periodo_a_anno:  +document.getElementById('fat_a_anno').value,
+    periodo_a_mese:  +document.getElementById('fat_a_mese').value,
+    note:   document.getElementById('fat_note').value,
+    righe:  fatRighe,
+  };
+  try {
+    const res = await api(`/api/ditte/${currentDetId}/fatture`, 'POST', body);
+    toast(`Fattura ${res.numero} salvata (${stato})`, 'success');
+    fatRighe = [];
+    _renderFatRighe();
+    _loadFatStorico();
+  } catch(e) { toast('Errore salvataggio: ' + e.message, 'error'); }
+}
+
+document.getElementById('btnFatSalvaBozza')?.addEventListener('click', () => _saveFattura('bozza'));
+document.getElementById('btnFatEmetti')?.addEventListener('click', () => _saveFattura('emessa'));
+
+/* ── 5.3 Estratto PDF ─────────────────────────────────────────────────────── */
+function _openEstrattoPdf() {
+  _buildAnnoSel('est_anno',       currentDetAnno);
+  _buildAnnoSel('est_anno_mese',  currentDetAnno);
+  _buildAnnoSel('est_anno_range', currentDetAnno);
+  // reset to defaults
+  const radioAnno = document.querySelector('input[name="est_periodo"][value="anno"]');
+  if (radioAnno) radioAnno.checked = true;
+  _updateEstPeriodoFields();
+  openModal('modalEstrattoPdf');
+}
+
+function _updateEstPeriodoFields() {
+  const periodo = document.querySelector('input[name="est_periodo"]:checked')?.value || 'anno';
+  document.getElementById('estPeriodoAnno').style.display  = periodo === 'anno'    ? '' : 'none';
+  document.getElementById('estPeriodoMese').style.display  = periodo === 'mese'    ? '' : 'none';
+  document.getElementById('estPeriodoRange').style.display = periodo === 'range'   ? '' : 'none';
+}
+
+document.querySelectorAll('input[name="est_periodo"]').forEach(r => {
+  r.addEventListener('change', _updateEstPeriodoFields);
+});
+
+document.getElementById('btnEstGeneraPdf')?.addEventListener('click', async () => {
+  const formato  = document.querySelector('input[name="est_formato"]:checked')?.value || 'completo';
+  const periodo  = document.querySelector('input[name="est_periodo"]:checked')?.value || 'anno';
+  const includi_tariffario = document.getElementById('est_includi_tariffario')?.checked || false;
+
+  const body = { formato, periodo, includi_tariffario };
+  if (periodo === 'anno') {
+    body.anno = +document.getElementById('est_anno').value;
+  } else if (periodo === 'mese') {
+    body.anno = +document.getElementById('est_anno_mese').value;
+    body.mese = +document.getElementById('est_mese').value;
+  } else if (periodo === 'range') {
+    body.anno    = +document.getElementById('est_anno_range').value;
+    body.da_mese = +document.getElementById('est_da_mese').value;
+    body.a_mese  = +document.getElementById('est_a_mese').value;
+  }
+  // storico: nessun parametro extra
+
+  try {
+    const res = await fetch(`/api/ditte/${currentDetId}/estratto/pdf`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || res.statusText);
+    }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `estratto_${currentDetId}_${body.anno || 'storico'}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    closeModal('modalEstrattoPdf');
+    toast('Estratto PDF generato', 'success');
+  } catch(e) { toast('Errore PDF: ' + e.message, 'error'); }
+});
+
+/* ── 5.4 Previsionale ─────────────────────────────────────────────────────── */
+function _openPrevisionale() {
+  _buildAnnoSel('prev_anno', currentDetAnno);
+  _loadPrevisionale();
+  openModal('modalPrevisionale');
+}
+
+async function _loadPrevisionale() {
+  const anno = +document.getElementById('prev_anno').value || currentDetAnno;
+  const el   = document.getElementById('prevTabella');
+  el.innerHTML = '<p style="color:var(--color-text-muted)">Caricamento...</p>';
+  try {
+    const data = await api(`/api/ditte/${currentDetId}/previsionale/${anno}`);
+    _renderPrevTabella(data);
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--color-danger, var(--color-error))">Errore: ${e.message}</p>`;
+  }
+}
+
+function _renderPrevTabella(data) {
+  const el   = document.getElementById('prevTabella');
+  const rows = data.mesi.map(m => {
+    const diff      = m.differenza;
+    const diffCls   = diff > 0 ? 'prev-diff-pos' : diff < 0 ? 'prev-diff-neg' : '';
+    const diffSign  = diff > 0 ? '+' : '';
+    return `<tr>
+      <td>${m.mese_label}</td>
+      <td style="text-align:right">${formatEur(m.previsto)}</td>
+      <td style="text-align:right">${formatEur(m.effettivo)}</td>
+      <td style="text-align:right" class="${diffCls}">${diffSign}${formatEur(diff)}</td>
+    </tr>`;
+  }).join('');
+  const dTot    = data.differenza_tot;
+  const dTotCls = dTot > 0 ? 'prev-diff-pos' : dTot < 0 ? 'prev-diff-neg' : '';
+  el.innerHTML = `
+    <table class="prev-table">
+      <thead><tr>
+        <th>Mese</th>
+        <th style="text-align:right">Previsto</th>
+        <th style="text-align:right">Effettivo</th>
+        <th style="text-align:right">Differenza</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr class="prev-tot-row">
+        <td><strong>TOTALE</strong></td>
+        <td style="text-align:right"><strong>${formatEur(data.totale_previsto)}</strong></td>
+        <td style="text-align:right"><strong>${formatEur(data.totale_effettivo)}</strong></td>
+        <td style="text-align:right" class="${dTotCls}"><strong>${dTot > 0 ? '+' : ''}${formatEur(dTot)}</strong></td>
+      </tr></tfoot>
+    </table>
+    <p style="margin-top:var(--space-2);font-size:var(--font-size-sm);color:var(--color-text-muted)">
+      Tariffario: <strong>${data.tariffario_nome || '—'}</strong>
+      &nbsp;·&nbsp; Cadenza: <strong>${data.cadenza || '—'}</strong>
+    </p>`;
+}
+
+document.getElementById('btnPrevAggiorna')?.addEventListener('click', _loadPrevisionale);
+
+/* ── 5.6 Sollecito ───────────────────────────────────────────────────────── */
+function _openSollecito() {
+  // mostra il residuo dell'anno corrente dall'ultimo riepilogo caricato
+  const residuo = currentDetStats ? currentDetStats.residuo : null;
+  document.getElementById('solImporto').textContent =
+    residuo !== null ? formatEur(Math.abs(residuo)) : '—';
+  document.getElementById('solNota').textContent =
+    residuo !== null && residuo <= 0
+      ? '⚠️ Questo cliente non ha residui da sollecitare.'
+      : `Anno ${currentDetAnno}`;
+  const btnPdf = document.getElementById('btnSolGeneraPdf');
+  if (btnPdf) btnPdf.disabled = residuo !== null && residuo <= 0;
+  openModal('modalSollecito');
+}
+
+document.getElementById('btnSolGeneraPdf')?.addEventListener('click', async () => {
+  try {
+    const res = await fetch(`/api/ditte/${currentDetId}/sollecito/pdf`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ anno: currentDetAnno }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || res.statusText);
+    }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `sollecito_${currentDetId}_${currentDetAnno}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    closeModal('modalSollecito');
+    toast('PDF sollecito generato', 'success');
+  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+});
 
 /* INIT */
 checkAuth();

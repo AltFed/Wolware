@@ -56,7 +56,7 @@ def get_previsionale(ditta_id, anno):
 
         # Calcola effettivo per mese (da pratiche salvate)
         pratiche = db.execute(
-            'SELECT mese, SUM(costo) as tot FROM pratiche WHERE ditta_id=? AND anno=? GROUP BY mese',
+            'SELECT mese, SUM(importo) as tot FROM pratiche WHERE ditta_id=? AND anno=? GROUP BY mese',
             (ditta_id, anno)
         ).fetchall()
         effettivo = {m: 0.0 for m in range(1, 13)}

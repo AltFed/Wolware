@@ -561,3 +561,61 @@ td.empty-state-row p{font-size:var(--text-sm);line-height:1.7}
   font-size:9px;font-weight:700;background:var(--color-success-light);color:var(--color-success)}
 .ccf-badge-da{display:inline-block;padding:1px 6px;border-radius:var(--radius-full);
   font-size:9px;font-weight:700;background:var(--color-warning-light);color:var(--color-warning)}
+
+/* ── Blocco 5 — Fattura ─────────────────────────────────────────────────── */
+.fat-righe-table{width:100%;border-collapse:collapse;font-size:var(--text-sm)}
+.fat-righe-table th,.fat-righe-table td{
+  padding:var(--space-2) var(--space-2);
+  border-bottom:1px solid var(--color-divider);
+  text-align:left;vertical-align:middle}
+.fat-righe-table th{background:var(--color-surface-2);font-weight:700;
+  color:var(--color-text-muted);font-size:10px;text-transform:uppercase}
+.fat-righe-table input,.fat-righe-table select{
+  border:1px solid var(--color-border);border-radius:var(--radius-sm);
+  padding:3px 6px;font-size:var(--text-sm);background:var(--color-surface);
+  color:var(--color-text);width:100%}
+.fat-totali-box{display:flex;gap:var(--space-4);flex-wrap:wrap;align-items:center;
+  background:var(--color-surface-2);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);
+  margin-top:var(--space-3);font-size:var(--text-sm)}
+.fat-totale-finale{margin-left:auto;font-weight:700;font-size:var(--text-base)}
+.fat-storico-row{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;
+  padding:var(--space-3) var(--space-2);border-bottom:1px solid var(--color-divider);
+  font-size:var(--text-sm)}
+.fat-numero{font-family:monospace;font-weight:700;color:var(--color-primary)}
+.fat-data{color:var(--color-text-muted);font-size:var(--text-xs)}
+.fat-totale{margin-left:auto;font-weight:600}
+.fat-storico-azioni{display:flex;gap:var(--space-2)}
+.fat-stato-badge{display:inline-block;padding:2px 8px;border-radius:var(--radius-full);
+  font-size:10px;font-weight:700;white-space:nowrap}
+.fat-stato-bozza{background:#fef3c7;color:#92400e}
+.fat-stato-emessa{background:#dbeafe;color:#1e40af}
+.fat-stato-inviata{background:#e0e7ff;color:#3730a3}
+.fat-stato-incassata{background:#d1fae5;color:#065f46}
+.fat-stato-annullata{background:#fee2e2;color:#991b1b;text-decoration:line-through}
+
+/* ── Blocco 5.3 — Estratto PDF ──────────────────────────────────────────── */
+.radio-group{display:flex;gap:var(--space-4);flex-wrap:wrap;margin-top:var(--space-1)}
+.radio-group label{display:flex;align-items:center;gap:var(--space-1);
+  cursor:pointer;font-size:var(--text-sm);font-weight:400}
+
+/* ── Blocco 5.4 — Previsionale ──────────────────────────────────────────── */
+.prev-table{width:100%;border-collapse:collapse;font-size:var(--text-sm)}
+.prev-table th,.prev-table td{
+  padding:var(--space-2) var(--space-3);
+  border-bottom:1px solid var(--color-divider)}
+.prev-table th{background:var(--color-surface-2);font-weight:700;
+  color:var(--color-text-muted);font-size:10px;text-transform:uppercase}
+.prev-table tfoot tr.prev-tot-row td{
+  border-top:2px solid var(--color-border);
+  background:var(--color-surface-2);padding-top:var(--space-3)}
+.prev-diff-pos{color:var(--color-success)}
+.prev-diff-neg{color:var(--color-danger, var(--color-error))}
+
+/* ── Blocco 5.6 — Sollecito ─────────────────────────────────────────────── */
+.sol-importo-box{display:flex;align-items:center;justify-content:space-between;
+  background:var(--color-surface-2);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);padding:var(--space-4) var(--space-5)}
+.sol-label{font-size:var(--text-sm);font-weight:700;
+  color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em}
+.sol-val{font-size:1.5rem;font-weight:800;color:var(--color-error, #dc2626)}

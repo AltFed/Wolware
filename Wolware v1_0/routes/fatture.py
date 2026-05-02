@@ -89,11 +89,11 @@ def importa_righe(ditta_id):
         for p in pratiche:
             righe.append({
                 'pratica_id':  p['id'],
-                'descrizione': p['descrizione'],
+                'descrizione': p['nome'],
                 'mese_label':  f"{_mese_label(p['mese'])} {p['anno']}",
-                'qta':         1,
-                'prezzo':      p['costo'],
-                'totale':      p['costo'],
+                'qta':         p['quantita'] or 1,
+                'prezzo':      p['prezzo'],
+                'totale':      p['importo'],
                 'esente_iva':  p['esente_iva'],
                 'aliquota_iva': 0 if p['esente_iva'] else 22,
             })
@@ -274,7 +274,7 @@ def _genera_pdf_fattura(fattura, ditta, righe):
     story.append(Spacer(1, 0.5*cm))
 
     # Dati cliente
-    story.append(Paragraph(f"<b>Cliente:</b> {ditta.get('nome', '')}", SMALL))
+    story.append(Paragraph(f"<b>Cliente:</b> {ditta.get('ragione_sociale', '')}", SMALL))
     story.append(Paragraph(f"<b>C.F./P.IVA:</b> {ditta.get('codice_fiscale', '')}", SMALL))
     story.append(Paragraph(f"<b>Indirizzo:</b> {ditta.get('indirizzo', '')}", SMALL))
     story.append(Spacer(1, 0.5*cm))

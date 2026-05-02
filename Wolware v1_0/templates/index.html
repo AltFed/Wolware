@@ -2249,6 +2249,247 @@
   </div>
 </div>
 
+<!-- ═══ BLOCCO 5.2 — Modal Fattura ═══════════════════════════════════════ -->
+<div class="modal" id="modalFattura">
+  <div class="modal-content modal-xxl" style="max-width:1020px;max-height:90vh">
+    <div class="modal-header">
+      <h3 id="fatturaTitle">Fattura</h3>
+      <button class="btn-icon" data-close="modalFattura">✕</button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto">
+
+      <!-- Nuova fattura -->
+      <div class="dettaglio-section">
+        <div class="dettaglio-section-hdr">Nuova Fattura</div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Tipo</label>
+            <select id="fat_tipo">
+              <option value="proforma">Proforma</option>
+              <option value="ordinaria">Ordinaria</option>
+              <option value="acconto">Acconto</option>
+              <option value="saldo">Saldo</option>
+              <option value="nota_credito">Nota di credito</option>
+              <option value="elettronica">Elettronica</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Anno Fattura</label>
+            <select id="fat_anno"></select>
+          </div>
+        </div>
+        <div class="form-row" style="align-items:flex-end">
+          <div class="form-field">
+            <label>Periodo Da</label>
+            <div style="display:flex;gap:4px">
+              <select id="fat_da_mese" style="width:130px">
+                <option value="1">Gennaio</option><option value="2">Febbraio</option>
+                <option value="3">Marzo</option><option value="4">Aprile</option>
+                <option value="5">Maggio</option><option value="6">Giugno</option>
+                <option value="7">Luglio</option><option value="8">Agosto</option>
+                <option value="9">Settembre</option><option value="10">Ottobre</option>
+                <option value="11">Novembre</option><option value="12">Dicembre</option>
+              </select>
+              <select id="fat_da_anno" style="width:80px"></select>
+            </div>
+          </div>
+          <div class="form-field">
+            <label>A</label>
+            <div style="display:flex;gap:4px">
+              <select id="fat_a_mese" style="width:130px">
+                <option value="1">Gennaio</option><option value="2">Febbraio</option>
+                <option value="3">Marzo</option><option value="4">Aprile</option>
+                <option value="5">Maggio</option><option value="6">Giugno</option>
+                <option value="7">Luglio</option><option value="8">Agosto</option>
+                <option value="9">Settembre</option><option value="10">Ottobre</option>
+                <option value="11">Novembre</option><option value="12">Dicembre</option>
+              </select>
+              <select id="fat_a_anno" style="width:80px"></select>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btnFatImportaPratiche">⬇ Importa da Pratiche</button>
+        </div>
+
+        <!-- Righe -->
+        <div id="fatRigheWrap" style="overflow-x:auto;margin-top:var(--space-3)">
+          <table class="fat-righe-table">
+            <thead><tr>
+              <th>Descrizione</th>
+              <th style="min-width:100px">Periodo</th>
+              <th style="width:60px">Qta</th>
+              <th style="width:90px">Prezzo</th>
+              <th style="width:70px">IVA</th>
+              <th style="width:90px;text-align:right">Totale</th>
+              <th style="width:36px"></th>
+            </tr></thead>
+            <tbody id="fatRigheTbody"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="btnFatAddRiga" style="margin-top:var(--space-2)">+ Aggiungi riga</button>
+
+        <!-- Totali anteprima -->
+        <div class="fat-totali-box" id="fatTotaliBox">
+          <span>Imponibile: <strong id="fatTotImponibile">€ 0,00</strong></span>
+          <span>Esente IVA: <strong id="fatTotEsente">€ 0,00</strong></span>
+          <span>IVA 22%: <strong id="fatTotIva">€ 0,00</strong></span>
+          <span class="fat-totale-finale">TOTALE: <strong id="fatTotTotale">€ 0,00</strong></span>
+        </div>
+
+        <div class="form-field" style="margin-top:var(--space-3)">
+          <label>Note</label>
+          <textarea id="fat_note" class="dettaglio-textarea" rows="2" placeholder="Note fattura..."></textarea>
+        </div>
+      </div>
+
+      <!-- Storico fatture -->
+      <div class="dettaglio-section">
+        <div class="dettaglio-section-hdr">Storico Fatture Anno Selezionato</div>
+        <div id="fatStoricoList"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalFattura">Chiudi</button>
+      <button class="btn btn-secondary" id="btnFatSalvaBozza">Salva Bozza</button>
+      <button class="btn btn-primary" id="btnFatEmetti">Emetti Fattura</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ BLOCCO 5.3 — Modal Estratto PDF ══════════════════════════════════ -->
+<div class="modal" id="modalEstrattoPdf">
+  <div class="modal-content" style="max-width:500px">
+    <div class="modal-header">
+      <h3>Estratto Conto PDF</h3>
+      <button class="btn-icon" data-close="modalEstrattoPdf">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field">
+        <label>Formato</label>
+        <div class="radio-group">
+          <label><input type="radio" name="est_formato" value="completo" checked> Completo</label>
+          <label><input type="radio" name="est_formato" value="sintetico"> Sintetico</label>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Periodo</label>
+        <div class="radio-group">
+          <label><input type="radio" name="est_periodo" value="anno" checked> Anno</label>
+          <label><input type="radio" name="est_periodo" value="mese"> Mese</label>
+          <label><input type="radio" name="est_periodo" value="range"> Range mesi</label>
+          <label><input type="radio" name="est_periodo" value="storico"> Storico</label>
+        </div>
+      </div>
+      <div id="estPeriodoAnno" class="form-row">
+        <div class="form-field">
+          <label>Anno</label>
+          <select id="est_anno"></select>
+        </div>
+      </div>
+      <div id="estPeriodoMese" class="form-row" style="display:none">
+        <div class="form-field">
+          <label>Anno</label>
+          <select id="est_anno_mese"></select>
+        </div>
+        <div class="form-field">
+          <label>Mese</label>
+          <select id="est_mese">
+            <option value="1">Gennaio</option><option value="2">Febbraio</option>
+            <option value="3">Marzo</option><option value="4">Aprile</option>
+            <option value="5">Maggio</option><option value="6">Giugno</option>
+            <option value="7">Luglio</option><option value="8">Agosto</option>
+            <option value="9">Settembre</option><option value="10">Ottobre</option>
+            <option value="11">Novembre</option><option value="12">Dicembre</option>
+          </select>
+        </div>
+      </div>
+      <div id="estPeriodoRange" class="form-row" style="display:none">
+        <div class="form-field">
+          <label>Anno</label>
+          <select id="est_anno_range"></select>
+        </div>
+        <div class="form-field">
+          <label>Da Mese</label>
+          <select id="est_da_mese">
+            <option value="1">Gennaio</option><option value="2">Febbraio</option>
+            <option value="3">Marzo</option><option value="4">Aprile</option>
+            <option value="5">Maggio</option><option value="6">Giugno</option>
+            <option value="7">Luglio</option><option value="8">Agosto</option>
+            <option value="9">Settembre</option><option value="10">Ottobre</option>
+            <option value="11">Novembre</option><option value="12">Dicembre</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>A Mese</label>
+          <select id="est_a_mese">
+            <option value="1">Gennaio</option><option value="2">Febbraio</option>
+            <option value="3">Marzo</option><option value="4">Aprile</option>
+            <option value="5">Maggio</option><option value="6">Giugno</option>
+            <option value="7">Luglio</option><option value="8">Agosto</option>
+            <option value="9">Settembre</option><option value="10">Ottobre</option>
+            <option value="11">Novembre</option><option value="12">Dicembre</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-field">
+        <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer">
+          <input type="checkbox" id="est_includi_tariffario"> Includi tariffario applicato
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalEstrattoPdf">Annulla</button>
+      <button class="btn btn-primary" id="btnEstGeneraPdf">📄 Genera PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ BLOCCO 5.4 — Modal Previsionale ══════════════════════════════════ -->
+<div class="modal" id="modalPrevisionale">
+  <div class="modal-content" style="max-width:660px">
+    <div class="modal-header">
+      <h3>Analisi Previsionale</h3>
+      <button class="btn-icon" data-close="modalPrevisionale">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:flex-end;gap:var(--space-3);margin-bottom:var(--space-4)">
+        <div class="form-field" style="margin:0">
+          <label>Anno</label>
+          <select id="prev_anno"></select>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnPrevAggiorna">🔄 Aggiorna</button>
+      </div>
+      <div id="prevTabella"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalPrevisionale">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ BLOCCO 5.6 — Modal Sollecito ═════════════════════════════════════ -->
+<div class="modal" id="modalSollecito">
+  <div class="modal-content" style="max-width:440px">
+    <div class="modal-header">
+      <h3>Sollecito di Pagamento</h3>
+      <button class="btn-icon" data-close="modalSollecito">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--color-text-muted);margin-bottom:var(--space-4)">
+        Verrà generato un PDF di sollecito per il seguente importo residuo:
+      </p>
+      <div class="sol-importo-box">
+        <span class="sol-label">Importo Dovuto</span>
+        <span class="sol-val" id="solImporto">—</span>
+      </div>
+      <p id="solNota" style="margin-top:var(--space-3);font-size:var(--font-size-sm);color:var(--color-text-muted)"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalSollecito">Annulla</button>
+      <button class="btn btn-primary" id="btnSolGeneraPdf">📄 Genera PDF Sollecito</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
   <script src="/static/js/app.js" defer></script>
 </body>

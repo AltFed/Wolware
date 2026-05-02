@@ -49,7 +49,7 @@ def genera_estratto(ditta_id):
             formato,
             tariffario=[dict(t) for t in tariffario] if tariffario else None,
         )
-        nome_file = f"estratto_{ditta['nome'].replace(' ', '_')}_{anno or 'storico'}.pdf"
+        nome_file = f"estratto_{ditta['ragione_sociale'].replace(' ', '_')}_{anno or 'storico'}.pdf"
         return send_file(buf, mimetype='application/pdf',
                          as_attachment=True, download_name=nome_file)
     finally:
@@ -120,13 +120,13 @@ def _genera_pdf_estratto(ditta, pratiche, pagamenti, arrotondamenti, formato, ta
 
     story = []
     story.append(Paragraph("ESTRATTO CONTO", H1))
-    story.append(Paragraph(f"Cliente: <b>{ditta.get('nome', '')}</b>", SMALL))
+    story.append(Paragraph(f"Cliente: <b>{ditta.get('ragione_sociale', '')}</b>", SMALL))
     story.append(Paragraph(f"C.F./P.IVA: {ditta.get('codice_fiscale', '')}", SMALL))
     story.append(Spacer(1, 0.5*cm))
 
     # Riepilogo finanziario
-    tot_pratiche = sum(p['costo'] for p in pratiche)
-    esente       = sum(p['costo'] for p in pratiche if p.get('esente_iva'))
+    tot_pratiche = sum(p['importo'] for p in pratiche)
+    esente       = sum(p['importo'] for p in pratiche if p.get('esente_iva'))
     imponibile   = tot_pratiche - esente
     iva          = round(imponibile * 0.22, 2)
     tot_iva      = round(imponibile + iva + esente, 2)
@@ -168,11 +168,11 @@ def _genera_pdf_estratto(ditta, pratiche, pagamenti, arrotondamenti, formato, ta
         for (anno, mese), voci in sorted(pratiche_per_mese.items()):
             titolo_mese = f"{nomi_mesi[mese-1]} {anno}"
             story.append(Paragraph(titolo_mese, H2))
-            righe_m = [['Descrizione', 'Costo', 'IVA']]
+            righe_m = [['Descrizione', 'Importo', 'IVA']]
             for v in voci:
                 righe_m.append([
-                    v['descrizione'],
-                    f"€ {v['costo']:.2f}",
+                    v['nome'],
+                    f"€ {float(v['importo'] or 0):.2f}",
                     'Esente' if v.get('esente_iva') else '22%',
                 ])
             tm = Table(righe_m, colWidths=[10*cm, 3*cm, 3*cm])

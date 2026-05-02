@@ -22,7 +22,7 @@ def genera_sollecito(ditta_id):
             return jsonify({'error': 'Il cliente non ha residui da sollecitare'}), 400
 
         buf = _genera_pdf_sollecito(dict(ditta), residuo)
-        nome = f"sollecito_{ditta['nome'].replace(' ', '_')}_{date.today()}.pdf"
+        nome = f"sollecito_{ditta['ragione_sociale'].replace(' ', '_')}_{date.today()}.pdf"
         return send_file(buf, mimetype='application/pdf',
                          as_attachment=True, download_name=nome)
     finally:
@@ -62,7 +62,7 @@ def _genera_pdf_sollecito(ditta, importo_dovuto):
 
     # Dati destinatario
     story.append(Paragraph(f"<b>Spett.le</b>", NORM))
-    story.append(Paragraph(f"<b>{ditta.get('nome', '')}</b>", NORM))
+    story.append(Paragraph(f"<b>{ditta.get('ragione_sociale', '')}</b>", NORM))
     if ditta.get('indirizzo'):
         story.append(Paragraph(ditta['indirizzo'], NORM))
     story.append(Spacer(1, 1*cm))
