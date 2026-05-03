@@ -1,5 +1,5 @@
 # Contesto progetto Wolware — Prima Nota Studio
-_Aggiornato: 2026-05-03_
+_Aggiornato: 2026-05-03 (Blocco 3 completato)_
 
 ## Progetto
 
@@ -63,21 +63,28 @@ Rinominato da `perplexity`. Ownership: Claude.
 
 ---
 
-### ⏳ Blocco 3 — Modal Giroconto + Modal Prepara Fatturazione (DA FARE)
+### ✅ Blocco 3 — Modal Giroconto + Modal Prepara Fatturazione (COMPLETO)
 
 **Giroconto:**
-- Modal con: Data, Tipo (Versamento/Prelievo/Bonifico/Spostamento), Da (origine), A (destinazione), Importo, Descrizione
-- Tipo intelligente: Versamento → Da=Cassa auto; Prelievo → A=Cassa auto; Bonifico → solo banche
-- Crea 2 movimenti in `movimenti_studio` con stesso `giroconto_id` (UUID), `giroconto_dir` opposta, `giroconto_tipo`
+- Modal HTML `#modalGiroconto`: Data, Tipo select, Da→A grid, Importo, Descrizione
+- `_onGiroTipoChange()`: versamento→Da=Cassa auto; prelievo→A=Cassa auto; bonifico→solo banche; spostamento→tutti
+- `_salvaGiroconto()`: POST → crea 2 righe specchio in `movimenti_studio` con UUID `giroconto_id`, `giroconto_dir` opposta
 - `POST /api/prima-nota/giroconto`
-- Endpoint: `pnBtnGiroconto`
+- Bindato su `pnBtnGiroconto` in `_bindModal()`
 
 **Prepara Fatturazione:**
-- Modal con lista entrate non fatturate (checkbox, totale live)
-- Genera PDF riepilogativo
-- Marca come fatturato SOLO dopo conferma + salvataggio PDF
-- `POST /api/prima-nota/fatturazione/prepara`
-- Endpoint: `pnBtnFatturazione`
+- Modal HTML `#modalFatturazione`: tabella checkbox entrate non fatturate, totale live, master select
+- `_caricaDaFatturare()`: GET `/api/prima-nota/da-fatturare`
+- `_generaDocumento()`: POST pdf → download blob → `window.confirm` → POST marca → refresh
+- Fatture marcate SOLO dopo conferma utente (previene doppio-mark su cancel)
+- API: `GET /api/prima-nota/da-fatturare`, `POST /api/prima-nota/fatturazione/pdf`, `POST /api/prima-nota/fatturazione/marca`
+- Bindato su `pnBtnFatturazione` in `_bindModal()`
+
+#### API Blocco 3
+- `POST /api/prima-nota/giroconto` — body: `{tipo, data, da, a, importo, descrizione}`
+- `GET /api/prima-nota/da-fatturare` — entrate non in `movimenti_fatturati`
+- `POST /api/prima-nota/fatturazione/pdf` — body: `{ids:[...]}` → returns PDF stream
+- `POST /api/prima-nota/fatturazione/marca` — body: `{ids:[...]}` → INSERT OR IGNORE in `movimenti_fatturati`
 
 ---
 
@@ -98,8 +105,6 @@ API da creare:
 
 | ID | Blocco | Funzione |
 |---|---|---|
-| `pnBtnGiroconto` | 3 | Modal Giroconto |
-| `pnBtnFatturazione` | 3 | Modal Prepara Fatturazione |
 | `pnBtnBanche` | 4 | Modal Gestione Banche |
 | `pnBtnUscite` | 4 | Modal Macrogruppi Uscite |
 | `pnBtnEntrate` | 4 | Modal Macrogruppi Entrate |

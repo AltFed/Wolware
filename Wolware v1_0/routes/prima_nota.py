@@ -3,11 +3,13 @@
 # Gestisce: saldi, movimenti, clienti da sollecitare, flag fatturato
 # Blocchi 2/3/4 saranno aggiunti nei turni successivi.
 
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, request, session, send_file
 from database import get_db
 from datetime import date, datetime, timedelta
 from functools import wraps
+import io
 import json
+import uuid
 
 bp = Blueprint('prima_nota', __name__)
 
@@ -452,3 +454,310 @@ def crea_movimento():
     db.commit()
     db.close()
     return jsonify({'ok': True, 'id': mov_id})
+
+
+# ─────────────────────────────────────────────────────────────────
+# POST /api/prima-nota/giroconto
+# Crea 2 movimenti speculari con lo stesso giroconto_id.
+# Body: {data, tipo, da, a, importo, descrizione}
+# tipo: versamento | prelievo | bonifico | spostamento
+# ─────────────────────────────────────────────────────────────────
+@bp.route('/api/prima-nota/giroconto', methods=['POST'])
+@login_required
+def crea_giroconto():
+    db = get_db()
+    d = request.get_json() or {}
+
+    data_mov    = d.get('data', '').strip()
+    tipo_giro   = d.get('tipo', '').strip()
+    origine     = d.get('da', '').strip()
+    dest        = d.get('a', '').strip()
+    descrizione = d.get('descrizione', '').strip()
+
+    try:
+        importo = float(d.get('importo', 0))
+    except (TypeError, ValueError):
+        importo = 0.0
+
+    if not data_mov:
+        db.close(); return jsonify({'error': 'Inserisci la data'}), 400
+    if tipo_giro not in ('versamento', 'prelievo', 'bonifico', 'spostamento'):
+        db.close(); return jsonify({'error': 'Seleziona il tipo di giroconto'}), 400
+    if not origine:
+        db.close(); return jsonify({'error': 'Seleziona il conto di origine'}), 400
+    if not dest:
+        db.close(); return jsonify({'error': 'Seleziona il conto di destinazione'}), 400
+    if origine == dest:
+        db.close(); return jsonify({'error': 'I conti di origine e destinazione devono essere diversi'}), 400
+    if importo <= 0:
+        db.close(); return jsonify({'error': 'Inserisci un importo valido'}), 400
+
+    giro_id = str(uuid.uuid4())
+
+    def _nome_conto(tipologia):
+        if tipologia == 'cassa':
+            return 'Cassa'
+        if tipologia.startswith('banca_'):
+            bid = tipologia.split('_')[1]
+            b = db.execute('SELECT nome FROM banche_studio WHERE id=?', (bid,)).fetchone()
+            return b['nome'] if b else tipologia
+        return tipologia
+
+    nome_orig = _nome_conto(origine)
+    nome_dest = _nome_conto(dest)
+
+    # Gamba USCITA dal conto origine (sottovoce_nome = destinazione)
+    db.execute(
+        '''INSERT INTO movimenti_studio
+           (tipo, data, tipologia, macrogruppo_id, macrogruppo_nome,
+            sottovoce_id, sottovoce_nome, importo, descrizione,
+            giroconto_id, giroconto_dir, giroconto_tipo)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+        ('giroconto', data_mov, origine,
+         None, 'Giroconto', None, nome_dest,
+         importo, descrizione,
+         giro_id, 'uscita', tipo_giro)
+    )
+    id_uscita = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+    # Gamba ENTRATA nel conto destinazione (sottovoce_nome = origine)
+    db.execute(
+        '''INSERT INTO movimenti_studio
+           (tipo, data, tipologia, macrogruppo_id, macrogruppo_nome,
+            sottovoce_id, sottovoce_nome, importo, descrizione,
+            giroconto_id, giroconto_dir, giroconto_tipo)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+        ('giroconto', data_mov, dest,
+         None, 'Giroconto', None, nome_orig,
+         importo, descrizione,
+         giro_id, 'entrata', tipo_giro)
+    )
+    id_entrata = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+    db.commit()
+    db.close()
+    return jsonify({
+        'ok': True,
+        'ids': [id_uscita, id_entrata],
+        'msg': f'Giroconto registrato: {importo:.2f} EUR da {nome_orig} a {nome_dest}'
+    })
+
+
+# ─────────────────────────────────────────────────────────────────
+# GET /api/prima-nota/da-fatturare
+# Entrate non ancora in movimenti_fatturati.
+# Restituisce soggetto, categoria dedotta, data, importo.
+# ─────────────────────────────────────────────────────────────────
+@bp.route('/api/prima-nota/da-fatturare')
+@login_required
+def get_da_fatturare():
+    db = get_db()
+    oggi = date.today().isoformat()
+
+    rows = db.execute(
+        '''SELECT m.id, m.data, m.tipologia, m.macrogruppo_id, m.macrogruppo_nome,
+                  m.sottovoce_id, m.sottovoce_nome, m.importo,
+                  d.ragione_sociale,
+                  d.inizio_paghe, d.fine_paghe,
+                  d.inizio_contabilita, d.fine_contabilita
+           FROM movimenti_studio m
+           LEFT JOIN ditte d ON (m.macrogruppo_id = 'clienti'
+                                  AND m.sottovoce_id = CAST(d.id AS TEXT))
+           LEFT JOIN movimenti_fatturati mf ON mf.movimento_id = m.id
+           WHERE m.tipo = 'entrata' AND mf.movimento_id IS NULL
+           ORDER BY m.data DESC, m.id DESC'''
+    ).fetchall()
+
+    result = []
+    for r in rows:
+        r = dict(r)
+        if r['macrogruppo_id'] == 'clienti' and r['ragione_sociale']:
+            soggetto = r['ragione_sociale']
+            # Deduce tipo gestione attiva oggi
+            ha_paghe = (r['inizio_paghe'] and r['inizio_paghe'] <= oggi and
+                        (not r['fine_paghe'] or r['fine_paghe'] >= oggi))
+            ha_cont  = (r['inizio_contabilita'] and r['inizio_contabilita'] <= oggi and
+                        (not r['fine_contabilita'] or r['fine_contabilita'] >= oggi))
+            if ha_paghe and ha_cont:
+                categoria = 'Paghe + Contabilità'
+            elif ha_paghe:
+                categoria = 'Paghe'
+            elif ha_cont:
+                categoria = 'Contabilità'
+            else:
+                categoria = r['macrogruppo_nome'] or 'Clienti'
+        else:
+            soggetto  = r['sottovoce_nome'] or r['macrogruppo_nome'] or '—'
+            categoria = r['macrogruppo_nome'] or '—'
+
+        result.append({
+            'id':       r['id'],
+            'data':     r['data'],
+            'soggetto': soggetto,
+            'categoria': categoria,
+            'importo':  r['importo'],
+        })
+
+    db.close()
+    return jsonify(result)
+
+
+# ─────────────────────────────────────────────────────────────────
+# POST /api/prima-nota/fatturazione/pdf
+# Genera PDF "Incassi da fatturare" per i movimenti selezionati.
+# Body: {ids: [1,2,3]}
+# ─────────────────────────────────────────────────────────────────
+@bp.route('/api/prima-nota/fatturazione/pdf', methods=['POST'])
+@login_required
+def genera_pdf_fatturazione():
+    db = get_db()
+    d = request.get_json() or {}
+    ids = d.get('ids', [])
+
+    if not ids:
+        db.close()
+        return jsonify({'error': 'Seleziona almeno un incasso da fatturare'}), 400
+
+    placeholders = ','.join('?' * len(ids))
+    rows = db.execute(
+        f'''SELECT m.id, m.data, m.importo, m.macrogruppo_nome,
+                   m.sottovoce_nome, m.macrogruppo_id,
+                   d.ragione_sociale,
+                   d.inizio_paghe, d.fine_paghe,
+                   d.inizio_contabilita, d.fine_contabilita
+            FROM movimenti_studio m
+            LEFT JOIN ditte d ON (m.macrogruppo_id = 'clienti'
+                                   AND m.sottovoce_id = CAST(d.id AS TEXT))
+            WHERE m.id IN ({placeholders})
+            ORDER BY m.data DESC''',
+        ids
+    ).fetchall()
+    db.close()
+
+    oggi = date.today().isoformat()
+    incassi = []
+    totale = 0.0
+    for r in rows:
+        r = dict(r)
+        if r['macrogruppo_id'] == 'clienti' and r['ragione_sociale']:
+            soggetto = r['ragione_sociale']
+            ha_p = (r['inizio_paghe'] and r['inizio_paghe'] <= oggi and
+                    (not r['fine_paghe'] or r['fine_paghe'] >= oggi))
+            ha_c = (r['inizio_contabilita'] and r['inizio_contabilita'] <= oggi and
+                    (not r['fine_contabilita'] or r['fine_contabilita'] >= oggi))
+            cat = ('Paghe + Contabilità' if ha_p and ha_c
+                   else 'Paghe' if ha_p
+                   else 'Contabilità' if ha_c
+                   else r['macrogruppo_nome'] or 'Clienti')
+        else:
+            soggetto = r['sottovoce_nome'] or r['macrogruppo_nome'] or '—'
+            cat = r['macrogruppo_nome'] or '—'
+
+        incassi.append({'data': r['data'], 'soggetto': soggetto,
+                        'categoria': cat, 'importo': r['importo']})
+        totale += r['importo']
+
+    buf = _genera_pdf_incassi(incassi, totale)
+    nome = f"Fatturazione_{date.today()}.pdf"
+    return send_file(buf, mimetype='application/pdf',
+                     as_attachment=True, download_name=nome)
+
+
+def _genera_pdf_incassi(incassi, totale):
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    except ImportError:
+        raise RuntimeError('reportlab non installato')
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                             leftMargin=2.5*cm, rightMargin=2.5*cm,
+                             topMargin=3*cm, bottomMargin=3*cm)
+    styles = getSampleStyleSheet()
+    TITLE = ParagraphStyle('title', fontSize=16, leading=20,
+                            fontName='Helvetica-Bold', spaceAfter=6)
+    BOLD  = ParagraphStyle('bold',  fontSize=11, leading=15, fontName='Helvetica-Bold')
+    NORM  = ParagraphStyle('norm',  fontSize=10, leading=14)
+    SMALL = ParagraphStyle('sm',    fontSize=9,  leading=13,
+                            textColor=colors.HexColor('#4a5568'))
+    FOOT  = ParagraphStyle('foot',  fontSize=8,  leading=12,
+                            textColor=colors.HexColor('#718096'))
+
+    oggi_fmt = date.today().strftime('%d/%m/%Y')
+    story = []
+
+    story.append(Paragraph('INCASSI DA FATTURARE', TITLE))
+    story.append(Paragraph(f'Data: {oggi_fmt}   —   Incassi selezionati: {len(incassi)}', NORM))
+    story.append(Spacer(1, 0.8*cm))
+
+    # Tabella incassi
+    header = ['Data', 'Soggetto', 'Tipo', 'Importo']
+    table_data = [header]
+    for inc in incassi:
+        d_fmt = '/'.join(reversed(inc['data'].split('-'))) if inc['data'] else '—'
+        table_data.append([
+            d_fmt,
+            inc['soggetto'],
+            inc['categoria'],
+            f"€ {inc['importo']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+        ])
+    # Riga totale
+    table_data.append(['', '', 'TOTALE', f"€ {totale:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')])
+
+    col_w = [2.2*cm, 7*cm, 4.5*cm, 2.8*cm]
+    t = Table(table_data, colWidths=col_w, repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND',   (0, 0), (-1, 0),  colors.HexColor('#2d3748')),
+        ('TEXTCOLOR',    (0, 0), (-1, 0),  colors.white),
+        ('FONTNAME',     (0, 0), (-1, 0),  'Helvetica-Bold'),
+        ('FONTSIZE',     (0, 0), (-1, 0),  9),
+        ('ROWBACKGROUNDS', (0, 1), (-2, -2), [colors.white, colors.HexColor('#f7fafc')]),
+        ('FONTSIZE',     (0, 1), (-1, -1), 9),
+        ('ALIGN',        (3, 0), (3, -1),  'RIGHT'),
+        ('FONTNAME',     (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('LINEABOVE',    (0, -1), (-1, -1), 1, colors.HexColor('#2d3748')),
+        ('GRID',         (0, 0), (-1, -2), 0.25, colors.HexColor('#e2e8f0')),
+        ('TOPPADDING',   (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING',(0, 0), (-1, -1), 4),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 0.8*cm))
+
+    story.append(Paragraph(
+        f'Documento generato il {oggi_fmt} — Ricordati di emettere fattura entro 12 giorni dall\'incasso.',
+        FOOT
+    ))
+
+    doc.build(story)
+    buf.seek(0)
+    return buf
+
+
+# ─────────────────────────────────────────────────────────────────
+# POST /api/prima-nota/fatturazione/marca
+# Segna i movimenti selezionati come fatturati.
+# Body: {ids: [1,2,3]}
+# ─────────────────────────────────────────────────────────────────
+@bp.route('/api/prima-nota/fatturazione/marca', methods=['POST'])
+@login_required
+def marca_fatturati():
+    db = get_db()
+    d = request.get_json() or {}
+    ids = d.get('ids', [])
+
+    if not ids:
+        db.close()
+        return jsonify({'error': 'Nessun id ricevuto'}), 400
+
+    for mid in ids:
+        db.execute(
+            'INSERT OR IGNORE INTO movimenti_fatturati (movimento_id) VALUES (?)', (mid,)
+        )
+
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'marcati': len(ids)})

@@ -3727,6 +3727,21 @@ const PrimaNota = (() => {
       _buildSottovoci(cat.sottovoci);
     });
     $('pnBtnSalvaMovimento').addEventListener('click', _salvaMovimento);
+
+    // Giroconto
+    $('pnBtnGiroconto').addEventListener('click', openModalGiroconto);
+    $('pnGiroTipo').addEventListener('change', _onGiroTipoChange);
+    $('pnBtnSalvaGiroconto').addEventListener('click', _salvaGiroconto);
+
+    // Fatturazione
+    $('pnBtnFatturazione').addEventListener('click', openModalFatturazione);
+    $('pnFattMaster').addEventListener('change', e => {
+      document.querySelectorAll('.pn-fatt-cb').forEach(cb => {
+        cb.checked = e.target.checked;
+      });
+      _aggiornaFattTotale();
+    });
+    $('pnBtnGeneraFatturazione').addEventListener('click', _generaDocumento);
   }
 
   function openModalMovimento() {
@@ -3872,7 +3887,241 @@ const PrimaNota = (() => {
     el.style.display = 'block';
   }
 
-  return { init, refresh, eliminaMovimento, rimuoviFatturato, apriSollecito, openModalMovimento };
+  // ── Modal Giroconto ─────────────────────────────────────────────
+
+  async function openModalGiroconto() {
+    if (!$('pnGiroData').value)
+      $('pnGiroData').value = new Date().toISOString().split('T')[0];
+    $('pnGiroTipo').value = '';
+    $('pnGiroImporto').value = '';
+    $('pnGiroDescrizione').value = '';
+    $('pnGiroError').style.display = 'none';
+    await _buildContiGiro();
+    openModal('modalGiroconto');
+  }
+
+  async function _buildContiGiro() {
+    try {
+      const saldi = await fetch('/api/prima-nota/saldi').then(r => r.json());
+      const opzioni = saldi.map(s =>
+        `<option value="${s.id}">${_esc(s.nome)}</option>`
+      ).join('');
+      $('pnGiroDa').innerHTML = '<option value="">— Seleziona —</option>' + opzioni;
+      $('pnGiroA').innerHTML  = '<option value="">— Seleziona —</option>' + opzioni;
+    } catch(e) {
+      $('pnGiroDa').innerHTML = '<option value="cassa">Cassa</option>';
+      $('pnGiroA').innerHTML  = '<option value="cassa">Cassa</option>';
+    }
+  }
+
+  function _onGiroTipoChange() {
+    const tipo = $('pnGiroTipo').value;
+    const da = $('pnGiroDa');
+    const a  = $('pnGiroA');
+
+    // Ripristina tutte le opzioni prima di filtrare
+    Array.from(da.options).forEach(o => o.hidden = false);
+    Array.from(a.options).forEach(o => o.hidden = false);
+
+    if (tipo === 'versamento') {
+      // Da = Cassa auto, A = solo banche
+      const cassaOpt = Array.from(da.options).find(o => o.value === 'cassa');
+      if (cassaOpt) da.value = 'cassa';
+      Array.from(a.options).forEach(o => {
+        if (o.value === 'cassa') o.hidden = true;
+      });
+      if (a.value === 'cassa') a.value = '';
+    } else if (tipo === 'prelievo') {
+      // A = Cassa auto, Da = solo banche
+      const cassaOpt = Array.from(a.options).find(o => o.value === 'cassa');
+      if (cassaOpt) a.value = 'cassa';
+      Array.from(da.options).forEach(o => {
+        if (o.value === 'cassa') o.hidden = true;
+      });
+      if (da.value === 'cassa') da.value = '';
+    } else if (tipo === 'bonifico') {
+      // Entrambi solo banche
+      Array.from(da.options).forEach(o => { if (o.value === 'cassa') o.hidden = true; });
+      Array.from(a.options).forEach(o => { if (o.value === 'cassa') o.hidden = true; });
+      if (da.value === 'cassa') da.value = '';
+      if (a.value === 'cassa') a.value = '';
+    }
+    // spostamento: libero, nessun filtro
+  }
+
+  async function _salvaGiroconto() {
+    const btn = $('pnBtnSalvaGiroconto');
+    const data_mov    = $('pnGiroData').value;
+    const tipo        = $('pnGiroTipo').value;
+    const da          = $('pnGiroDa').value;
+    const a           = $('pnGiroA').value;
+    const importoVal  = $('pnGiroImporto').value;
+    const descrizione = $('pnGiroDescrizione').value.trim();
+
+    if (!data_mov)   return _showGiroErr('Inserisci la data');
+    if (!tipo)       return _showGiroErr('Seleziona il tipo di giroconto');
+    if (!da)         return _showGiroErr('Seleziona il conto di origine');
+    if (!a)          return _showGiroErr('Seleziona il conto di destinazione');
+    if (da === a)    return _showGiroErr('I conti di origine e destinazione devono essere diversi');
+    const importo = parseFloat(importoVal);
+    if (!importo || importo <= 0) return _showGiroErr('Inserisci un importo valido');
+
+    $('pnGiroError').style.display = 'none';
+    const origHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    try {
+      const res = await fetch('/api/prima-nota/giroconto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: data_mov, tipo, da, a, importo, descrizione })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        closeModal('modalGiroconto');
+        await refresh();
+        toast(data.msg || 'Giroconto registrato!', 'success');
+      } else {
+        _showGiroErr(data.error || 'Errore nel salvataggio');
+      }
+    } catch(e) {
+      _showGiroErr('Errore di rete');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origHTML;
+    }
+  }
+
+  function _showGiroErr(msg) {
+    const el = $('pnGiroError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  // ── Modal Prepara Fatturazione ───────────────────────────────────
+
+  let _fattIncassi = []; // cache lista incassi caricati
+
+  async function openModalFatturazione() {
+    $('pnFattError').style.display = 'none';
+    $('pnFattMaster').checked = false;
+    $('pnFattBody').innerHTML = '<tr><td colspan="5" class="empty-row">Caricamento…</td></tr>';
+    $('pnFattCount').textContent = '0';
+    $('pnFattTotale').textContent = '€ 0,00';
+    openModal('modalFatturazione');
+    await _caricaDaFatturare();
+  }
+
+  async function _caricaDaFatturare() {
+    try {
+      _fattIncassi = await fetch('/api/prima-nota/da-fatturare').then(r => r.json());
+      if (!_fattIncassi.length) {
+        closeModal('modalFatturazione');
+        toast('Nessun incasso da fatturare disponibile', 'info');
+        return;
+      }
+      _renderFatturazione(_fattIncassi);
+    } catch(e) {
+      $('pnFattBody').innerHTML = '<tr><td colspan="5" class="empty-row">Errore caricamento</td></tr>';
+    }
+  }
+
+  function _renderFatturazione(incassi) {
+    const tbody = $('pnFattBody');
+    tbody.innerHTML = incassi.map(inc => `
+      <tr>
+        <td><input type="checkbox" class="pn-fatt-cb" data-id="${inc.id}"
+          data-importo="${inc.importo}" onchange="_aggiornaFattTotale()"></td>
+        <td>${_data(inc.data)}</td>
+        <td>${_esc(inc.soggetto)}</td>
+        <td>${_esc(inc.categoria)}</td>
+        <td class="col-money pn-importo-entrata">${_eur(inc.importo)}</td>
+      </tr>`).join('');
+    _aggiornaFattTotale();
+  }
+
+  function _aggiornaFattTotale() {
+    const checked = document.querySelectorAll('.pn-fatt-cb:checked');
+    let tot = 0;
+    checked.forEach(cb => { tot += parseFloat(cb.dataset.importo) || 0; });
+    $('pnFattCount').textContent = checked.length;
+    $('pnFattTotale').textContent = _eur(tot);
+    // Sync master checkbox
+    const all = document.querySelectorAll('.pn-fatt-cb');
+    $('pnFattMaster').checked = all.length > 0 && checked.length === all.length;
+    $('pnFattMaster').indeterminate = checked.length > 0 && checked.length < all.length;
+  }
+
+  async function _generaDocumento() {
+    const checked = document.querySelectorAll('.pn-fatt-cb:checked');
+    if (!checked.length) {
+      const el = $('pnFattError');
+      el.textContent = 'Seleziona almeno un incasso da fatturare';
+      el.style.display = 'block';
+      return;
+    }
+    $('pnFattError').style.display = 'none';
+
+    const ids = Array.from(checked).map(cb => parseInt(cb.dataset.id));
+    const btn = $('pnBtnGeneraFatturazione');
+    const origHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    try {
+      // 1. Genera e scarica PDF
+      const res = await fetch('/api/prima-nota/fatturazione/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Errore generazione PDF');
+      }
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Fatturazione_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      // 2. Conferma marcatura
+      const ok = confirm(
+        `Confermi di voler marcare ${ids.length} incasso/i come fatturati?\n` +
+        'Potrai sempre rimuovere il flag cliccando l\'icona ✓ in tabella.'
+      );
+      if (!ok) {
+        toast('PDF generato. Nessun incasso marcato.', 'info');
+        return;
+      }
+
+      // 3. Marca come fatturati
+      const res2 = await fetch('/api/prima-nota/fatturazione/marca', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids })
+      });
+      const data = await res2.json();
+      if (data.ok) {
+        closeModal('modalFatturazione');
+        await refresh();
+        toast(`${data.marcati} incasso/i marcati come fatturati`, 'success');
+      }
+    } catch(e) {
+      const el = $('pnFattError');
+      el.textContent = e.message || 'Errore di rete';
+      el.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origHTML;
+    }
+  }
+
+  return { init, refresh, eliminaMovimento, rimuoviFatturato, apriSollecito,
+           openModalMovimento, openModalGiroconto, openModalFatturazione };
 })();
 
 /* Aggancia switchTab per Prima Nota */
