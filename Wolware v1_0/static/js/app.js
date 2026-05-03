@@ -3710,6 +3710,298 @@ const PrimaNota = (() => {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  // ── Blocco 4: Banche ────────────────────────────────────────────
+
+  let _banche = [];
+
+  async function openModalBanche() {
+    $('pnBancheError').style.display = 'none';
+    $('pnNuovaBancaNome').value = '';
+    $('pnNuovaBancaSaldo').value = '0';
+    $('pnNuovaBancaColore').value = '#6366f1';
+    openModal('modalBanche');
+    await _caricaBanche();
+  }
+
+  async function _caricaBanche() {
+    try {
+      _banche = await fetch('/api/prima-nota/banche').then(r => r.json());
+      _renderBanche();
+    } catch(e) {
+      $('pnBancheList').innerHTML = '<p style="padding:var(--space-3);color:var(--color-error)">Errore caricamento</p>';
+    }
+  }
+
+  function _renderBanche() {
+    const el = $('pnBancheList');
+    if (!_banche.length) {
+      el.innerHTML = '<p style="padding:var(--space-4);text-align:center;color:var(--color-text-muted)">Nessuna banca configurata</p>';
+      return;
+    }
+    el.innerHTML = _banche.map(b => `
+      <div id="pn-banca-row-${b.id}" class="pn-anagrafica-row">
+        <span class="pn-color-dot" style="background:${_esc(b.colore||'#6366f1')}"></span>
+        <span class="pn-anagrafica-nome">${_esc(b.nome)}</span>
+        <span class="pn-anagrafica-sub">Saldo iniziale: ${_eur(b.saldo_iniziale)}</span>
+        <button class="btn btn-secondary btn-sm" onclick="PrimaNota.modificaBanca(${b.id})">✏</button>
+        <button class="btn btn-secondary btn-sm pn-btn-elimina" onclick="PrimaNota.eliminaBanca(${b.id})">✕</button>
+      </div>`).join('');
+  }
+
+  function modificaBanca(id) {
+    const b = _banche.find(x => x.id === id);
+    if (!b) return;
+    const row = $(`pn-banca-row-${id}`);
+    row.innerHTML = `
+      <input class="form-input" value="${_esc(b.nome)}" id="pn-banca-edit-nome-${id}"
+        style="flex:1;height:32px;padding:0 var(--space-2)">
+      <input type="number" class="form-input" value="${b.saldo_iniziale}"
+        id="pn-banca-edit-saldo-${id}" step="0.01"
+        style="width:110px;height:32px;padding:0 var(--space-2)">
+      <input type="color" value="${_esc(b.colore||'#6366f1')}"
+        id="pn-banca-edit-colore-${id}"
+        style="height:32px;width:44px;border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;padding:2px">
+      <button class="btn btn-primary btn-sm" onclick="PrimaNota.salvaBanca(${id})">Salva</button>
+      <button class="btn btn-secondary btn-sm" onclick="PrimaNota.cancelBancaEdit()">✕</button>`;
+    $(`pn-banca-edit-nome-${id}`).focus();
+  }
+
+  function cancelBancaEdit() { _renderBanche(); }
+
+  async function salvaBanca(id) {
+    const nome = $(`pn-banca-edit-nome-${id}`)?.value.trim();
+    const saldo_iniziale = parseFloat($(`pn-banca-edit-saldo-${id}`)?.value) || 0;
+    const colore = $(`pn-banca-edit-colore-${id}`)?.value || '#6366f1';
+    if (!nome) { toast('Il nome è obbligatorio', 'error'); return; }
+    try {
+      const res = await fetch(`/api/prima-nota/banche/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, saldo_iniziale, colore })
+      });
+      const data = await res.json();
+      if (data.ok) { await _caricaBanche(); await _caricaSaldi(); toast('Banca aggiornata', 'success'); }
+      else toast(data.error || 'Errore', 'error');
+    } catch(e) { toast('Errore di rete', 'error'); }
+  }
+
+  async function eliminaBanca(id) {
+    const b = _banche.find(x => x.id === id);
+    if (!confirm(`Eliminare la banca "${b?.nome}"?\nAttenzione: operazione non reversibile.`)) return;
+    try {
+      const res = await fetch(`/api/prima-nota/banche/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) { await _caricaBanche(); await _caricaSaldi(); toast('Banca eliminata', 'success'); }
+      else { $('pnBancheError').textContent = data.error; $('pnBancheError').style.display = 'block'; }
+    } catch(e) { toast('Errore di rete', 'error'); }
+  }
+
+  async function _aggiungiNuovaBanca() {
+    const nome = $('pnNuovaBancaNome').value.trim();
+    const saldo_iniziale = parseFloat($('pnNuovaBancaSaldo').value) || 0;
+    const colore = $('pnNuovaBancaColore').value || '#6366f1';
+    if (!nome) { toast('Inserisci il nome della banca', 'error'); return; }
+    try {
+      const res = await fetch('/api/prima-nota/banche', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, saldo_iniziale, colore })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        $('pnNuovaBancaNome').value = '';
+        $('pnNuovaBancaSaldo').value = '0';
+        await _caricaBanche();
+        await _caricaSaldi();
+        toast('Banca aggiunta', 'success');
+      } else toast(data.error || 'Errore', 'error');
+    } catch(e) { toast('Errore di rete', 'error'); }
+  }
+
+  // ── Blocco 4: Macrogruppi ────────────────────────────────────────
+
+  let _macroData = [];
+  let _macroTipo = 'entrate';
+
+  async function openModalMacrogruppi(tipo) {
+    _macroTipo = tipo;
+    $('pnMacroTipo').value = tipo;
+    $('pnMacroTitle').textContent = tipo === 'entrate' ? 'Macrogruppi Entrate' : 'Macrogruppi Uscite';
+    $('pnMacroError').style.display = 'none';
+    $('pnNuovoMacroNome').value = '';
+    openModal('modalMacrogruppi');
+    await _caricaMacrogruppi();
+  }
+
+  async function _caricaMacrogruppi() {
+    try {
+      _macroData = await fetch(`/api/prima-nota/macrogruppi/${_macroTipo}`).then(r => r.json());
+      _renderMacrogruppi();
+    } catch(e) {
+      $('pnMacroList').innerHTML = '<p style="padding:var(--space-3);color:var(--color-error)">Errore caricamento</p>';
+    }
+  }
+
+  function _renderMacrogruppi() {
+    const el = $('pnMacroList');
+    let html = '';
+
+    if (_macroTipo === 'entrate') {
+      html += `<div class="pn-macro-group" style="margin-bottom:var(--space-2)">
+        <div class="pn-anagrafica-row pn-anagrafica-row-macro" style="background:var(--color-surface-2)">
+          <span class="pn-anagrafica-nome">👥 Clienti</span>
+          <span class="pn-anagrafica-sub">
+            <span class="pn-badge-speciale">speciale</span>
+            sola lettura — sottovoci = ditte attive
+          </span>
+        </div>
+      </div>`;
+    }
+
+    if (!_macroData.length) {
+      html += '<p style="padding:var(--space-3);text-align:center;color:var(--color-text-muted)">Nessun macrogruppo configurato</p>';
+    }
+
+    for (const m of _macroData) {
+      const svRows = m.sottovoci.map(s => `
+        <div id="pn-sv-row-${s.id}" class="pn-anagrafica-row pn-anagrafica-row-sv">
+          <span class="pn-sv-indent">↳</span>
+          <span class="pn-anagrafica-nome">${_esc(s.nome)}</span>
+          <button class="btn btn-secondary btn-sm" onclick="PrimaNota.modificaSv('${_macroTipo}',${m.id},${s.id})">✏</button>
+          <button class="btn btn-secondary btn-sm pn-btn-elimina" onclick="PrimaNota.eliminaSv('${_macroTipo}',${m.id},${s.id})">✕</button>
+        </div>`).join('');
+      html += `
+        <div class="pn-macro-group">
+          <div id="pn-macro-row-${m.id}" class="pn-anagrafica-row pn-anagrafica-row-macro">
+            <span class="pn-anagrafica-nome">${_esc(m.nome)}</span>
+            <span class="pn-anagrafica-sub">${m.sottovoci.length} sottovoci</span>
+            <button class="btn btn-secondary btn-sm" onclick="PrimaNota.modificaMacro('${_macroTipo}',${m.id})">✏</button>
+            <button class="btn btn-secondary btn-sm pn-btn-elimina" onclick="PrimaNota.eliminaMacro('${_macroTipo}',${m.id})">✕</button>
+          </div>
+          ${svRows}
+          <div class="pn-anagrafica-row pn-anagrafica-row-sv">
+            <span class="pn-sv-indent">↳</span>
+            <input class="form-input" id="pn-nuova-sv-${m.id}" placeholder="Nuova sottovoce…"
+              style="flex:1;height:28px;padding:0 var(--space-2);font-size:var(--text-xs)"
+              onkeydown="if(event.key==='Enter')PrimaNota.aggiungiSv('${_macroTipo}',${m.id})">
+            <button class="btn btn-secondary btn-sm" onclick="PrimaNota.aggiungiSv('${_macroTipo}',${m.id})">+ Aggiungi</button>
+          </div>
+        </div>`;
+    }
+
+    el.innerHTML = html;
+  }
+
+  function modificaMacro(tipo, id) {
+    const m = _macroData.find(x => x.id === id);
+    if (!m) return;
+    const row = $(`pn-macro-row-${id}`);
+    row.innerHTML = `
+      <input class="form-input" value="${_esc(m.nome)}" id="pn-macro-edit-${id}"
+        style="flex:1;height:32px;padding:0 var(--space-2)"
+        onkeydown="if(event.key==='Enter')PrimaNota.salvaMacro('${tipo}',${id})">
+      <button class="btn btn-primary btn-sm" onclick="PrimaNota.salvaMacro('${tipo}',${id})">Salva</button>
+      <button class="btn btn-secondary btn-sm" onclick="PrimaNota.cancelMacroEdit()">✕</button>`;
+    $(`pn-macro-edit-${id}`).focus();
+  }
+
+  function cancelMacroEdit() { _renderMacrogruppi(); }
+
+  async function salvaMacro(tipo, id) {
+    const nome = $(`pn-macro-edit-${id}`)?.value.trim();
+    if (!nome) { toast('Il nome è obbligatorio', 'error'); return; }
+    try {
+      const res = await fetch(`/api/prima-nota/macrogruppi/${tipo}/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome })
+      });
+      const data = await res.json();
+      if (data.ok) { await _caricaMacrogruppi(); toast('Macrogruppo aggiornato', 'success'); }
+      else toast(data.error || 'Errore', 'error');
+    } catch(e) { toast('Errore di rete', 'error'); }
+  }
+
+  async function eliminaMacro(tipo, id) {
+    const m = _macroData.find(x => x.id === id);
+    if (!confirm(`Eliminare il macrogruppo "${m?.nome}" e tutte le sue sottovoci?`)) return;
+    try {
+      const res = await fetch(`/api/prima-nota/macrogruppi/${tipo}/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) { await _caricaMacrogruppi(); toast('Macrogruppo eliminato', 'success'); }
+      else { $('pnMacroError').textContent = data.error; $('pnMacroError').style.display = 'block'; }
+    } catch(e) { toast('Errore di rete', 'error'); }
+  }
+
+  function modificaSv(tipo, macroId, svId) {
+    const m = _macroData.find(x => x.id === macroId);
+    const s = m?.sottovoci.find(x => x.id === svId);
+    if (!s) return;
+    const row = $(`pn-sv-row-${svId}`);
+    row.innerHTML = `
+      <span class="pn-sv-indent">↳</span>
+      <input class="form-input" value="${_esc(s.nome)}" id="pn-sv-edit-${svId}"
+        style="flex:1;height:28px;padding:0 var(--space-2);font-size:var(--text-xs)"
+        onkeydown="if(event.key==='Enter')PrimaNota.salvaSv('${tipo}',${macroId},${svId})">
+      <button class="btn btn-primary btn-sm" onclick="PrimaNota.salvaSv('${tipo}',${macroId},${svId})">Salva</button>
+      <button class="btn btn-secondary btn-sm" onclick="PrimaNota.cancelMacroEdit()">✕</button>`;
+    $(`pn-sv-edit-${svId}`).focus();
+  }
+
+  async function salvaSv(tipo, macroId, svId) {
+    const nome = $(`pn-sv-edit-${svId}`)?.value.trim();
+    if (!nome) { toast('Il nome è obbligatorio', 'error'); return; }
+    try {
+      const res = await fetch(`/api/prima-nota/macrogruppi/${tipo}/${macroId}/sottovoci/${svId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome })
+      });
+      const data = await res.json();
+      if (data.ok) { await _caricaMacrogruppi(); toast('Sottovoce aggiornata', 'success'); }
+      else toast(data.error || 'Errore', 'error');
+    } catch(e) { toast('Errore di rete', 'error'); }
+  }
+
+  async function eliminaSv(tipo, macroId, svId) {
+    const m = _macroData.find(x => x.id === macroId);
+    const s = m?.sottovoci.find(x => x.id === svId);
+    if (!confirm(`Eliminare la sottovoce "${s?.nome}"?`)) return;
+    try {
+      const res = await fetch(`/api/prima-nota/macrogruppi/${tipo}/${macroId}/sottovoci/${svId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) { await _caricaMacrogruppi(); toast('Sottovoce eliminata', 'success'); }
+      else { $('pnMacroError').textContent = data.error; $('pnMacroError').style.display = 'block'; }
+    } catch(e) { toast('Errore di rete', 'error'); }
+  }
+
+  async function aggiungiSv(tipo, macroId) {
+    const nome = $(`pn-nuova-sv-${macroId}`)?.value.trim();
+    if (!nome) { toast('Inserisci il nome della sottovoce', 'error'); return; }
+    try {
+      const res = await fetch(`/api/prima-nota/macrogruppi/${tipo}/${macroId}/sottovoci`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome })
+      });
+      const data = await res.json();
+      if (data.ok) { await _caricaMacrogruppi(); toast('Sottovoce aggiunta', 'success'); }
+      else toast(data.error || 'Errore', 'error');
+    } catch(e) { toast('Errore di rete', 'error'); }
+  }
+
+  async function _aggiungiNuovoMacro() {
+    const nome = $('pnNuovoMacroNome').value.trim();
+    if (!nome) { toast('Inserisci il nome del macrogruppo', 'error'); return; }
+    try {
+      const res = await fetch(`/api/prima-nota/macrogruppi/${_macroTipo}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        $('pnNuovoMacroNome').value = '';
+        await _caricaMacrogruppi();
+        toast('Macrogruppo aggiunto', 'success');
+      } else toast(data.error || 'Errore', 'error');
+    } catch(e) { toast('Errore di rete', 'error'); }
+  }
+
   // ── Modal Registra Movimento ────────────────────────────────────
 
   function _bindModal() {
@@ -3735,6 +4027,16 @@ const PrimaNota = (() => {
 
     // Fatturazione
     $('pnBtnFatturazione').addEventListener('click', openModalFatturazione);
+
+    // Banche
+    $('pnBtnBanche').addEventListener('click', openModalBanche);
+    $('pnBtnAggiungiBanca').addEventListener('click', _aggiungiNuovaBanca);
+
+    // Macrogruppi
+    $('pnBtnEntrate').addEventListener('click', () => openModalMacrogruppi('entrate'));
+    $('pnBtnUscite').addEventListener('click', () => openModalMacrogruppi('uscite'));
+    $('pnBtnAggiungiMacro').addEventListener('click', _aggiungiNuovoMacro);
+
     $('pnFattMaster').addEventListener('change', e => {
       document.querySelectorAll('.pn-fatt-cb').forEach(cb => {
         cb.checked = e.target.checked;
@@ -4121,7 +4423,10 @@ const PrimaNota = (() => {
   }
 
   return { init, refresh, eliminaMovimento, rimuoviFatturato, apriSollecito,
-           openModalMovimento, openModalGiroconto, openModalFatturazione };
+           openModalMovimento, openModalGiroconto, openModalFatturazione,
+           openModalBanche, modificaBanca, salvaBanca, eliminaBanca, cancelBancaEdit,
+           openModalMacrogruppi, modificaMacro, salvaMacro, eliminaMacro, cancelMacroEdit,
+           modificaSv, salvaSv, eliminaSv, aggiungiSv };
 })();
 
 /* Aggancia switchTab per Prima Nota */

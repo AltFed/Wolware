@@ -663,3 +663,28 @@ td.empty-state-row p{font-size:var(--text-sm);line-height:1.7}
 .pn-btn-elimina{color:var(--color-text-muted);transition:color var(--transition-interactive)}
 .pn-btn-elimina:hover{color:var(--color-error)}
 .pn-movimenti-table th,.pn-movimenti-table td{font-size:var(--text-sm)}
+
+/* ── Prima Nota: form helpers (usati nei modal Blocco 2/3/4) ──── */
+.form-group{margin-bottom:var(--space-4)}
+.form-label{display:block;font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);margin-bottom:var(--space-1)}
+.form-input,.form-select{width:100%;padding:0 var(--space-3);height:38px;background:var(--color-surface-2);
+  border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:var(--text-sm);
+  color:var(--color-text);transition:border-color var(--transition)}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--color-primary);
+  box-shadow:0 0 0 3px color-mix(in oklab,var(--color-primary) 15%,transparent)}
+
+/* ── Blocco 4: anagrafica rows ─────────────────────────────────── */
+.pn-anagrafica-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);
+  border-bottom:1px solid var(--color-divider);font-size:var(--text-sm)}
+.pn-anagrafica-row:last-child{border-bottom:none}
+.pn-anagrafica-row-macro{font-weight:600;background:var(--color-surface)}
+.pn-anagrafica-row-sv{padding-left:calc(var(--space-5) + var(--space-1));font-size:var(--text-xs);
+  background:var(--color-surface-2)}
+.pn-anagrafica-nome{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pn-anagrafica-sub{font-size:var(--text-xs);color:var(--color-text-muted);white-space:nowrap}
+.pn-badge-speciale{background:rgba(99,102,241,.12);color:#6366f1;padding:1px 6px;
+  border-radius:var(--radius-full);font-size:10px;font-weight:700}
+.pn-color-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,.1)}
+.pn-sv-indent{color:var(--color-text-faint, var(--color-text-muted));font-size:12px;flex-shrink:0}
+.pn-macro-group{border:1px solid var(--color-border);border-radius:var(--radius-md);
+  margin-bottom:var(--space-2);overflow:hidden}

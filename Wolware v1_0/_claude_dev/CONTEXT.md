@@ -1,5 +1,5 @@
 # Contesto progetto Wolware — Prima Nota Studio
-_Aggiornato: 2026-05-03 (Blocco 3 completato)_
+_Aggiornato: 2026-05-03 (Blocchi 3+4 completati)_
 
 ## Progetto
 
@@ -88,16 +88,33 @@ Rinominato da `perplexity`. Ownership: Claude.
 
 ---
 
-### ⏳ Blocco 4 — Modal gestione anagrafica (DA FARE)
+### ✅ Blocco 4 — Modal gestione anagrafica (COMPLETO)
 
-**Banche** (`pnBtnBanche`): CRUD `banche_studio`. Blocco eliminazione se ha movimenti.
-**Macrogruppi Uscite** (`pnBtnUscite`): CRUD `macrogruppi_uscite` + `sottovoci_uscite`. Editing inline.
-**Macrogruppi Entrate** (`pnBtnEntrate`): identico Uscite + "CLIENTI" fisso in cima (sola lettura).
+**Banche** (`pnBtnBanche`): CRUD `banche_studio`. Delete bloccato se ha movimenti.
+- Modal `#modalBanche`: lista con color-dot, inline edit, form aggiungi
+- Aggiornamento saldi contestuale a ogni modifica banca
 
-API da creare:
-- `GET/POST/PUT/DELETE /api/prima-nota/banche`
-- `GET/POST/PUT/DELETE /api/prima-nota/macrogruppi/entrate` + sottovoci
-- `GET/POST/PUT/DELETE /api/prima-nota/macrogruppi/uscite` + sottovoci
+**Macrogruppi** (`pnBtnUscite` / `pnBtnEntrate`): modale `#modalMacrogruppi` condiviso
+- `_macroTipo` = 'entrate' | 'uscite'; titolo e API cambiano dinamicamente
+- Entrate: "Clienti" fisso in cima (read-only) — sottovoci = ditte attive
+- Inline edit macrogruppo e sottovoce (Enter o click Salva)
+- Delete bloccato se macrogruppo/sottovoce ha movimenti collegati
+
+#### API Blocco 4
+- `GET/POST /api/prima-nota/banche`
+- `PUT/DELETE /api/prima-nota/banche/<id>`
+- `GET /api/prima-nota/macrogruppi/entrate` — con sottovoci annidate
+- `GET /api/prima-nota/macrogruppi/uscite` — idem
+- `POST /api/prima-nota/macrogruppi/<tipo>` — crea macrogruppo
+- `PUT/DELETE /api/prima-nota/macrogruppi/<tipo>/<id>` — modifica/elimina (+ cascade sottovoci)
+- `POST /api/prima-nota/macrogruppi/<tipo>/<macro_id>/sottovoci`
+- `PUT/DELETE /api/prima-nota/macrogruppi/<tipo>/<macro_id>/sottovoci/<sv_id>`
+
+#### CSS aggiunto per Blocco 4
+- `.form-group`, `.form-label`, `.form-input`, `.form-select` — definiti finalmente in style.css
+- `.pn-anagrafica-row`, `.pn-anagrafica-row-macro`, `.pn-anagrafica-row-sv`
+- `.pn-anagrafica-nome`, `.pn-anagrafica-sub`, `.pn-badge-speciale`, `.pn-color-dot`
+- `.pn-sv-indent`, `.pn-macro-group`
 
 ---
 
@@ -105,10 +122,7 @@ API da creare:
 
 | ID | Blocco | Funzione |
 |---|---|---|
-| `pnBtnBanche` | 4 | Modal Gestione Banche |
-| `pnBtnUscite` | 4 | Modal Macrogruppi Uscite |
-| `pnBtnEntrate` | 4 | Modal Macrogruppi Entrate |
-| `pnBtnEsporta` | - | Export CSV/Excel (fuori scope Blocco 1-4) |
+| `pnBtnEsporta` | - | Export CSV/Excel (fuori scope) |
 | `pnBtnSollecitoMassivo` | - | Sollecito massivo batch (fuori scope) |
 
 ---

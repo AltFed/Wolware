@@ -2852,6 +2852,91 @@
 </div>
 <!-- /MODAL Prepara Fatturazione -->
 
+<!-- MODAL: Gestione Banche -->
+<div class="modal-overlay" id="modalBanche">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <h2 class="modal-title">Gestione Banche</h2>
+      <button class="modal-close" data-close="modalBanche">&#x2715;</button>
+    </div>
+    <div class="modal-body" style="padding-bottom:0">
+
+      <div id="pnBancheError" class="form-error" style="display:none;margin-bottom:var(--space-3)"></div>
+
+      <!-- Lista banche -->
+      <div id="pnBancheList" style="margin-bottom:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden">
+        <div style="padding:var(--space-4);text-align:center;color:var(--color-text-muted)">Caricamento…</div>
+      </div>
+
+      <!-- Form aggiungi nuova banca -->
+      <div style="border-top:1px solid var(--color-border);padding:var(--space-4) 0">
+        <p style="font-size:var(--text-sm);font-weight:600;margin-bottom:var(--space-3)">Aggiungi banca</p>
+        <div style="display:grid;grid-template-columns:1fr 130px 52px auto;gap:var(--space-2);align-items:end">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Nome *</label>
+            <input type="text" class="form-input" id="pnNuovaBancaNome" placeholder="Es: Banca Sella…">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Saldo iniziale</label>
+            <input type="number" class="form-input" id="pnNuovaBancaSaldo" step="0.01" value="0">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Colore</label>
+            <input type="color" id="pnNuovaBancaColore" value="#6366f1"
+              style="height:38px;width:48px;border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;padding:2px;background:var(--color-surface-2)">
+          </div>
+          <button class="btn btn-primary btn-sm" id="pnBtnAggiungiBanca" style="height:38px;margin-bottom:0">
+            + Aggiungi
+          </button>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalBanche">Chiudi</button>
+    </div>
+  </div>
+</div>
+<!-- /MODAL Gestione Banche -->
+
+<!-- MODAL: Gestione Macrogruppi (Entrate / Uscite) -->
+<div class="modal-overlay" id="modalMacrogruppi">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="pnMacroTitle">Gestione Macrogruppi</h2>
+      <button class="modal-close" data-close="modalMacrogruppi">&#x2715;</button>
+    </div>
+    <div class="modal-body" style="padding-bottom:0">
+      <input type="hidden" id="pnMacroTipo" value="">
+
+      <div id="pnMacroError" class="form-error" style="display:none;margin-bottom:var(--space-3)"></div>
+
+      <!-- Lista macrogruppi + sottovoci -->
+      <div id="pnMacroList" style="margin-bottom:var(--space-4);max-height:420px;overflow-y:auto">
+        <div style="padding:var(--space-4);text-align:center;color:var(--color-text-muted)">Caricamento…</div>
+      </div>
+
+      <!-- Form aggiungi macrogruppo -->
+      <div style="border-top:1px solid var(--color-border);padding:var(--space-4) 0">
+        <p style="font-size:var(--text-sm);font-weight:600;margin-bottom:var(--space-3)">Aggiungi macrogruppo</p>
+        <div style="display:flex;gap:var(--space-2);align-items:end">
+          <div class="form-group" style="margin-bottom:0;flex:1">
+            <input type="text" class="form-input" id="pnNuovoMacroNome" placeholder="Nome macrogruppo…">
+          </div>
+          <button class="btn btn-primary btn-sm" id="pnBtnAggiungiMacro" style="height:38px">
+            + Aggiungi
+          </button>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalMacrogruppi">Chiudi</button>
+    </div>
+  </div>
+</div>
+<!-- /MODAL Gestione Macrogruppi -->
+
 <div class="toast-container" id="toastContainer"></div>
   <script src="/static/js/app.js" defer></script>
 </body>

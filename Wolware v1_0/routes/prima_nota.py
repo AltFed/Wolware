@@ -761,3 +761,230 @@ def marca_fatturati():
     db.commit()
     db.close()
     return jsonify({'ok': True, 'marcati': len(ids)})
+
+
+# ═════════════════════════════════════════════════════════════════
+# BLOCCO 4 — Gestione anagrafica
+# ═════════════════════════════════════════════════════════════════
+
+# ── Banche ────────────────────────────────────────────────────────
+
+@bp.route('/api/prima-nota/banche', methods=['GET'])
+@login_required
+def get_banche():
+    db = get_db()
+    rows = db.execute('SELECT * FROM banche_studio ORDER BY ordine, nome').fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@bp.route('/api/prima-nota/banche', methods=['POST'])
+@login_required
+def crea_banca():
+    db = get_db()
+    d = request.get_json() or {}
+    nome = d.get('nome', '').strip()
+    if not nome:
+        db.close()
+        return jsonify({'error': 'Il nome è obbligatorio'}), 400
+    saldo_iniziale = float(d.get('saldo_iniziale', 0) or 0)
+    colore = (d.get('colore') or '#6366f1').strip()
+    ordine = db.execute('SELECT COALESCE(MAX(ordine),0)+1 FROM banche_studio').fetchone()[0]
+    db.execute(
+        'INSERT INTO banche_studio (nome, saldo_iniziale, colore, ordine) VALUES (?,?,?,?)',
+        (nome, saldo_iniziale, colore, ordine)
+    )
+    bid = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'id': bid})
+
+
+@bp.route('/api/prima-nota/banche/<int:banca_id>', methods=['PUT'])
+@login_required
+def aggiorna_banca(banca_id):
+    db = get_db()
+    d = request.get_json() or {}
+    nome = d.get('nome', '').strip()
+    if not nome:
+        db.close()
+        return jsonify({'error': 'Il nome è obbligatorio'}), 400
+    saldo_iniziale = float(d.get('saldo_iniziale', 0) or 0)
+    colore = (d.get('colore') or '#6366f1').strip()
+    db.execute(
+        'UPDATE banche_studio SET nome=?, saldo_iniziale=?, colore=? WHERE id=?',
+        (nome, saldo_iniziale, colore, banca_id)
+    )
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+
+@bp.route('/api/prima-nota/banche/<int:banca_id>', methods=['DELETE'])
+@login_required
+def elimina_banca(banca_id):
+    db = get_db()
+    tipologia = f'banca_{banca_id}'
+    count = db.execute(
+        'SELECT COUNT(*) FROM movimenti_studio WHERE tipologia=?', (tipologia,)
+    ).fetchone()[0]
+    if count > 0:
+        db.close()
+        return jsonify({'error': f'Impossibile eliminare: la banca ha {count} movimenti collegati'}), 400
+    db.execute('DELETE FROM banche_studio WHERE id=?', (banca_id,))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+
+# ── Macrogruppi (entrate / uscite) ────────────────────────────────
+
+def _get_macrogruppi_list(tipo):
+    t_m = f'macrogruppi_{tipo}'
+    t_s = f'sottovoci_{tipo}'
+    db = get_db()
+    macros = db.execute(f'SELECT * FROM {t_m} ORDER BY ordine, nome').fetchall()
+    result = []
+    for m in macros:
+        sv = db.execute(
+            f'SELECT * FROM {t_s} WHERE macrogruppo_id=? ORDER BY ordine, nome', (m['id'],)
+        ).fetchall()
+        result.append({**dict(m), 'sottovoci': [dict(s) for s in sv]})
+    db.close()
+    return result
+
+
+@bp.route('/api/prima-nota/macrogruppi/entrate', methods=['GET'])
+@login_required
+def get_macrogruppi_entrate():
+    return jsonify(_get_macrogruppi_list('entrate'))
+
+
+@bp.route('/api/prima-nota/macrogruppi/uscite', methods=['GET'])
+@login_required
+def get_macrogruppi_uscite():
+    return jsonify(_get_macrogruppi_list('uscite'))
+
+
+@bp.route('/api/prima-nota/macrogruppi/<tipo>', methods=['POST'])
+@login_required
+def crea_macrogruppo(tipo):
+    if tipo not in ('entrate', 'uscite'):
+        return jsonify({'error': 'Tipo non valido'}), 400
+    db = get_db()
+    d = request.get_json() or {}
+    nome = d.get('nome', '').strip()
+    if not nome:
+        db.close()
+        return jsonify({'error': 'Il nome è obbligatorio'}), 400
+    t_m = f'macrogruppi_{tipo}'
+    ordine = db.execute(f'SELECT COALESCE(MAX(ordine),0)+1 FROM {t_m}').fetchone()[0]
+    db.execute(f'INSERT INTO {t_m} (nome, ordine) VALUES (?,?)', (nome, ordine))
+    mid = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'id': mid})
+
+
+@bp.route('/api/prima-nota/macrogruppi/<tipo>/<int:macro_id>', methods=['PUT'])
+@login_required
+def aggiorna_macrogruppo(tipo, macro_id):
+    if tipo not in ('entrate', 'uscite'):
+        return jsonify({'error': 'Tipo non valido'}), 400
+    db = get_db()
+    d = request.get_json() or {}
+    nome = d.get('nome', '').strip()
+    if not nome:
+        db.close()
+        return jsonify({'error': 'Il nome è obbligatorio'}), 400
+    t_m = f'macrogruppi_{tipo}'
+    db.execute(f'UPDATE {t_m} SET nome=? WHERE id=?', (nome, macro_id))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+
+@bp.route('/api/prima-nota/macrogruppi/<tipo>/<int:macro_id>', methods=['DELETE'])
+@login_required
+def elimina_macrogruppo(tipo, macro_id):
+    if tipo not in ('entrate', 'uscite'):
+        return jsonify({'error': 'Tipo non valido'}), 400
+    db = get_db()
+    tipo_mov = 'entrata' if tipo == 'entrate' else 'uscita'
+    count = db.execute(
+        'SELECT COUNT(*) FROM movimenti_studio WHERE macrogruppo_id=? AND tipo=?',
+        (str(macro_id), tipo_mov)
+    ).fetchone()[0]
+    if count > 0:
+        db.close()
+        return jsonify({'error': f'Impossibile eliminare: il macrogruppo ha {count} movimenti collegati'}), 400
+    t_m = f'macrogruppi_{tipo}'
+    t_s = f'sottovoci_{tipo}'
+    db.execute(f'DELETE FROM {t_s} WHERE macrogruppo_id=?', (macro_id,))
+    db.execute(f'DELETE FROM {t_m} WHERE id=?', (macro_id,))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+
+@bp.route('/api/prima-nota/macrogruppi/<tipo>/<int:macro_id>/sottovoci', methods=['POST'])
+@login_required
+def crea_sottovoce(tipo, macro_id):
+    if tipo not in ('entrate', 'uscite'):
+        return jsonify({'error': 'Tipo non valido'}), 400
+    db = get_db()
+    d = request.get_json() or {}
+    nome = d.get('nome', '').strip()
+    if not nome:
+        db.close()
+        return jsonify({'error': 'Il nome è obbligatorio'}), 400
+    t_s = f'sottovoci_{tipo}'
+    ordine = db.execute(
+        f'SELECT COALESCE(MAX(ordine),0)+1 FROM {t_s} WHERE macrogruppo_id=?', (macro_id,)
+    ).fetchone()[0]
+    db.execute(f'INSERT INTO {t_s} (macrogruppo_id, nome, ordine) VALUES (?,?,?)',
+               (macro_id, nome, ordine))
+    sid = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'id': sid})
+
+
+@bp.route('/api/prima-nota/macrogruppi/<tipo>/<int:macro_id>/sottovoci/<int:sottovoce_id>',
+          methods=['PUT'])
+@login_required
+def aggiorna_sottovoce(tipo, macro_id, sottovoce_id):
+    if tipo not in ('entrate', 'uscite'):
+        return jsonify({'error': 'Tipo non valido'}), 400
+    db = get_db()
+    d = request.get_json() or {}
+    nome = d.get('nome', '').strip()
+    if not nome:
+        db.close()
+        return jsonify({'error': 'Il nome è obbligatorio'}), 400
+    t_s = f'sottovoci_{tipo}'
+    db.execute(f'UPDATE {t_s} SET nome=? WHERE id=?', (nome, sottovoce_id))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+
+@bp.route('/api/prima-nota/macrogruppi/<tipo>/<int:macro_id>/sottovoci/<int:sottovoce_id>',
+          methods=['DELETE'])
+@login_required
+def elimina_sottovoce(tipo, macro_id, sottovoce_id):
+    if tipo not in ('entrate', 'uscite'):
+        return jsonify({'error': 'Tipo non valido'}), 400
+    db = get_db()
+    count = db.execute(
+        'SELECT COUNT(*) FROM movimenti_studio WHERE sottovoce_id=?',
+        (str(sottovoce_id),)
+    ).fetchone()[0]
+    if count > 0:
+        db.close()
+        return jsonify({'error': f'Impossibile eliminare: la sottovoce ha {count} movimenti collegati'}), 400
+    t_s = f'sottovoci_{tipo}'
+    db.execute(f'DELETE FROM {t_s} WHERE id=?', (sottovoce_id,))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
