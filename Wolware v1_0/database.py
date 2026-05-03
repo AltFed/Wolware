@@ -74,7 +74,6 @@ def init_db():
         ('cc_json',                  'TEXT'),
         ('tariff_json',              'TEXT'),
         ('tariffario_id',            'INTEGER REFERENCES tariffari(id)'),
-        # ── Nuove colonne spec Volume 2 ──
         ('cadenza_pagamenti',        "TEXT DEFAULT 'libero'"),
         ('residuo_iniziale',         'REAL DEFAULT 0.0'),
         ('inizio_paghe',             'TEXT'),
@@ -90,10 +89,6 @@ def init_db():
 
     # ═══════════════════════════════════════════════════════════════════
     # TABELLA: pratiche
-    # La vecchia struttura (v1) era un task-tracker con tipo_pratica,
-    # stato, priorita — incompatibile con la spec Volume 2.
-    # Se trova la vecchia struttura: la rinomina in pratiche_legacy
-    # (i dati non vengono persi) e crea la nuova.
     # ═══════════════════════════════════════════════════════════════════
     tables = [r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
 
@@ -135,11 +130,12 @@ def init_db():
         created_at TEXT DEFAULT (datetime('now', 'localtime'))
     )''')
 
+    existing_pag = [row[1] for row in c.execute("PRAGMA table_info(pagamenti)").fetchall()]
+    if 'movimenti_studio_id' not in existing_pag:
+        c.execute('ALTER TABLE pagamenti ADD COLUMN movimenti_studio_id INTEGER REFERENCES movimenti_studio(id)')
+
     # ═══════════════════════════════════════════════════════════════════
     # TABELLA: arrotondamenti
-    # importo è sempre positivo; tipo determina il segno:
-    #   'abbuono'  → diminuisce il residuo
-    #   'addebito' → aumenta il residuo
     # ═══════════════════════════════════════════════════════════════════
     c.execute('''CREATE TABLE IF NOT EXISTS arrotondamenti (
         id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -181,7 +177,6 @@ def init_db():
 
     # ═══════════════════════════════════════════════════════════════════
     # TABELLA: macrogruppi
-    # tipo: 'fisso_mensile' | 'fisso_annuale' | 'variabile_mensile' | 'variabile_annuale'
     # ═══════════════════════════════════════════════════════════════════
     c.execute('''CREATE TABLE IF NOT EXISTS macrogruppi (
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -192,7 +187,7 @@ def init_db():
     )''')
 
     # ═══════════════════════════════════════════════════════════════════
-    # TABELLA: voci_costo (voci del tariffario globale)
+    # TABELLA: voci_costo
     # ═══════════════════════════════════════════════════════════════════
     c.execute('''CREATE TABLE IF NOT EXISTS voci_costo (
         id                       INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -216,7 +211,7 @@ def init_db():
             c.execute(f'ALTER TABLE voci_costo ADD COLUMN {col} {typedef}')
 
     # ═══════════════════════════════════════════════════════════════════
-    # TABELLA: ditta_voci (copia personalizzata del tariffario per cliente)
+    # TABELLA: ditta_voci
     # ═══════════════════════════════════════════════════════════════════
     c.execute('''CREATE TABLE IF NOT EXISTS ditta_voci (
         id                       INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -258,7 +253,7 @@ def init_db():
         cambiato_il     TEXT DEFAULT (datetime('now','localtime')),
         note            TEXT
     )''')
-    
+
     c.execute('''CREATE TABLE IF NOT EXISTS fatture (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
         ditta_id         INTEGER NOT NULL,
@@ -280,6 +275,70 @@ def init_db():
         FOREIGN KEY (ditta_id) REFERENCES ditte(id) ON DELETE CASCADE
     )
     ''')
+
+    # ═══════════════════════════════════════════════════════════════════
+    # TABELLE: Prima Nota Studio
+    # ═══════════════════════════════════════════════════════════════════
+    c.execute('''CREATE TABLE IF NOT EXISTS banche_studio (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome           TEXT NOT NULL,
+        saldo_iniziale REAL DEFAULT 0.0,
+        ordine         INTEGER DEFAULT 0,
+        colore         TEXT DEFAULT '#6366f1',
+        created_at     TEXT DEFAULT (datetime('now', 'localtime'))
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS movimenti_studio (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        tipo             TEXT NOT NULL CHECK(tipo IN ('entrata','uscita','giroconto')),
+        data             TEXT NOT NULL,
+        tipologia        TEXT NOT NULL,
+        macrogruppo_id   TEXT,
+        macrogruppo_nome TEXT,
+        sottovoce_id     TEXT,
+        sottovoce_nome   TEXT,
+        importo          REAL NOT NULL CHECK(importo >= 0),
+        descrizione      TEXT,
+        giroconto_id     TEXT,
+        giroconto_dir    TEXT CHECK(giroconto_dir IN ('entrata','uscita',NULL)),
+        created_at       TEXT DEFAULT (datetime('now', 'localtime'))
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS movimenti_fatturati (
+        movimento_id      INTEGER PRIMARY KEY REFERENCES movimenti_studio(id) ON DELETE CASCADE,
+        data_fatturazione TEXT DEFAULT (datetime('now', 'localtime'))
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS macrogruppi_entrate (
+        id     INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome   TEXT NOT NULL,
+        ordine INTEGER DEFAULT 0
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS sottovoci_entrate (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        macrogruppo_id INTEGER NOT NULL REFERENCES macrogruppi_entrate(id),
+        nome           TEXT NOT NULL,
+        ordine         INTEGER DEFAULT 0
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS macrogruppi_uscite (
+        id     INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome   TEXT NOT NULL,
+        ordine INTEGER DEFAULT 0
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS sottovoci_uscite (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        macrogruppo_id INTEGER NOT NULL REFERENCES macrogruppi_uscite(id),
+        nome           TEXT NOT NULL,
+        ordine         INTEGER DEFAULT 0
+    )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS impostazioni (
+        chiave TEXT PRIMARY KEY,
+        valore TEXT
+    )''')
 
     conn.commit()
     conn.close()
