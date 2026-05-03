@@ -301,8 +301,13 @@ def init_db():
         descrizione      TEXT,
         giroconto_id     TEXT,
         giroconto_dir    TEXT CHECK(giroconto_dir IN ('entrata','uscita',NULL)),
+        giroconto_tipo   TEXT CHECK(giroconto_tipo IN ('versamento','prelievo','bonifico','spostamento',NULL)),
         created_at       TEXT DEFAULT (datetime('now', 'localtime'))
     )''')
+
+    existing_ms = [row[1] for row in c.execute("PRAGMA table_info(movimenti_studio)").fetchall()]
+    if 'giroconto_tipo' not in existing_ms:
+        c.execute("ALTER TABLE movimenti_studio ADD COLUMN giroconto_tipo TEXT CHECK(giroconto_tipo IN ('versamento','prelievo','bonifico','spostamento',NULL))")
 
     c.execute('''CREATE TABLE IF NOT EXISTS movimenti_fatturati (
         movimento_id      INTEGER PRIMARY KEY REFERENCES movimenti_studio(id) ON DELETE CASCADE,

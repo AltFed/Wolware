@@ -3493,6 +3493,7 @@ document.getElementById('btnSolGeneraPdf')?.addEventListener('click', async () =
    ══════════════════════════════════════════════════════════════════ */
 const PrimaNota = (() => {
   let _movimenti = [];
+  let _categorie = null;
   let _filtroAnno = '';
   let _filtroMese = '0';
   let _filtroTipo = 'tutti';
@@ -3511,6 +3512,7 @@ const PrimaNota = (() => {
     if (!_initialized) {
       _bindFiltri();
       _bindSolleciti();
+      _bindModal();
       _initialized = true;
     }
   }
@@ -3708,7 +3710,169 @@ const PrimaNota = (() => {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  return { init, refresh, eliminaMovimento, rimuoviFatturato, apriSollecito };
+  // ── Modal Registra Movimento ────────────────────────────────────
+
+  function _bindModal() {
+    $('pnBtnMovimento').addEventListener('click', openModalMovimento);
+    $('pnTabEntrata').addEventListener('click', () => _setTab('entrata'));
+    $('pnTabUscita').addEventListener('click', () => _setTab('uscita'));
+    $('pnMovCategoria').addEventListener('change', () => {
+      const raw = $('pnMovCategoria').value;
+      if (!raw) {
+        $('pnMovSottovoce').innerHTML = '<option value="">Prima seleziona categoria</option>';
+        $('pnMovSottovoce').disabled = true;
+        return;
+      }
+      const cat = JSON.parse(raw);
+      _buildSottovoci(cat.sottovoci);
+    });
+    $('pnBtnSalvaMovimento').addEventListener('click', _salvaMovimento);
+  }
+
+  function openModalMovimento() {
+    // Default data = oggi
+    if (!$('pnMovData').value) {
+      $('pnMovData').value = new Date().toISOString().split('T')[0];
+    }
+    $('pnMovError').style.display = 'none';
+    _categorie = null; // forza refresh categorie ad ogni apertura
+    _setTab('entrata');
+    _buildConti();
+    openModal('modalMovimento');
+  }
+
+  async function _buildConti() {
+    const sel = $('pnMovConto');
+    try {
+      const saldi = await fetch('/api/prima-nota/saldi').then(r => r.json());
+      sel.innerHTML = '<option value="">— Seleziona... —</option>';
+      saldi.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.nome;
+        sel.appendChild(opt);
+      });
+    } catch(e) {
+      sel.innerHTML = '<option value="cassa">Cassa</option>';
+    }
+  }
+
+  async function _loadCategorie() {
+    if (_categorie) return _categorie;
+    _categorie = await fetch('/api/prima-nota/categorie').then(r => r.json());
+    return _categorie;
+  }
+
+  async function _setTab(tipo) {
+    $('pnMovTipo').value = tipo;
+    const isEntrata = tipo === 'entrata';
+    $('pnTabEntrata').style.cssText = isEntrata
+      ? 'flex:1;background:var(--color-success);color:#fff;border:none'
+      : 'flex:1';
+    $('pnTabEntrata').className = isEntrata ? 'btn btn-sm' : 'btn btn-secondary btn-sm';
+    $('pnTabUscita').style.cssText = !isEntrata
+      ? 'flex:1;background:var(--color-error);color:#fff;border:none'
+      : 'flex:1';
+    $('pnTabUscita').className = !isEntrata ? 'btn btn-sm' : 'btn btn-secondary btn-sm';
+    // Mantieni data, importo, note; reset categoria+sottovoce
+    $('pnMovCategoria').innerHTML = '<option value="">— Seleziona... —</option>';
+    $('pnMovSottovoce').innerHTML = '<option value="">Prima seleziona categoria</option>';
+    $('pnMovSottovoce').disabled = true;
+    $('pnMovError').style.display = 'none';
+    await _buildCategorie(tipo);
+  }
+
+  async function _buildCategorie(tipo) {
+    const cats = await _loadCategorie();
+    const lista = tipo === 'entrata' ? cats.entrate : cats.uscite;
+    const sel = $('pnMovCategoria');
+    sel.innerHTML = '<option value="">— Seleziona... —</option>';
+    lista.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = JSON.stringify({ id: m.id, nome: m.nome, sottovoci: m.sottovoci });
+      opt.textContent = m.nome;
+      sel.appendChild(opt);
+    });
+  }
+
+  function _buildSottovoci(sottovoci) {
+    const sel = $('pnMovSottovoce');
+    if (!sottovoci || !sottovoci.length) {
+      sel.innerHTML = '<option value="">Nessuna sottovoce configurata</option>';
+      sel.disabled = true;
+      return;
+    }
+    sel.innerHTML = '<option value="">— Seleziona... —</option>';
+    sottovoci.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = JSON.stringify({ id: s.id, nome: s.nome });
+      opt.textContent = s.nome;
+      sel.appendChild(opt);
+    });
+    sel.disabled = false;
+  }
+
+  async function _salvaMovimento() {
+    const btn = $('pnBtnSalvaMovimento');
+    const tipo        = $('pnMovTipo').value;
+    const data_mov    = $('pnMovData').value;
+    const tipologia   = $('pnMovConto').value;
+    const catRaw      = $('pnMovCategoria').value;
+    const sotRaw      = $('pnMovSottovoce').value;
+    const importoVal  = $('pnMovImporto').value;
+    const descrizione = $('pnMovNote').value.trim();
+
+    if (!data_mov)   return _showModalErr('Inserisci la data del movimento');
+    if (!tipologia)  return _showModalErr('Seleziona Cassa o una banca');
+    if (!catRaw)     return _showModalErr('Seleziona una categoria');
+    if (!sotRaw)     return _showModalErr('Seleziona la sottovoce');
+    const importo = parseFloat(importoVal);
+    if (!importo || importo <= 0) return _showModalErr("L'importo deve essere maggiore di zero");
+
+    const cat = JSON.parse(catRaw);
+    const sot = JSON.parse(sotRaw);
+
+    $('pnMovError').style.display = 'none';
+    const origHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    try {
+      const res = await fetch('/api/prima-nota/movimenti', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo, data: data_mov, tipologia,
+          macrogruppo_id: cat.id, macrogruppo_nome: cat.nome,
+          sottovoce_id: sot.id, sottovoce_nome: sot.nome,
+          importo, descrizione
+        })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        closeModal('modalMovimento');
+        $('pnMovImporto').value = '';
+        $('pnMovNote').value = '';
+        await refresh();
+        toast('Movimento registrato!', 'success');
+      } else {
+        _showModalErr(typeof data.error === 'string' ? data.error : 'Errore nel salvataggio');
+      }
+    } catch(e) {
+      _showModalErr('Errore di rete');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origHTML;
+    }
+  }
+
+  function _showModalErr(msg) {
+    const el = $('pnMovError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  return { init, refresh, eliminaMovimento, rimuoviFatturato, apriSollecito, openModalMovimento };
 })();
 
 /* Aggancia switchTab per Prima Nota */

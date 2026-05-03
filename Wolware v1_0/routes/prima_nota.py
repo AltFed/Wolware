@@ -327,3 +327,128 @@ def get_anni():
         anni.insert(0, anno_corrente)
     db.close()
     return jsonify(anni)
+
+
+# ─────────────────────────────────────────────────────────────────
+# GET /api/prima-nota/categorie
+# Restituisce macrogruppi+sottovoci per entrate e uscite.
+# Entrate: [{"clienti" speciale} + macrogruppi_entrate]
+# Uscite:  [macrogruppi_uscite]
+# ─────────────────────────────────────────────────────────────────
+@bp.route('/api/prima-nota/categorie')
+@login_required
+def get_categorie():
+    db = get_db()
+
+    # Entrate — "Clienti" speciale (lista clienti non archiviati)
+    clienti = db.execute(
+        'SELECT id, ragione_sociale FROM ditte WHERE archiviato=0 ORDER BY ragione_sociale'
+    ).fetchall()
+    entrate = [{
+        'id': 'clienti',
+        'nome': 'Clienti',
+        'speciale': True,
+        'sottovoci': [{'id': str(c['id']), 'nome': c['ragione_sociale']} for c in clienti]
+    }]
+
+    # Entrate — macrogruppi liberi con sottovoci
+    macro_e = db.execute('SELECT * FROM macrogruppi_entrate ORDER BY ordine, nome').fetchall()
+    for m in macro_e:
+        sv = db.execute(
+            'SELECT * FROM sottovoci_entrate WHERE macrogruppo_id=? ORDER BY ordine, nome', (m['id'],)
+        ).fetchall()
+        entrate.append({
+            'id': m['id'],
+            'nome': m['nome'],
+            'speciale': False,
+            'sottovoci': [{'id': s['id'], 'nome': s['nome']} for s in sv]
+        })
+
+    # Uscite — macrogruppi con sottovoci
+    uscite = []
+    macro_u = db.execute('SELECT * FROM macrogruppi_uscite ORDER BY ordine, nome').fetchall()
+    for m in macro_u:
+        sv = db.execute(
+            'SELECT * FROM sottovoci_uscite WHERE macrogruppo_id=? ORDER BY ordine, nome', (m['id'],)
+        ).fetchall()
+        uscite.append({
+            'id': m['id'],
+            'nome': m['nome'],
+            'sottovoci': [{'id': s['id'], 'nome': s['nome']} for s in sv]
+        })
+
+    db.close()
+    return jsonify({'entrate': entrate, 'uscite': uscite})
+
+
+# ─────────────────────────────────────────────────────────────────
+# POST /api/prima-nota/movimenti
+# Crea un movimento entrata o uscita.
+# Se entrata + categoria "clienti": crea anche il pagamento.
+# ─────────────────────────────────────────────────────────────────
+@bp.route('/api/prima-nota/movimenti', methods=['POST'])
+@login_required
+def crea_movimento():
+    db = get_db()
+    d = request.get_json() or {}
+
+    tipo           = d.get('tipo', '').strip()
+    data_mov       = d.get('data', '').strip()
+    tipologia      = d.get('tipologia', '').strip()
+    macrogruppo_id = str(d.get('macrogruppo_id', '')).strip()
+    macrogruppo_nome = d.get('macrogruppo_nome', '').strip()
+    sottovoce_id   = str(d.get('sottovoce_id', '')).strip()
+    sottovoce_nome = d.get('sottovoce_nome', '').strip()
+    descrizione    = d.get('descrizione', '').strip()
+
+    try:
+        importo = float(d.get('importo', 0))
+    except (TypeError, ValueError):
+        importo = 0.0
+
+    # Validazioni specifiche per campo
+    if not data_mov:
+        db.close(); return jsonify({'error': 'Inserisci la data del movimento'}), 400
+    if not tipologia:
+        db.close(); return jsonify({'error': 'Seleziona Cassa o una banca'}), 400
+    if not macrogruppo_id:
+        db.close(); return jsonify({'error': 'Seleziona una categoria'}), 400
+    if not sottovoce_id:
+        db.close(); return jsonify({'error': 'Seleziona la sottovoce'}), 400
+    if importo <= 0:
+        db.close(); return jsonify({'error': "L'importo deve essere maggiore di zero"}), 400
+    if tipo not in ('entrata', 'uscita'):
+        db.close(); return jsonify({'error': 'Tipo non valido'}), 400
+
+    db.execute(
+        '''INSERT INTO movimenti_studio
+           (tipo, data, tipologia, macrogruppo_id, macrogruppo_nome,
+            sottovoce_id, sottovoce_nome, importo, descrizione)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        (tipo, data_mov, tipologia, macrogruppo_id, macrogruppo_nome,
+         sottovoce_id, sottovoce_nome, importo, descrizione)
+    )
+    mov_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+    # Se entrata da cliente: crea anche il pagamento sulla scheda cliente
+    if tipo == 'entrata' and macrogruppo_id == 'clienti':
+        anno = int(data_mov.split('-')[0])
+        if tipologia == 'cassa':
+            mezzo = 'Contanti'
+        elif tipologia.startswith('banca_'):
+            banca_id = tipologia.split('_')[1]
+            banca = db.execute('SELECT nome FROM banche_studio WHERE id=?', (banca_id,)).fetchone()
+            mezzo = f'Bonifico {banca["nome"]}' if banca else 'Bonifico'
+        else:
+            mezzo = tipologia
+
+        db.execute(
+            '''INSERT INTO pagamenti
+               (ditta_id, anno, data, importo, metodo, note, movimenti_studio_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)''',
+            (int(sottovoce_id), anno, data_mov, importo, mezzo, descrizione, mov_id)
+        )
+
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'id': mov_id})

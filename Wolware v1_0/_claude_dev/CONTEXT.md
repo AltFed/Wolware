@@ -28,71 +28,110 @@ Rinominato da `perplexity`. Ownership: Claude.
 | Modulo JS PrimaNota | `static/js/app.js` | ✅ Fatto |
 | CSS Prima Nota | `static/css/style.css` | ✅ Fatto |
 
-#### API disponibili (Blocco 1)
-- `GET /api/prima-nota/saldi` — saldi cassa + banche
-- `GET /api/prima-nota/movimenti` — lista movimenti (filtri: anno, mese, tipo, cerca)
-- `GET /api/prima-nota/anni` — anni presenti per filtro
-- `GET /api/prima-nota/clienti-da-sollecitare` — clienti con residuo > 0
-- `DELETE /api/prima-nota/movimenti/<id>` — elimina movimento (gestisce giroconto e pagamento collegato)
-- `PATCH /api/prima-nota/movimenti/<id>/rimuovi-fatturato` — rimuove flag fatturato
+#### API Blocco 1
+- `GET /api/prima-nota/saldi`
+- `GET /api/prima-nota/movimenti` (filtri: anno, mese, tipo, cerca)
+- `GET /api/prima-nota/anni`
+- `GET /api/prima-nota/clienti-da-sollecitare`
+- `DELETE /api/prima-nota/movimenti/<id>`
+- `PATCH /api/prima-nota/movimenti/<id>/rimuovi-fatturato`
 
-#### Tabelle DB create
-- `banche_studio` — banche configurate dello studio
-- `movimenti_studio` — movimenti cassa/banca/giroconto
-- `movimenti_fatturati` — flag fatturato per entrate
-- `macrogruppi_entrate` / `sottovoci_entrate` — categorie entrate
-- `macrogruppi_uscite` / `sottovoci_uscite` — categorie uscite
-- `impostazioni` — saldo iniziale cassa e altre config
-- Migrazione: colonna `movimenti_studio_id` aggiunta a `pagamenti`
+---
 
-### ⏳ Blocco 2 — Form nuovo movimento (DA FARE)
+### ✅ Blocco 2 — Modal Registra Movimento (COMPLETO)
 
-Richiede:
-- Modal HTML per inserimento movimento (entrata/uscita/giroconto)
-- Selezione categoria (macrogruppo + sottovoce, con "clienti" speciale)
-- `POST /api/prima-nota/movimenti` — crea movimento
-- Se entrata da cliente: creare anche riga in `pagamenti`
+| Componente | File | Stato |
+|---|---|---|
+| `giroconto_tipo` migration in DB | `database.py` | ✅ Fatto |
+| `GET /api/prima-nota/categorie` | `routes/prima_nota.py` | ✅ Fatto |
+| `POST /api/prima-nota/movimenti` | `routes/prima_nota.py` | ✅ Fatto |
+| Modal HTML `#modalMovimento` | `templates/index.html` | ✅ Fatto |
+| JS modal (open/tab/categoria/sottovoce/salva) | `static/js/app.js` | ✅ Fatto |
 
-### ⏳ Blocco 3 — Gestione Banche (DA FARE)
+#### API Blocco 2
+- `GET /api/prima-nota/categorie` — `{entrate: [{id, nome, speciale, sottovoci}], uscite: [...]}`
+- `POST /api/prima-nota/movimenti` — body: `{tipo, data, tipologia, macrogruppo_id, macrogruppo_nome, sottovoce_id, sottovoce_nome, importo, descrizione}`
+  - Se entrata + macrogruppo_id='clienti': crea automaticamente record in `pagamenti`
+  - Mezzo pagamento: "Contanti" (cassa) o "Bonifico NomeBanca" (banca)
 
-- Modal CRUD banche (`banche_studio`)
+#### Dettagli tecnici Blocco 2
+- `_categorie` è resettato ad ogni apertura modal (no cache stale)
+- Tab Entrata/Uscita: preserva data/importo/note, resetta categoria+sottovoce
+- Sottovoce "Clienti" = lista ditte non archiviate da `GET /api/ditte` (via categorie endpoint)
+- `openModalMovimento()` esposto pubblicamente nel modulo PrimaNota
+- `pnBtnMovimento` bindato in `_bindModal()` chiamato da `init()` al primo accesso al tab
+
+---
+
+### ⏳ Blocco 3 — Modal Giroconto + Modal Prepara Fatturazione (DA FARE)
+
+**Giroconto:**
+- Modal con: Data, Tipo (Versamento/Prelievo/Bonifico/Spostamento), Da (origine), A (destinazione), Importo, Descrizione
+- Tipo intelligente: Versamento → Da=Cassa auto; Prelievo → A=Cassa auto; Bonifico → solo banche
+- Crea 2 movimenti in `movimenti_studio` con stesso `giroconto_id` (UUID), `giroconto_dir` opposta, `giroconto_tipo`
+- `POST /api/prima-nota/giroconto`
+- Endpoint: `pnBtnGiroconto`
+
+**Prepara Fatturazione:**
+- Modal con lista entrate non fatturate (checkbox, totale live)
+- Genera PDF riepilogativo
+- Marca come fatturato SOLO dopo conferma + salvataggio PDF
+- `POST /api/prima-nota/fatturazione/prepara`
+- Endpoint: `pnBtnFatturazione`
+
+---
+
+### ⏳ Blocco 4 — Modal gestione anagrafica (DA FARE)
+
+**Banche** (`pnBtnBanche`): CRUD `banche_studio`. Blocco eliminazione se ha movimenti.
+**Macrogruppi Uscite** (`pnBtnUscite`): CRUD `macrogruppi_uscite` + `sottovoci_uscite`. Editing inline.
+**Macrogruppi Entrate** (`pnBtnEntrate`): identico Uscite + "CLIENTI" fisso in cima (sola lettura).
+
+API da creare:
 - `GET/POST/PUT/DELETE /api/prima-nota/banche`
+- `GET/POST/PUT/DELETE /api/prima-nota/macrogruppi/entrate` + sottovoci
+- `GET/POST/PUT/DELETE /api/prima-nota/macrogruppi/uscite` + sottovoci
 
-### ⏳ Blocco 4 — Categorie e impostazioni (DA FARE)
+---
 
-- Modal CRUD macrogruppi/sottovoci entrate e uscite
-- Impostazione saldo iniziale cassa
-- `GET/POST/PUT/DELETE /api/prima-nota/categorie`
-- `PUT /api/prima-nota/impostazioni`
+## Pulsanti ancora senza handler
 
-## Pulsanti UI ancora senza handler (Blocco 2+)
+| ID | Blocco | Funzione |
+|---|---|---|
+| `pnBtnGiroconto` | 3 | Modal Giroconto |
+| `pnBtnFatturazione` | 3 | Modal Prepara Fatturazione |
+| `pnBtnBanche` | 4 | Modal Gestione Banche |
+| `pnBtnUscite` | 4 | Modal Macrogruppi Uscite |
+| `pnBtnEntrate` | 4 | Modal Macrogruppi Entrate |
+| `pnBtnEsporta` | - | Export CSV/Excel (fuori scope Blocco 1-4) |
+| `pnBtnSollecitoMassivo` | - | Sollecito massivo batch (fuori scope) |
 
-| ID | Funzione attesa |
-|---|---|
-| `pnBtnMovimento` | Apre modal nuovo movimento |
-| `pnBtnBanche` | Apre modal gestione banche |
-| `pnBtnUscite` | Apre modal categorie uscite |
-| `pnBtnEntrate` | Apre modal categorie entrate |
-| `pnBtnFatturazione` | Flusso fatturazione batch |
-| `pnBtnGiroconto` | Shortcut nuovo giroconto |
-| `pnBtnEsporta` | Export CSV/Excel |
-| `pnBtnSollecitoMassivo` | Sollecito massivo a tutti i debitori |
+---
 
 ## Pattern architetturali del progetto
 
 - Blueprint: `bp = Blueprint('nome', __name__)` in `routes/`, registrato in `app.py`
-- DB: `get_db()` restituisce `sqlite3.connect` con `row_factory = sqlite3.Row`
-- Auth: decorator `@login_required` locale in ogni blueprint (controlla `session['user_id']`)
-- Tab switching JS: `window.switchTab` viene wrappato a catena — seguire il pattern
-  `const _orig = switchTab; window.switchTab = function(t){ _orig(t); if(t==='xxx') doInit(); }`
-- Toast: funzione globale `toast(msg, type)` disponibile in app.js
-- Modal: `openModal(id)` / `closeModal(id)` globali
-- `showToast` non esiste — usare `toast()`
+- DB: `get_db()` con `row_factory = sqlite3.Row`; chiudere con `db.close()`
+- Auth: decorator `@login_required` locale in ogni blueprint
+- Tab switch: `window.switchTab` wrappato a catena
+- Toast: `toast(msg, type)` globale — **NON** `showToast`
+- Modal: `openModal(id)` / `closeModal(id)`
+- Pagamenti: INSERT richiede `anno` (INTEGER NOT NULL) — estrarlo da `data_mov.split('-')[0]`
+- `openDettaglioCliente(id)` — funzione globale in app.js per aprire dettaglio cliente
+- `escHtml` NON è globale — PrimaNota usa `_esc()` interno
 
-## Note importanti
+## Schema DB Prima Nota
 
-- `escHtml` non è globale in app.js — il modulo PrimaNota ha la propria `_esc()`
-- `showToast` non esiste — usare `toast(msg, type)`
-- Il flag fatturato ha logica: fatturato > 7gg urgente, ≤7gg da_fatturare
-- Giroconto = 2 righe in `movimenti_studio` con stesso `giroconto_id` (UUID), dir opposta
-- Entrata da cliente (macrogruppo_id='clienti') crea anche riga in `pagamenti`
+```
+movimenti_studio: id, tipo, data, tipologia, macrogruppo_id, macrogruppo_nome,
+                  sottovoce_id, sottovoce_nome, importo, descrizione,
+                  giroconto_id, giroconto_dir, giroconto_tipo, created_at
+banche_studio:    id, nome, saldo_iniziale, ordine, colore, created_at
+movimenti_fatturati: movimento_id, data_fatturazione
+macrogruppi_entrate: id, nome, ordine
+sottovoci_entrate:   id, macrogruppo_id, nome, ordine
+macrogruppi_uscite:  id, nome, ordine
+sottovoci_uscite:    id, macrogruppo_id, nome, ordine
+impostazioni:        chiave, valore
+pagamenti (colonna aggiunta): movimenti_studio_id
+```
