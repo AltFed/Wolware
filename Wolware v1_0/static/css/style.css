@@ -619,3 +619,47 @@ td.empty-state-row p{font-size:var(--text-sm);line-height:1.7}
 .sol-label{font-size:var(--text-sm);font-weight:700;
   color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.04em}
 .sol-val{font-size:1.5rem;font-weight:800;color:var(--color-error, #dc2626)}
+
+/* ── Blocco 6 — Prima Nota Studio ───────────────────────────────────────── */
+.pn-saldi-row{display:flex;flex-wrap:wrap;gap:var(--space-3);margin-bottom:var(--space-4)}
+.pn-saldo-card{background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-lg);padding:var(--space-4) var(--space-5);min-width:140px;
+  display:flex;flex-direction:column;gap:var(--space-1);box-shadow:var(--shadow-sm);
+  transition:box-shadow var(--transition-interactive)}
+.pn-saldo-card:hover{box-shadow:var(--shadow-md)}
+.pn-saldo-card.pn-saldo-negativo{border-color:var(--color-error);background:var(--color-error-highlight)}
+.pn-saldo-label{font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);
+  text-transform:uppercase;letter-spacing:.06em}
+.pn-saldo-value{font-size:var(--text-xl);font-weight:700;color:var(--color-text);font-family:var(--font-mono)}
+.pn-saldo-negativo .pn-saldo-value{color:var(--color-error)}
+.pn-saldo-skeleton .pn-saldo-value{color:var(--color-text-muted)}
+.pn-solleciti-block{border-left:3px solid var(--color-warning)}
+.pn-solleciti-header{padding:var(--space-3) var(--space-4);user-select:none}
+.pn-solleciti-title{font-weight:600;font-size:var(--text-sm)}
+.pn-solleciti-badge{background:var(--color-warning);color:#fff;border-radius:var(--radius-full);
+  font-size:var(--text-xs);font-weight:700;padding:1px 7px;min-width:20px;text-align:center}
+.pn-col-flag{width:28px;text-align:center;padding-left:var(--space-2)!important;padding-right:var(--space-1)!important}
+.pn-flag{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+  border-radius:var(--radius-sm);font-size:11px;font-weight:700;cursor:default;border:none;background:transparent}
+.pn-flag-v{color:var(--color-success);cursor:pointer;background:rgba(34,197,94,.1)}
+.pn-flag-v:hover{background:rgba(34,197,94,.2)}
+.pn-flag-urgente{color:var(--color-warning);background:rgba(245,158,11,.1);animation:pn-urgente-pulse 2s ease-in-out infinite}
+@keyframes pn-urgente-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.pn-flag-da-fatturare{color:var(--color-text-muted)}
+.pn-flag-empty{display:inline-block;width:20px;height:20px}
+.badge-tipo{display:inline-block;padding:2px 8px;border-radius:var(--radius-full);
+  font-size:var(--text-xs);font-weight:600;white-space:nowrap}
+.badge-entrata{background:rgba(34,197,94,.12);color:var(--color-success)}
+.badge-uscita{background:rgba(239,68,68,.12);color:var(--color-error)}
+.badge-giroconto{background:rgba(124,58,237,.12);color:#7c3aed}
+.pn-importo-entrata{color:var(--color-success);font-weight:600;font-family:var(--font-mono)}
+.pn-importo-uscita{color:var(--color-error);font-weight:600;font-family:var(--font-mono)}
+.pn-importo-giroconto{color:#7c3aed;font-weight:500;font-family:var(--font-mono)}
+.pn-col-note{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:var(--color-text-muted);font-size:var(--text-xs)}
+.pn-nome-cliente{background:none;border:none;cursor:pointer;color:var(--color-primary);
+  font-size:var(--text-sm);padding:0;text-decoration:underline;text-underline-offset:2px}
+.pn-nome-cliente:hover{color:var(--color-primary-dark, var(--color-primary))}
+.pn-btn-elimina{color:var(--color-text-muted);transition:color var(--transition-interactive)}
+.pn-btn-elimina:hover{color:var(--color-error)}
+.pn-movimenti-table th,.pn-movimenti-table td{font-size:var(--text-sm)}

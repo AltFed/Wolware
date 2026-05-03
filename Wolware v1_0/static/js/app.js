@@ -3488,5 +3488,235 @@ document.getElementById('btnSolGeneraPdf')?.addEventListener('click', async () =
   } catch(e) { toast('Errore: ' + e.message, 'error'); }
 });
 
+/* ══════════════════════════════════════════════════════════════════
+   MODULO: Prima Nota Studio — Blocco 1
+   ══════════════════════════════════════════════════════════════════ */
+const PrimaNota = (() => {
+  let _movimenti = [];
+  let _filtroAnno = '';
+  let _filtroMese = '0';
+  let _filtroTipo = 'tutti';
+  let _filtroCerca = '';
+  let _sollecitiEspansi = false;
+  let _debounceTimer = null;
+  let _initialized = false;
+
+  const $ = id => document.getElementById(id);
+
+  async function init() {
+    await _caricaAnni();
+    await _caricaSaldi();
+    await _caricaSolleciti();
+    await _caricaMovimenti();
+    if (!_initialized) {
+      _bindFiltri();
+      _bindSolleciti();
+      _initialized = true;
+    }
+  }
+
+  async function _caricaAnni() {
+    try {
+      const anni = await fetch('/api/prima-nota/anni').then(r => r.json());
+      const sel = $('pnFiltroAnno');
+      sel.innerHTML = '<option value="">Tutti gli anni</option>';
+      anni.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a;
+        opt.textContent = a;
+        if (a === String(new Date().getFullYear())) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      _filtroAnno = sel.value;
+    } catch (e) { console.error('PrimaNota: errore anni', e); }
+  }
+
+  async function _caricaSaldi() {
+    try {
+      const saldi = await fetch('/api/prima-nota/saldi').then(r => r.json());
+      const row = $('pnSaldiRow');
+      row.innerHTML = '';
+      saldi.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'pn-saldo-card' + (s.saldo < 0 ? ' pn-saldo-negativo' : '');
+        if (s.id && s.id.startsWith('banca_')) {
+          card.dataset.bancaId = s.id.split('_')[1];
+          card.dataset.bancaNome = s.nome;
+        }
+        card.innerHTML = `<span class="pn-saldo-label">${_esc(s.nome)}</span>
+          <span class="pn-saldo-value">${_eur(s.saldo)}</span>`;
+        row.appendChild(card);
+      });
+    } catch (e) { console.error('PrimaNota: errore saldi', e); }
+  }
+
+  async function _caricaSolleciti() {
+    try {
+      const clienti = await fetch('/api/prima-nota/clienti-da-sollecitare').then(r => r.json());
+      const block = $('pnSollecitiBlock');
+      const badge = $('pnSollecitiCount');
+      const tbody = $('pnSollecitiBody');
+      if (clienti.length === 0) { block.style.display = 'none'; return; }
+      block.style.display = 'block';
+      badge.textContent = clienti.length;
+      tbody.innerHTML = clienti.map(c => `<tr>
+        <td><strong>${_esc(c.ragione_sociale)}</strong></td>
+        <td class="col-money" style="color:var(--color-error);font-weight:600">${_eur(c.residuo)}</td>
+        <td>${c.ultimo_pagamento ? _data(c.ultimo_pagamento) : '—'}</td>
+        <td><button class="btn btn-secondary btn-sm" onclick="PrimaNota.apriSollecito(${c.id})">📬</button></td>
+      </tr>`).join('');
+    } catch (e) { console.error('PrimaNota: errore solleciti', e); }
+  }
+
+  async function _caricaMovimenti() {
+    const p = new URLSearchParams();
+    if (_filtroAnno) p.set('anno', _filtroAnno);
+    if (_filtroMese && _filtroMese !== '0') p.set('mese', _filtroMese);
+    if (_filtroTipo && _filtroTipo !== 'tutti') p.set('tipo', _filtroTipo);
+    if (_filtroCerca) p.set('cerca', _filtroCerca);
+    try {
+      _movimenti = await fetch(`/api/prima-nota/movimenti?${p}`).then(r => r.json());
+      _render(_movimenti);
+    } catch (e) { console.error('PrimaNota: errore movimenti', e); }
+  }
+
+  function _render(movimenti) {
+    const tbody = $('pnMovimentiBody');
+    if (!movimenti || !movimenti.length) {
+      tbody.innerHTML = `<tr><td colspan="9" class="empty-row">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.5" opacity="0.25" style="margin-bottom:var(--space-2)">
+          <rect x="2" y="5" width="20" height="14" rx="2"/>
+          <line x1="2" y1="10" x2="22" y2="10"/>
+        </svg><br>Nessun movimento</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = movimenti.map(m => {
+      const flagHtml   = _renderFlag(m);
+      const tipoHtml   = m.tipo === 'entrata'
+        ? '<span class="badge-tipo badge-entrata">Entrata</span>'
+        : m.tipo === 'uscita'
+          ? '<span class="badge-tipo badge-uscita">Uscita</span>'
+          : `<span class="badge-tipo badge-giroconto">Giro ${m.giroconto_dir === 'entrata' ? '↓' : '↑'}</span>`;
+      const cls        = m.tipo === 'entrata' ? 'pn-importo-entrata' : m.tipo === 'uscita' ? 'pn-importo-uscita' : 'pn-importo-giroconto';
+      const nomeHtml   = (m.tipo === 'entrata' && m.macrogruppo_id === 'clienti' && m.sottovoce_id)
+        ? `<button class="btn-link pn-nome-cliente" onclick="apriDettaglioCliente(${m.sottovoce_id})">${_esc(m.nome_display || '—')}</button>`
+        : _esc(m.nome_display || m.sottovoce_nome || '—');
+      const conto      = _formatConto(m.tipologia);
+      return `<tr data-id="${m.id}">
+        <td class="pn-col-flag">${flagHtml}</td>
+        <td>${_data(m.data)}</td>
+        <td>${tipoHtml}</td>
+        <td>${_esc(m.macrogruppo_nome || '—')}</td>
+        <td>${nomeHtml}</td>
+        <td class="pn-col-note">${_esc(m.descrizione || '—')}</td>
+        <td>${_esc(conto)}</td>
+        <td class="col-money"><span class="${cls}">${_eur(m.importo)}</span></td>
+        <td class="col-actions">
+          <button class="btn-icon pn-btn-elimina" title="Elimina"
+            onclick="PrimaNota.eliminaMovimento(${m.id},${m.tipo === 'giroconto'})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function _renderFlag(m) {
+    if (m.tipo !== 'entrata') return '<span class="pn-flag-empty"></span>';
+    if (m.flag === 'fatturato')
+      return `<button class="pn-flag pn-flag-v" title="Fatturato — clicca per rimuovere"
+        onclick="PrimaNota.rimuoviFatturato(${m.id})">✓</button>`;
+    if (m.flag === 'urgente') {
+      const giorni = m.data ? Math.floor((Date.now() - new Date(m.data)) / 86400000) : 0;
+      return `<span class="pn-flag pn-flag-urgente" title="DA FATTURARE URGENTE! ${giorni} giorni fa">!</span>`;
+    }
+    return `<span class="pn-flag pn-flag-da-fatturare" title="Da fatturare">○</span>`;
+  }
+
+  function _formatConto(tipologia) {
+    if (!tipologia) return '—';
+    if (tipologia === 'cassa') return 'Cassa';
+    if (tipologia.startsWith('banca_')) {
+      const id = tipologia.split('_')[1];
+      const card = document.querySelector(`[data-banca-id="${id}"]`);
+      return card ? card.dataset.bancaNome : tipologia;
+    }
+    return tipologia;
+  }
+
+  function _bindFiltri() {
+    $('pnFiltroAnno').addEventListener('change', e => { _filtroAnno = e.target.value; _caricaMovimenti(); });
+    $('pnFiltroMese').addEventListener('change', e => { _filtroMese = e.target.value; _caricaMovimenti(); });
+    $('pnFiltroTipo').addEventListener('change', e => { _filtroTipo = e.target.value; _caricaMovimenti(); });
+    $('pnFiltroCerca').addEventListener('input', e => {
+      clearTimeout(_debounceTimer);
+      _debounceTimer = setTimeout(() => { _filtroCerca = e.target.value.trim(); _caricaMovimenti(); }, 300);
+    });
+  }
+
+  function _bindSolleciti() {
+    $('pnSollecitiToggle').addEventListener('click', () => {
+      _sollecitiEspansi = !_sollecitiEspansi;
+      $('pnSollecitiContent').style.display = _sollecitiEspansi ? 'block' : 'none';
+      $('pnSollecitiChevron').style.transform = _sollecitiEspansi ? 'rotate(180deg)' : '';
+    });
+  }
+
+  async function eliminaMovimento(id, isGiroconto) {
+    const msg = isGiroconto
+      ? 'Stai eliminando un giroconto: verranno rimossi entrambi i movimenti collegati. Procedere?'
+      : 'Eliminare questo movimento?';
+    if (!confirm(msg)) return;
+    try {
+      const data = await fetch(`/api/prima-nota/movimenti/${id}`, { method: 'DELETE' }).then(r => r.json());
+      if (data.ok) { await refresh(); toast('Movimento eliminato', 'success'); }
+      else toast(data.error || 'Errore eliminazione', 'error');
+    } catch (e) { toast('Errore di rete', 'error'); }
+  }
+
+  async function rimuoviFatturato(id) {
+    if (!confirm('Rimuovere il flag fatturato da questo movimento?')) return;
+    try {
+      const data = await fetch(`/api/prima-nota/movimenti/${id}/rimuovi-fatturato`, { method: 'PATCH' }).then(r => r.json());
+      if (data.ok) { await _caricaMovimenti(); toast('Flag fatturato rimosso', 'success'); }
+    } catch (e) { toast('Errore di rete', 'error'); }
+  }
+
+  function apriSollecito(ditteId) {
+    if (typeof openModalSollecito === 'function') openModalSollecito(ditteId);
+  }
+
+  async function refresh() {
+    await _caricaSaldi();
+    await _caricaMovimenti();
+    await _caricaSolleciti();
+  }
+
+  function _eur(val) {
+    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(val || 0);
+  }
+  function _data(s) {
+    if (!s) return '—';
+    const [y, m, d] = s.split('-');
+    return `${d}/${m}/${y.slice(2)}`;
+  }
+  function _esc(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  return { init, refresh, eliminaMovimento, rimuoviFatturato, apriSollecito };
+})();
+
+/* Aggancia switchTab per Prima Nota */
+const _origSwitchTabPN = switchTab;
+window.switchTab = function (tabName) {
+  _origSwitchTabPN(tabName);
+  if (tabName === 'prima-nota') PrimaNota.init();
+};
+
 /* INIT */
 checkAuth();

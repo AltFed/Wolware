@@ -52,6 +52,13 @@
           </svg>
           Tariffari
         </a>
+        <a href="#" class="nav-item" data-tab="prima-nota">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <line x1="2" y1="10" x2="22" y2="10"/>
+          </svg>
+          Prima Nota
+        </a>
         <a href="#" class="nav-item" data-tab="ditte">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="2" y="7" width="20" height="14" rx="2" />
@@ -120,6 +127,13 @@
               <line x1="8" y1="18" x2="21" y2="18" />
             </svg>
             Tariffari
+          </button>
+          <button class="tab-btn" data-tab="prima-nota">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="5" width="20" height="14" rx="2"/>
+              <line x1="2" y1="10" x2="22" y2="10"/>
+            </svg>
+            Prima Nota
           </button>
           <button class="tab-btn" data-tab="ditte">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -558,6 +572,169 @@
             </div>
           </div>
         </section>
+
+        <!-- PRIMA NOTA STUDIO -->
+        <section class="tab-panel" id="tab-prima-nota">
+
+          <!-- ── HEADER ─────────────────────────────────────────────────── -->
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Prima Nota Studio</h1>
+              <p class="page-subtitle">Registro movimenti di Cassa e Banche dello studio</p>
+            </div>
+            <div class="header-actions" style="flex-wrap:wrap;gap:var(--space-2)">
+              <button class="btn btn-secondary btn-sm" id="pnBtnBanche">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="5" width="20" height="14" rx="2"/>
+                  <line x1="2" y1="10" x2="22" y2="10"/>
+                </svg>
+                🏦 Banche
+              </button>
+              <button class="btn btn-secondary btn-sm" id="pnBtnUscite">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                📁 Uscite
+              </button>
+              <button class="btn btn-secondary btn-sm" id="pnBtnEntrate">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                📁 Entrate
+              </button>
+              <button class="btn btn-sm" id="pnBtnFatturazione"
+                style="background:var(--color-success);color:#fff;border:none">
+                🧾 Fatturazione
+              </button>
+              <button class="btn btn-sm" id="pnBtnGiroconto"
+                style="background:#7c3aed;color:#fff;border:none">
+                🔄 Giroconto
+              </button>
+              <button class="btn btn-secondary btn-sm" id="pnBtnEsporta">
+                📥 Esporta
+              </button>
+              <button class="btn btn-primary" id="pnBtnMovimento">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                + Movimento
+              </button>
+            </div>
+          </div>
+
+          <!-- ── CARD SALDI ────────────────────────────────────────────── -->
+          <div class="pn-saldi-row" id="pnSaldiRow">
+            <div class="pn-saldo-card pn-saldo-skeleton">
+              <span class="pn-saldo-label">Cassa</span>
+              <span class="pn-saldo-value">—</span>
+            </div>
+          </div>
+
+          <!-- ── CLIENTI DA SOLLECITARE ─────────────────────────────────── -->
+          <div class="section-block pn-solleciti-block" id="pnSollecitiBlock" style="display:none">
+            <div class="pn-solleciti-header" id="pnSollecitiToggle" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:var(--space-2)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <span class="pn-solleciti-title">Clienti da sollecitare</span>
+                <span class="pn-solleciti-badge" id="pnSollecitiCount">0</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:var(--space-2)">
+                <button class="btn btn-secondary btn-sm" id="pnBtnSollecitoMassivo"
+                  onclick="event.stopPropagation()">
+                  📬 Sollecito massivo
+                </button>
+                <svg id="pnSollecitiChevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" style="transition:transform .2s">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+            </div>
+            <div id="pnSollecitiContent" style="display:none;margin-top:var(--space-3)">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th class="col-money">Residuo</th>
+                    <th>Ult. Pagamento</th>
+                    <th class="col-actions">Sollecito</th>
+                  </tr>
+                </thead>
+                <tbody id="pnSollecitiBody">
+                  <tr><td colspan="4" class="empty-row">Nessun cliente da sollecitare</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ── FILTRI ─────────────────────────────────────────────────── -->
+          <div class="filter-bar" style="flex-wrap:wrap">
+            <select class="filter-select" id="pnFiltroAnno" style="width:100px">
+              <option value="">Anno</option>
+            </select>
+            <select class="filter-select" id="pnFiltroMese" style="width:130px">
+              <option value="0">Tutti i mesi</option>
+              <option value="1">Gennaio</option>
+              <option value="2">Febbraio</option>
+              <option value="3">Marzo</option>
+              <option value="4">Aprile</option>
+              <option value="5">Maggio</option>
+              <option value="6">Giugno</option>
+              <option value="7">Luglio</option>
+              <option value="8">Agosto</option>
+              <option value="9">Settembre</option>
+              <option value="10">Ottobre</option>
+              <option value="11">Novembre</option>
+              <option value="12">Dicembre</option>
+            </select>
+            <select class="filter-select" id="pnFiltroTipo" style="width:130px">
+              <option value="tutti">Tutti i tipi</option>
+              <option value="entrate">Entrate</option>
+              <option value="uscite">Uscite</option>
+              <option value="giroconti">Giroconti</option>
+            </select>
+            <input type="text" class="filter-input" id="pnFiltroCerca"
+              placeholder="Cerca cliente, categoria, note…"
+              style="min-width:200px;flex:1" />
+          </div>
+
+          <!-- ── TABELLA MOVIMENTI ──────────────────────────────────────── -->
+          <div class="section-block">
+            <div class="table-wrapper">
+              <table class="data-table pn-movimenti-table">
+                <thead>
+                  <tr>
+                    <th class="pn-col-flag" title="Flag fatturato"></th>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Categoria</th>
+                    <th>Nome</th>
+                    <th>Note</th>
+                    <th>Conto</th>
+                    <th class="col-money">Importo</th>
+                    <th class="col-actions"></th>
+                  </tr>
+                </thead>
+                <tbody id="pnMovimentiBody">
+                  <tr>
+                    <td colspan="9" class="empty-row">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.5" opacity="0.25" style="margin-bottom:var(--space-2)">
+                        <rect x="2" y="5" width="20" height="14" rx="2"/>
+                        <line x1="2" y1="10" x2="22" y2="10"/>
+                      </svg>
+                      <br>Nessun movimento
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+        <!-- /PRIMA NOTA STUDIO -->
 
         <!-- ADMIN -->
         <section class="tab-panel" id="tab-admin">
