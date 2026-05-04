@@ -41,6 +41,7 @@ def create_app():
     from routes.previsionale        import bp as previsionale_bp
     from routes.solleciti           import bp as solleciti_bp
     from routes.prima_nota          import bp as prima_nota_bp
+    from routes.rendiconto          import bp as rendiconto_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(events_bp)
@@ -59,6 +60,7 @@ def create_app():
     app.register_blueprint(previsionale_bp)
     app.register_blueprint(solleciti_bp)
     app.register_blueprint(prima_nota_bp)
+    app.register_blueprint(rendiconto_bp)
 
     return app
 
