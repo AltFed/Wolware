@@ -4443,11 +4443,15 @@ window.switchTab = function (tabName) {
 const Rendiconto = (() => {
   const $ = id => document.getElementById(id);
   let _initialized = false;
+  let _anno = String(new Date().getFullYear());
 
   async function init() {
-    if (_initialized) return;
-    _initialized = true;
     _populateAnni();
+    await Promise.all([_caricaSaldi(), _caricaRiepilogo()]);
+    if (!_initialized) {
+      $('rdFiltroAnno').addEventListener('change', e => { _anno = e.target.value; _caricaRiepilogo(); });
+      _initialized = true;
+    }
   }
 
   function _populateAnni() {
@@ -4461,6 +4465,48 @@ const Rendiconto = (() => {
       if (y === current) opt.selected = true;
       sel.appendChild(opt);
     }
+    _anno = String(current);
+  }
+
+  async function _caricaSaldi() {
+    try {
+      const saldi = await fetch('/api/rendiconto/saldi').then(r => r.json());
+      const row = $('rdSaldiRow');
+      row.innerHTML = '';
+      const tot = saldi.reduce((s, c) => s + c.saldo, 0);
+
+      // Card "Totale Disponibilità" in evidenza
+      const totCard = document.createElement('div');
+      totCard.className = 'pn-saldo-card' + (tot < 0 ? ' pn-saldo-negativo' : '');
+      totCard.style.cssText = 'background:var(--color-surface-raised);border-color:var(--color-primary);min-width:160px';
+      totCard.innerHTML = `<span class="pn-saldo-label">Totale Disponibilità</span>
+        <span class="pn-saldo-value" style="color:${tot >= 0 ? 'var(--color-success)' : 'var(--color-error)'}">${_fmt(tot)}</span>`;
+      row.appendChild(totCard);
+
+      saldi.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'pn-saldo-card' + (s.saldo < 0 ? ' pn-saldo-negativo' : '');
+        card.innerHTML = `<span class="pn-saldo-label">${s.nome}</span>
+          <span class="pn-saldo-value">${_fmt(s.saldo)}</span>`;
+        row.appendChild(card);
+      });
+    } catch (e) { console.error('Rendiconto: errore saldi', e); }
+  }
+
+  async function _caricaRiepilogo() {
+    try {
+      const p = new URLSearchParams({ anno: _anno });
+      const d = await fetch(`/api/rendiconto/riepilogo?${p}`).then(r => r.json());
+      $('rdValEntrate').textContent = _fmt(d.tot_entrate);
+      $('rdValUscite').textContent  = _fmt(d.tot_uscite);
+      const diffEl = $('rdValDiff');
+      diffEl.textContent = (d.differenza >= 0 ? '+' : '') + _fmt(d.differenza);
+      diffEl.style.color = d.differenza >= 0 ? 'var(--color-success)' : 'var(--color-error)';
+    } catch (e) { console.error('Rendiconto: errore riepilogo', e); }
+  }
+
+  function _fmt(v) {
+    return new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
   }
 
   return { init };

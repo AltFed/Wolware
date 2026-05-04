@@ -806,14 +806,28 @@
             </label>
           </div>
 
-          <!-- ── PLACEHOLDER ────────────────────────────────────────────── -->
-          <div class="section-block" style="padding:var(--space-8);text-align:center;color:var(--color-text-muted)">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:var(--space-3);opacity:.4">
-              <rect x="2" y="3" width="20" height="14" rx="2"/>
-              <line x1="12" y1="17" x2="12" y2="21"/>
-              <line x1="8" y1="21" x2="16" y2="21"/>
-            </svg>
-            <p style="font-size:var(--text-sm)">Caricamento dati in arrivo — passo 2</p>
+          <!-- ── CARD SALDI ─────────────────────────────────────────────── -->
+          <div class="pn-saldi-row" id="rdSaldiRow">
+            <div class="pn-saldo-card pn-saldo-skeleton">
+              <span class="pn-saldo-label">Cassa</span>
+              <span class="pn-saldo-value">—</span>
+            </div>
+          </div>
+
+          <!-- ── RIEPILOGO ANNUALE ───────────────────────────────────────── -->
+          <div class="pn-saldi-row" id="rdRiepilogoRow" style="margin-bottom:var(--space-5)">
+            <div class="pn-saldo-card" id="rdCardEntrate" style="flex:1;min-width:180px">
+              <span class="pn-saldo-label">Totale Entrate</span>
+              <span class="pn-saldo-value" id="rdValEntrate" style="color:var(--color-success)">—</span>
+            </div>
+            <div class="pn-saldo-card" id="rdCardUscite" style="flex:1;min-width:180px">
+              <span class="pn-saldo-label">Totale Uscite</span>
+              <span class="pn-saldo-value" id="rdValUscite" style="color:var(--color-error)">—</span>
+            </div>
+            <div class="pn-saldo-card" style="flex:1;min-width:180px">
+              <span class="pn-saldo-label">Differenza</span>
+              <span class="pn-saldo-value" id="rdValDiff">—</span>
+            </div>
           </div>
 
         </section>
