@@ -4447,13 +4447,14 @@ const Rendiconto = (() => {
 
   async function init() {
     _populateAnni();
-    await Promise.all([_caricaSaldi(), _caricaRiepilogo(), _caricaEntrate(), _caricaUscite()]);
+    await Promise.all([_caricaSaldi(), _caricaRiepilogo(), _caricaEntrate(), _caricaUscite(), _caricaGiroconti()]);
     if (!_initialized) {
       $('rdFiltroAnno').addEventListener('change', e => {
         _anno = e.target.value;
         _caricaRiepilogo();
         _caricaEntrate();
         _caricaUscite();
+        _caricaGiroconti();
       });
       $('rdMostraArchiviati').addEventListener('change', () => _caricaEntrate());
       _initialized = true;
@@ -4629,6 +4630,38 @@ const Rendiconto = (() => {
     d.totali_mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCellRed(v)}</td>`);
     html += `<td class="rd-col-money rd-val-neg">${_fmt(d.totale_annuale)}</td></tr>`;
 
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+  }
+
+  async function _caricaGiroconti() {
+    try {
+      const p = new URLSearchParams({ anno: _anno });
+      const d = await fetch(`/api/rendiconto/giroconti?${p}`).then(r => r.json());
+      _renderGiroconti(d);
+    } catch (e) { console.error('Rendiconto: errore giroconti', e); }
+  }
+
+  function _renderGiroconti(rows) {
+    const wrap = $('rdGirocontiWrap');
+    if (!rows.length) {
+      wrap.innerHTML = `<div style="padding:var(--space-6);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)">Nessun giroconto nel ${_anno}</div>`;
+      return;
+    }
+    let html = '<table class="rd-table"><thead><tr>';
+    ['Data','Da','A','Descrizione','Importo'].forEach((h, i) =>
+      html += `<th${i === 4 ? ' class="rd-col-money"' : ''}>${h}</th>`
+    );
+    html += '</tr></thead><tbody>';
+    rows.forEach(r => {
+      html += `<tr>
+        <td style="white-space:nowrap">${r.data}</td>
+        <td>${r.da}</td>
+        <td>${r.a}</td>
+        <td style="color:var(--color-text-muted)">${r.descrizione}</td>
+        <td class="rd-col-money" style="color:#7c3aed;font-weight:600">${_fmt(r.importo)}</td>
+      </tr>`;
+    });
     html += '</tbody></table>';
     wrap.innerHTML = html;
   }

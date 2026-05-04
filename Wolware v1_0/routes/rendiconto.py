@@ -286,3 +286,36 @@ def get_uscite():
         'totali_mesi':    totali_mesi,
         'totale_annuale': round(sum(totali_mesi), 2),
     })
+
+
+# ─────────────────────────────────────────────────────────────────
+# GET /api/rendiconto/giroconti?anno=XXXX
+# Solo la "gamba uscita" di ogni giroconto.
+# Da = conto origine (tipologia), A = conto destinazione (sottovoce_nome)
+# ─────────────────────────────────────────────────────────────────
+@bp.get('/api/rendiconto/giroconti')
+@login_required
+def get_giroconti():
+    anno     = request.args.get('anno', str(date.today().year))
+    anno_str = str(anno)
+    db       = get_db()
+
+    rows = db.execute(
+        '''SELECT m.data,
+                  CASE WHEN m.tipologia='cassa' THEN 'Cassa'
+                       ELSE COALESCE(b.nome, m.tipologia) END AS da,
+                  m.sottovoce_nome  AS a,
+                  m.descrizione,
+                  m.importo
+           FROM movimenti_studio m
+           LEFT JOIN banche_studio b ON ('banca_' || b.id = m.tipologia)
+           WHERE m.tipo='giroconto' AND m.giroconto_dir='uscita'
+             AND strftime('%Y', m.data)=?
+           ORDER BY m.data DESC, m.id DESC''', (anno_str,)
+    ).fetchall()
+
+    result = [{'data': r['data'], 'da': r['da'] or '—',
+               'a': r['a'] or '—', 'descrizione': r['descrizione'] or '',
+               'importo': round(r['importo'], 2)} for r in rows]
+    db.close()
+    return jsonify(result)
