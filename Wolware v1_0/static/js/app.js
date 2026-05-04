@@ -4447,9 +4447,14 @@ const Rendiconto = (() => {
 
   async function init() {
     _populateAnni();
-    await Promise.all([_caricaSaldi(), _caricaRiepilogo()]);
+    await Promise.all([_caricaSaldi(), _caricaRiepilogo(), _caricaEntrate()]);
     if (!_initialized) {
-      $('rdFiltroAnno').addEventListener('change', e => { _anno = e.target.value; _caricaRiepilogo(); });
+      $('rdFiltroAnno').addEventListener('change', e => {
+        _anno = e.target.value;
+        _caricaRiepilogo();
+        _caricaEntrate();
+      });
+      $('rdMostraArchiviati').addEventListener('change', () => _caricaEntrate());
       _initialized = true;
     }
   }
@@ -4503,6 +4508,89 @@ const Rendiconto = (() => {
       diffEl.textContent = (d.differenza >= 0 ? '+' : '') + _fmt(d.differenza);
       diffEl.style.color = d.differenza >= 0 ? 'var(--color-success)' : 'var(--color-error)';
     } catch (e) { console.error('Rendiconto: errore riepilogo', e); }
+  }
+
+  async function _caricaEntrate() {
+    try {
+      const arch = $('rdMostraArchiviati').checked ? '1' : '0';
+      const p    = new URLSearchParams({ anno: _anno, mostra_archiviati: arch });
+      const d    = await fetch(`/api/rendiconto/entrate?${p}`).then(r => r.json());
+      _renderEntrate(d);
+    } catch (e) { console.error('Rendiconto: errore entrate', e); }
+  }
+
+  function _renderEntrate(d) {
+    const wrap = $('rdEntrateWrap');
+    const haData = d.sezioni_clienti.length > 0 || d.macrogruppi.length > 0;
+    if (!haData) {
+      wrap.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)">Nessuna entrata nel periodo selezionato</div>';
+      return;
+    }
+
+    const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    let html = '<table class="rd-table"><thead><tr>';
+    html += '<th style="min-width:200px">Voce</th>';
+    MESI.forEach(m => html += `<th class="rd-col-money">${m}</th>`);
+    html += '<th class="rd-col-money">TOT. PAG.</th>';
+    html += '<th class="rd-col-money rd-col-residuo">Residuo</th>';
+    html += '</tr></thead><tbody>';
+
+    // Sezioni clienti
+    d.sezioni_clienti.forEach(sez => {
+      const cls = { paghe:'rd-sez-paghe', cont:'rd-sez-cont', paghe_cont:'rd-sez-paghe-cont', altro:'rd-sez-altro' }[sez.colore] || 'rd-sez-altro';
+      // Header sezione
+      html += `<tr class="rd-sez-hdr ${cls}">`;
+      html += `<td>${sez.nome}</td>`;
+      sez.subtotali_mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCell(v)}</td>`);
+      html += `<td class="rd-col-money">${_fmt(sez.subtotale)}</td>`;
+      html += `<td class="rd-col-money rd-col-residuo ${sez.subtotale_residui > 0 ? 'rd-val-neg' : sez.subtotale_residui < 0 ? 'rd-val-pos' : ''}">${_fmt(sez.subtotale_residui)}</td>`;
+      html += '</tr>';
+      // Righe clienti
+      sez.clienti.forEach(c => {
+        html += `<tr class="rd-cliente">`;
+        html += `<td><span class="rd-cliente-link" onclick="switchTab('ditte')">${c.nome}</span></td>`;
+        c.mesi.forEach(v => html += `<td class="rd-col-money ${v > 0 ? 'rd-val-pos' : ''}">${_fmtCell(v)}</td>`);
+        html += `<td class="rd-col-money ${c.tot_pagato > 0 ? 'rd-val-pos' : ''}">${_fmt(c.tot_pagato)}</td>`;
+        const rCls = c.residuo > 0 ? 'rd-val-neg' : c.residuo < 0 ? 'rd-val-pos' : '';
+        html += `<td class="rd-col-money rd-col-residuo ${rCls}">${_fmt(c.residuo)}</td>`;
+        html += '</tr>';
+      });
+    });
+
+    // Macrogruppi liberi
+    d.macrogruppi.forEach(mg => {
+      html += `<tr class="rd-sez-hdr rd-sez-macro">`;
+      html += `<td>${mg.nome}</td>`;
+      mg.subtotali_mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCell(v)}</td>`);
+      html += `<td class="rd-col-money">${_fmt(mg.subtotale)}</td>`;
+      html += `<td class="rd-col-money rd-col-residuo rd-zero">—</td>`;
+      html += '</tr>';
+      mg.sottovoci.forEach(sv => {
+        html += `<tr class="rd-sottovoce">`;
+        html += `<td>&nbsp;&nbsp;› ${sv.nome}</td>`;
+        sv.mesi.forEach(v => html += `<td class="rd-col-money ${v > 0 ? 'rd-val-pos' : ''}">${_fmtCell(v)}</td>`);
+        html += `<td class="rd-col-money ${sv.totale > 0 ? 'rd-val-pos' : ''}">${_fmt(sv.totale)}</td>`;
+        html += `<td class="rd-col-money rd-col-residuo rd-zero">—</td>`;
+        html += '</tr>';
+      });
+    });
+
+    // Totale generale
+    html += `<tr class="rd-totale-gen">`;
+    html += `<td>TOTALE GENERALE</td>`;
+    d.totali_mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCell(v)}</td>`);
+    html += `<td class="rd-col-money">${_fmt(d.totale_annuale)}</td>`;
+    html += `<td class="rd-col-money rd-col-residuo">${_fmt(d.totale_residui)}</td>`;
+    html += '</tr>';
+
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+  }
+
+  function _fmtCell(v) {
+    return v === 0
+      ? '<span class="rd-zero">—</span>'
+      : `<span class="rd-val-pos">${_fmt(v)}</span>`;
   }
 
   function _fmt(v) {

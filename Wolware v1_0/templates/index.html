@@ -815,7 +815,7 @@
           </div>
 
           <!-- ── RIEPILOGO ANNUALE ───────────────────────────────────────── -->
-          <div class="pn-saldi-row" id="rdRiepilogoRow" style="margin-bottom:var(--space-5)">
+          <div class="pn-saldi-row" id="rdRiepilogoRow" style="margin-bottom:var(--space-6)">
             <div class="pn-saldo-card" id="rdCardEntrate" style="flex:1;min-width:180px">
               <span class="pn-saldo-label">Totale Entrate</span>
               <span class="pn-saldo-value" id="rdValEntrate" style="color:var(--color-success)">—</span>
@@ -827,6 +827,19 @@
             <div class="pn-saldo-card" style="flex:1;min-width:180px">
               <span class="pn-saldo-label">Differenza</span>
               <span class="pn-saldo-value" id="rdValDiff">—</span>
+            </div>
+          </div>
+
+          <!-- ── DETTAGLIO ENTRATE ─────────────────────────────────────── -->
+          <div class="section-block" style="padding:0;overflow:hidden" id="rdEntrateBlock">
+            <div style="padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:var(--space-2)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+              <span style="font-weight:600;font-size:var(--text-sm)">Dettaglio Entrate</span>
+            </div>
+            <div class="rd-table-wrap" id="rdEntrateWrap">
+              <div style="padding:var(--space-6);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)" id="rdEntrateEmpty">
+                Nessuna entrata nel periodo selezionato
+              </div>
             </div>
           </div>
 
