@@ -4663,6 +4663,8 @@ const Rendiconto = (() => {
   }
 
   function _bindCollapse(wrap) {
+    if (wrap.dataset.collapsebound) return;
+    wrap.dataset.collapsebound = '1';
     wrap.addEventListener('click', function(e) {
       const hdr = e.target.closest('tr[data-sid]');
       if (!hdr) return;
