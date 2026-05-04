@@ -3,6 +3,7 @@ wolware/
 venv/
 env/
 old/
+graphify-out/
 # File di database locale (MOLTO IMPORTANTE)
 *.db
 *.sqlite3
