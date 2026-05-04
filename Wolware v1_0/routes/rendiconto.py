@@ -234,3 +234,55 @@ def get_entrate():
         'totale_annuale':  round(sum(totali_mesi), 2),
         'totale_residui':  round(sum(s.get('subtotale_residui', 0) for s in result_sezioni), 2),
     })
+
+
+# ─────────────────────────────────────────────────────────────────
+# GET /api/rendiconto/uscite?anno=XXXX
+# Gerarchia macrogruppo → sottovoce, distribuzione mensile
+# ─────────────────────────────────────────────────────────────────
+@bp.get('/api/rendiconto/uscite')
+@login_required
+def get_uscite():
+    anno     = request.args.get('anno', str(date.today().year))
+    anno_str = str(anno)
+    db       = get_db()
+
+    rows = db.execute(
+        '''SELECT macrogruppo_id, macrogruppo_nome, sottovoce_id, sottovoce_nome,
+                  CAST(strftime('%m', data) AS INTEGER) AS mese, SUM(importo) AS tot
+           FROM movimenti_studio
+           WHERE tipo='uscita' AND strftime('%Y', data)=?
+           GROUP BY macrogruppo_id, sottovoce_id, mese
+           ORDER BY macrogruppo_nome, sottovoce_nome, mese''', (anno_str,)
+    ).fetchall()
+
+    mg_map = {}
+    for r in rows:
+        mgid   = r['macrogruppo_id']   or '__altro__'
+        mgnome = r['macrogruppo_nome'] or 'Altre uscite'
+        svid   = r['sottovoce_id']     or '__sv__'
+        svnome = r['sottovoce_nome']   or '—'
+        mg_map.setdefault(mgid, {'id': mgid, 'nome': mgnome, 'sottovoci': {}})
+        mg_map[mgid]['sottovoci'].setdefault(svid, {'id': svid, 'nome': svnome, 'mesi': [0.0]*12})
+        mg_map[mgid]['sottovoci'][svid]['mesi'][r['mese'] - 1] = round(r['tot'], 2)
+
+    macrogruppi = []
+    totali_mesi = [0.0] * 12
+    for mg in mg_map.values():
+        sottovoci = list(mg['sottovoci'].values())
+        for sv in sottovoci:
+            sv['totale'] = round(sum(sv['mesi']), 2)
+        sub_mesi = [round(sum(sv['mesi'][i] for sv in sottovoci), 2) for i in range(12)]
+        for i in range(12): totali_mesi[i] += sub_mesi[i]
+        macrogruppi.append({'id': mg['id'], 'nome': mg['nome'],
+                            'sottovoci': sottovoci,
+                            'subtotali_mesi': sub_mesi,
+                            'subtotale': round(sum(sub_mesi), 2)})
+
+    totali_mesi = [round(v, 2) for v in totali_mesi]
+    db.close()
+    return jsonify({
+        'macrogruppi':    macrogruppi,
+        'totali_mesi':    totali_mesi,
+        'totale_annuale': round(sum(totali_mesi), 2),
+    })

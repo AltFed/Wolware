@@ -4447,12 +4447,13 @@ const Rendiconto = (() => {
 
   async function init() {
     _populateAnni();
-    await Promise.all([_caricaSaldi(), _caricaRiepilogo(), _caricaEntrate()]);
+    await Promise.all([_caricaSaldi(), _caricaRiepilogo(), _caricaEntrate(), _caricaUscite()]);
     if (!_initialized) {
       $('rdFiltroAnno').addEventListener('change', e => {
         _anno = e.target.value;
         _caricaRiepilogo();
         _caricaEntrate();
+        _caricaUscite();
       });
       $('rdMostraArchiviati').addEventListener('change', () => _caricaEntrate());
       _initialized = true;
@@ -4585,6 +4586,57 @@ const Rendiconto = (() => {
 
     html += '</tbody></table>';
     wrap.innerHTML = html;
+  }
+
+  async function _caricaUscite() {
+    try {
+      const p = new URLSearchParams({ anno: _anno });
+      const d = await fetch(`/api/rendiconto/uscite?${p}`).then(r => r.json());
+      _renderUscite(d);
+    } catch (e) { console.error('Rendiconto: errore uscite', e); }
+  }
+
+  function _renderUscite(d) {
+    const wrap = $('rdUsciteWrap');
+    if (!d.macrogruppi.length) {
+      wrap.innerHTML = `<div style="padding:var(--space-6);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)">Nessuna uscita nel ${_anno}</div>`;
+      return;
+    }
+
+    const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    let html = '<table class="rd-table"><thead><tr>';
+    html += '<th style="min-width:200px">Voce</th>';
+    MESI.forEach(m => html += `<th class="rd-col-money">${m}</th>`);
+    html += '<th class="rd-col-money">Totale</th>';
+    html += '</tr></thead><tbody>';
+
+    d.macrogruppi.forEach(mg => {
+      // Riga macrogruppo (subtotale)
+      html += `<tr class="rd-sez-hdr rd-sez-macro"><td>${mg.nome}</td>`;
+      mg.subtotali_mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCellRed(v)}</td>`);
+      html += `<td class="rd-col-money rd-val-neg">${_fmt(mg.subtotale)}</td></tr>`;
+
+      // Sottovoci
+      mg.sottovoci.forEach(sv => {
+        html += `<tr class="rd-sottovoce"><td>&nbsp;&nbsp;› ${sv.nome}</td>`;
+        sv.mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCellRed(v)}</td>`);
+        html += `<td class="rd-col-money ${sv.totale > 0 ? 'rd-val-neg' : ''}">${_fmt(sv.totale)}</td></tr>`;
+      });
+    });
+
+    // Totale generale
+    html += `<tr class="rd-totale-gen"><td>TOTALE GENERALE</td>`;
+    d.totali_mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCellRed(v)}</td>`);
+    html += `<td class="rd-col-money rd-val-neg">${_fmt(d.totale_annuale)}</td></tr>`;
+
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+  }
+
+  function _fmtCellRed(v) {
+    return v === 0
+      ? '<span class="rd-zero">—</span>'
+      : `<span class="rd-val-neg">${_fmt(v)}</span>`;
   }
 
   function _fmtCell(v) {
