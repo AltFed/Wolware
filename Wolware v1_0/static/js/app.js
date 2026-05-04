@@ -4441,6 +4441,7 @@ window.switchTab = function (tabName) {
    RENDICONTO
 ───────────────────────────────────────────────────────────────── */
 const Rendiconto = (() => {
+  const $ = id => document.getElementById(id);
   let _initialized = false;
 
   async function init() {
