@@ -720,3 +720,10 @@ td.empty-state-row p{font-size:var(--text-sm);line-height:1.7}
 .rd-col-residuo{border-left:2px solid var(--color-border)!important}
 .rd-cliente-link{cursor:pointer;color:var(--color-primary);text-decoration:none}
 .rd-cliente-link:hover{text-decoration:underline}
+
+/* ─── RENDICONTO — mese evidenziato e sezioni collassabili ─── */
+.rd-mese-sel{background:rgba(99,102,241,.10)!important;color:var(--color-text)!important}
+th.rd-mese-sel{background:rgba(99,102,241,.22)!important}
+.rd-sez-hdr td:first-child{cursor:pointer;user-select:none}
+.rd-chevron{display:inline-block;transition:transform .2s;margin-right:6px;font-size:10px}
+.rd-collapsed .rd-chevron{transform:rotate(-90deg)}

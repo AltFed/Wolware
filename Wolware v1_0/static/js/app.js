@@ -4444,6 +4444,9 @@ const Rendiconto = (() => {
   const $ = id => document.getElementById(id);
   let _initialized = false;
   let _anno = String(new Date().getFullYear());
+  let _mese = 0;
+  let _cacheEntrate = null;
+  let _cacheUscite  = null;
 
   async function init() {
     _populateAnni();
@@ -4451,12 +4454,18 @@ const Rendiconto = (() => {
     if (!_initialized) {
       $('rdFiltroAnno').addEventListener('change', e => {
         _anno = e.target.value;
+        _cacheEntrate = null; _cacheUscite = null;
         _caricaRiepilogo();
         _caricaEntrate();
         _caricaUscite();
         _caricaGiroconti();
       });
-      $('rdMostraArchiviati').addEventListener('change', () => _caricaEntrate());
+      $('rdFiltroMese').addEventListener('change', e => {
+        _mese = parseInt(e.target.value) || 0;
+        if (_cacheEntrate) _renderEntrate(_cacheEntrate);
+        if (_cacheUscite)  _renderUscite(_cacheUscite);
+      });
+      $('rdMostraArchiviati').addEventListener('change', () => { _cacheEntrate = null; _caricaEntrate(); });
       $('rdBtnEsportaPdf').addEventListener('click', _esportaPdf);
       $('rdBtnEsportaExcel').addEventListener('click', _esportaExcel);
       _initialized = true;
@@ -4519,6 +4528,7 @@ const Rendiconto = (() => {
       const arch = $('rdMostraArchiviati').checked ? '1' : '0';
       const p    = new URLSearchParams({ anno: _anno, mostra_archiviati: arch });
       const d    = await fetch(`/api/rendiconto/entrate?${p}`).then(r => r.json());
+      _cacheEntrate = d;
       _renderEntrate(d);
     } catch (e) { console.error('Rendiconto: errore entrate', e); }
   }
@@ -4532,29 +4542,34 @@ const Rendiconto = (() => {
     }
 
     const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    const sel = _mese; // 1-12 or 0=tutti
+    const thCls = i => 'rd-col-money' + (sel > 0 && i === sel ? ' rd-mese-sel' : '');
+    const tdCls = (i, extra) => 'rd-col-money' + (extra ? ' ' + extra : '') + (sel > 0 && i === sel ? ' rd-mese-sel' : '');
+
     let html = '<table class="rd-table"><thead><tr>';
     html += '<th style="min-width:200px">Voce</th>';
-    MESI.forEach(m => html += `<th class="rd-col-money">${m}</th>`);
-    html += '<th class="rd-col-money">TOT. PAG.</th>';
+    MESI.forEach((m, i) => html += `<th class="${thCls(i + 1)}">${m}</th>`);
+    html += `<th class="${thCls(0)}">TOT. PAG.</th>`;
     html += '<th class="rd-col-money rd-col-residuo">Residuo</th>';
     html += '</tr></thead><tbody>';
 
+    let sidx = 0;
     // Sezioni clienti
     d.sezioni_clienti.forEach(sez => {
       const cls = { paghe:'rd-sez-paghe', cont:'rd-sez-cont', paghe_cont:'rd-sez-paghe-cont', altro:'rd-sez-altro' }[sez.colore] || 'rd-sez-altro';
-      // Header sezione
-      html += `<tr class="rd-sez-hdr ${cls}">`;
-      html += `<td>${sez.nome}</td>`;
-      sez.subtotali_mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCell(v)}</td>`);
-      html += `<td class="rd-col-money">${_fmt(sez.subtotale)}</td>`;
+      const sid = 'e' + (sidx++);
+      html += `<tr class="rd-sez-hdr ${cls}" data-sid="${sid}" data-open="1">`;
+      html += `<td><span class="rd-chevron">▾</span>${sez.nome}</td>`;
+      sez.subtotali_mesi.forEach((v, i) => html += `<td class="${thCls(i + 1)}">${_fmtCell(v)}</td>`);
+      html += `<td class="${thCls(0)}">${_fmt(sez.subtotale)}</td>`;
       html += `<td class="rd-col-money rd-col-residuo ${sez.subtotale_residui > 0 ? 'rd-val-neg' : sez.subtotale_residui < 0 ? 'rd-val-pos' : ''}">${_fmt(sez.subtotale_residui)}</td>`;
       html += '</tr>';
-      // Righe clienti
       sez.clienti.forEach(c => {
-        html += `<tr class="rd-cliente">`;
+        const hide = sel > 0 && c.mesi[sel - 1] === 0 ? ' style="display:none"' : '';
+        html += `<tr class="rd-cliente" data-parent="${sid}"${hide}>`;
         html += `<td><span class="rd-cliente-link" onclick="switchTab('ditte')">${c.nome}</span></td>`;
-        c.mesi.forEach(v => html += `<td class="rd-col-money ${v > 0 ? 'rd-val-pos' : ''}">${_fmtCell(v)}</td>`);
-        html += `<td class="rd-col-money ${c.tot_pagato > 0 ? 'rd-val-pos' : ''}">${_fmt(c.tot_pagato)}</td>`;
+        c.mesi.forEach((v, i) => html += `<td class="${tdCls(i + 1, v > 0 ? 'rd-val-pos' : '')}">${_fmtCell(v)}</td>`);
+        html += `<td class="${tdCls(0, c.tot_pagato > 0 ? 'rd-val-pos' : '')}">${_fmt(c.tot_pagato)}</td>`;
         const rCls = c.residuo > 0 ? 'rd-val-neg' : c.residuo < 0 ? 'rd-val-pos' : '';
         html += `<td class="rd-col-money rd-col-residuo ${rCls}">${_fmt(c.residuo)}</td>`;
         html += '</tr>';
@@ -4563,17 +4578,19 @@ const Rendiconto = (() => {
 
     // Macrogruppi liberi
     d.macrogruppi.forEach(mg => {
-      html += `<tr class="rd-sez-hdr rd-sez-macro">`;
-      html += `<td>${mg.nome}</td>`;
-      mg.subtotali_mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCell(v)}</td>`);
-      html += `<td class="rd-col-money">${_fmt(mg.subtotale)}</td>`;
+      const sid = 'e' + (sidx++);
+      html += `<tr class="rd-sez-hdr rd-sez-macro" data-sid="${sid}" data-open="1">`;
+      html += `<td><span class="rd-chevron">▾</span>${mg.nome}</td>`;
+      mg.subtotali_mesi.forEach((v, i) => html += `<td class="${thCls(i + 1)}">${_fmtCell(v)}</td>`);
+      html += `<td class="${thCls(0)}">${_fmt(mg.subtotale)}</td>`;
       html += `<td class="rd-col-money rd-col-residuo rd-zero">—</td>`;
       html += '</tr>';
       mg.sottovoci.forEach(sv => {
-        html += `<tr class="rd-sottovoce">`;
+        const hide = sel > 0 && sv.mesi[sel - 1] === 0 ? ' style="display:none"' : '';
+        html += `<tr class="rd-sottovoce" data-parent="${sid}"${hide}>`;
         html += `<td>&nbsp;&nbsp;› ${sv.nome}</td>`;
-        sv.mesi.forEach(v => html += `<td class="rd-col-money ${v > 0 ? 'rd-val-pos' : ''}">${_fmtCell(v)}</td>`);
-        html += `<td class="rd-col-money ${sv.totale > 0 ? 'rd-val-pos' : ''}">${_fmt(sv.totale)}</td>`;
+        sv.mesi.forEach((v, i) => html += `<td class="${tdCls(i + 1, v > 0 ? 'rd-val-pos' : '')}">${_fmtCell(v)}</td>`);
+        html += `<td class="${tdCls(0, sv.totale > 0 ? 'rd-val-pos' : '')}">${_fmt(sv.totale)}</td>`;
         html += `<td class="rd-col-money rd-col-residuo rd-zero">—</td>`;
         html += '</tr>';
       });
@@ -4582,19 +4599,21 @@ const Rendiconto = (() => {
     // Totale generale
     html += `<tr class="rd-totale-gen">`;
     html += `<td>TOTALE GENERALE</td>`;
-    d.totali_mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCell(v)}</td>`);
-    html += `<td class="rd-col-money">${_fmt(d.totale_annuale)}</td>`;
+    d.totali_mesi.forEach((v, i) => html += `<td class="${thCls(i + 1)}">${_fmtCell(v)}</td>`);
+    html += `<td class="${thCls(0)}">${_fmt(d.totale_annuale)}</td>`;
     html += `<td class="rd-col-money rd-col-residuo">${_fmt(d.totale_residui)}</td>`;
     html += '</tr>';
 
     html += '</tbody></table>';
     wrap.innerHTML = html;
+    _bindCollapse(wrap);
   }
 
   async function _caricaUscite() {
     try {
       const p = new URLSearchParams({ anno: _anno });
       const d = await fetch(`/api/rendiconto/uscite?${p}`).then(r => r.json());
+      _cacheUscite = d;
       _renderUscite(d);
     } catch (e) { console.error('Rendiconto: errore uscite', e); }
   }
@@ -4607,33 +4626,55 @@ const Rendiconto = (() => {
     }
 
     const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    const sel = _mese;
+    const thCls = i => 'rd-col-money' + (sel > 0 && i === sel ? ' rd-mese-sel' : '');
+    const tdCls = (i, extra) => 'rd-col-money' + (extra ? ' ' + extra : '') + (sel > 0 && i === sel ? ' rd-mese-sel' : '');
+
     let html = '<table class="rd-table"><thead><tr>';
     html += '<th style="min-width:200px">Voce</th>';
-    MESI.forEach(m => html += `<th class="rd-col-money">${m}</th>`);
-    html += '<th class="rd-col-money">Totale</th>';
+    MESI.forEach((m, i) => html += `<th class="${thCls(i + 1)}">${m}</th>`);
+    html += `<th class="${thCls(0)}">Totale</th>`;
     html += '</tr></thead><tbody>';
 
+    let sidx = 0;
     d.macrogruppi.forEach(mg => {
-      // Riga macrogruppo (subtotale)
-      html += `<tr class="rd-sez-hdr rd-sez-macro"><td>${mg.nome}</td>`;
-      mg.subtotali_mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCellRed(v)}</td>`);
-      html += `<td class="rd-col-money rd-val-neg">${_fmt(mg.subtotale)}</td></tr>`;
+      const sid = 'u' + (sidx++);
+      html += `<tr class="rd-sez-hdr rd-sez-macro" data-sid="${sid}" data-open="1">`;
+      html += `<td><span class="rd-chevron">▾</span>${mg.nome}</td>`;
+      mg.subtotali_mesi.forEach((v, i) => html += `<td class="${thCls(i + 1)}">${_fmtCellRed(v)}</td>`);
+      html += `<td class="${thCls(0)} rd-val-neg">${_fmt(mg.subtotale)}</td></tr>`;
 
-      // Sottovoci
       mg.sottovoci.forEach(sv => {
-        html += `<tr class="rd-sottovoce"><td>&nbsp;&nbsp;› ${sv.nome}</td>`;
-        sv.mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCellRed(v)}</td>`);
-        html += `<td class="rd-col-money ${sv.totale > 0 ? 'rd-val-neg' : ''}">${_fmt(sv.totale)}</td></tr>`;
+        const hide = sel > 0 && sv.mesi[sel - 1] === 0 ? ' style="display:none"' : '';
+        html += `<tr class="rd-sottovoce" data-parent="${sid}"${hide}>`;
+        html += `<td>&nbsp;&nbsp;› ${sv.nome}</td>`;
+        sv.mesi.forEach((v, i) => html += `<td class="${thCls(i + 1)}">${_fmtCellRed(v)}</td>`);
+        html += `<td class="${tdCls(0, sv.totale > 0 ? 'rd-val-neg' : '')}">${_fmt(sv.totale)}</td></tr>`;
       });
     });
 
-    // Totale generale
     html += `<tr class="rd-totale-gen"><td>TOTALE GENERALE</td>`;
-    d.totali_mesi.forEach(v => html += `<td class="rd-col-money">${_fmtCellRed(v)}</td>`);
-    html += `<td class="rd-col-money rd-val-neg">${_fmt(d.totale_annuale)}</td></tr>`;
+    d.totali_mesi.forEach((v, i) => html += `<td class="${thCls(i + 1)}">${_fmtCellRed(v)}</td>`);
+    html += `<td class="${thCls(0)} rd-val-neg">${_fmt(d.totale_annuale)}</td></tr>`;
 
     html += '</tbody></table>';
     wrap.innerHTML = html;
+    _bindCollapse(wrap);
+  }
+
+  function _bindCollapse(wrap) {
+    wrap.addEventListener('click', function(e) {
+      const hdr = e.target.closest('tr[data-sid]');
+      if (!hdr) return;
+      const sid = hdr.dataset.sid;
+      const open = hdr.dataset.open === '1';
+      hdr.dataset.open = open ? '0' : '1';
+      const chevron = hdr.querySelector('.rd-chevron');
+      if (chevron) chevron.style.transform = open ? 'rotate(-90deg)' : '';
+      wrap.querySelectorAll(`tr[data-parent="${sid}"]`).forEach(row => {
+        row.style.display = open ? 'none' : '';
+      });
+    });
   }
 
   async function _esportaPdf() {
