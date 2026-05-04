@@ -1,0 +1,118 @@
+{
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/config.py": {
+    "mtime": 1777657207.4220731,
+    "hash": "012f92fb1cd5a6d2cbeae69ec6d9e057"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/database.py": {
+    "mtime": 1777709814.0906775,
+    "hash": "606c6b02df4895f53f3a6fe683362dae"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/app.py": {
+    "mtime": 1777709814.0901663,
+    "hash": "e45fb9be1f5ac6afee018951dcae2c4c"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/main.py": {
+    "mtime": 1777657207.4223325,
+    "hash": "11b93f9047c59c7c25d36fcb52a0a972"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/auth/__init__.py": {
+    "mtime": 1777657207.4211237,
+    "hash": "e1dd59f707d1e202142bfe29b4b0ddc2"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/auth/routes.py": {
+    "mtime": 1777657207.421465,
+    "hash": "ec63bbaaae8cf8754cabdc1bc1bfe5bd"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/auth/decorators.py": {
+    "mtime": 1777657207.4213274,
+    "hash": "16718e11a94ac65fcd743a87eab3a08c"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/static/js/app.js": {
+    "mtime": 1777709814.0993907,
+    "hash": "44386074a0fe727e60376152543bc7e4"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/tariffari.py": {
+    "mtime": 1777709814.097434,
+    "hash": "7d711c54a64bb6b3fbd581e5738afb1f"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/solleciti.py": {
+    "mtime": 1777709814.0962303,
+    "hash": "716e1fc2b9792d9ad68ce2c47e0364d3"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/arrotondamenti.py": {
+    "mtime": 1777709814.0919244,
+    "hash": "cd39affd46b7eab21b8f67cda95f89cc"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/strumenti.py": {
+    "mtime": 1777709814.0969856,
+    "hash": "62fb931d4aeb6c340661bdb4396da9a0"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/fatture.py": {
+    "mtime": 1777709814.0939474,
+    "hash": "d459a8a0ca7953f90e999579dfca7a3f"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/users.py": {
+    "mtime": 1777709814.097837,
+    "hash": "203f0ef6939f12d24e81166a86c3ab2f"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/events.py": {
+    "mtime": 1777657207.423386,
+    "hash": "924b797aa2fed51d607f4fae9812f9f3"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/__init__.py": {
+    "mtime": 1777657207.4225595,
+    "hash": "628674f2dcdf190a2f7a9b78f2648a6f"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/pratiche.py": {
+    "mtime": 1777709814.0948374,
+    "hash": "3e565f074a61158df0e4744f0fd008ae"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/ditte.py": {
+    "mtime": 1777709814.0929697,
+    "hash": "a371d3761d7ad9ec75f11ff3cf6ba391"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/pratiche_richiesta.py": {
+    "mtime": 1777709814.0955493,
+    "hash": "1d716016a3a4dae021b0c2ccb62e5102"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/stats.py": {
+    "mtime": 1777709814.0966465,
+    "hash": "40325f4c2eef018e39f3f030d66e61d5"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/ditta_tariffario.py": {
+    "mtime": 1777709814.0924692,
+    "hash": "3db5cca7b56f3298521a4c6727465a3f"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/estratto.py": {
+    "mtime": 1777709814.0934818,
+    "hash": "aa9e7b11c5d83529d7652f6325155657"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/previsionale.py": {
+    "mtime": 1777709814.0958173,
+    "hash": "f85c872d19b4a01437cdf991016645d5"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/pagamenti.py": {
+    "mtime": 1777709814.094299,
+    "hash": "f3d34eb526479013f05edbb1b9f068df"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/requirements.txt": {
+    "mtime": 1777709814.0914304,
+    "hash": "d158fe580501b2cda023d641048d5b5b"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/README.md": {
+    "mtime": 1777657207.4207468,
+    "hash": "f2c4b5085f3fea0147b74f411f167617"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/PRATICA.txt": {
+    "mtime": 1777657207.4206524,
+    "hash": "88adf34c95ef83bef626c3c5b747efbb"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/templates/index.html": {
+    "mtime": 1777709814.1001518,
+    "hash": "156fd17776b3005f564da614a21ff825"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/templates/login.html": {
+    "mtime": 1777657207.426532,
+    "hash": "246222a0fd3d22656679860523d584e0"
+  }
+}
