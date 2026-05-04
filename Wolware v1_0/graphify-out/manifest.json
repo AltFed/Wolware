@@ -4,12 +4,12 @@
     "hash": "012f92fb1cd5a6d2cbeae69ec6d9e057"
   },
   "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/database.py": {
-    "mtime": 1777709814.0906775,
-    "hash": "606c6b02df4895f53f3a6fe683362dae"
+    "mtime": 1777888618.2069166,
+    "hash": "7b24a1652f215377ca4a4a0f76109efe"
   },
   "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/app.py": {
-    "mtime": 1777709814.0901663,
-    "hash": "e45fb9be1f5ac6afee018951dcae2c4c"
+    "mtime": 1777888618.2066545,
+    "hash": "9cfc308b29a672e46163db5675b42e8f"
   },
   "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/main.py": {
     "mtime": 1777657207.4223325,
@@ -27,9 +27,17 @@
     "mtime": 1777657207.4213274,
     "hash": "16718e11a94ac65fcd743a87eab3a08c"
   },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/_claude_dev/db_migration_prima_nota.sql": {
+    "mtime": 1777888618.2050245,
+    "hash": "26edaf1a7a1eec3dc28cb5611e918962"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/_claude_dev/prima_nota_js.js": {
+    "mtime": 1777888618.2058868,
+    "hash": "dbe1e6e4c0e8b6c638de60b7bbe54e53"
+  },
   "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/static/js/app.js": {
-    "mtime": 1777709814.0993907,
-    "hash": "44386074a0fe727e60376152543bc7e4"
+    "mtime": 1777888618.2166467,
+    "hash": "6e684accb67646b75b81dd1de623cf8e"
   },
   "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/tariffari.py": {
     "mtime": 1777709814.097434,
@@ -95,6 +103,10 @@
     "mtime": 1777709814.094299,
     "hash": "f3d34eb526479013f05edbb1b9f068df"
   },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/routes/prima_nota.py": {
+    "mtime": 1777888618.2156074,
+    "hash": "7bc12a7d3270a750a5423f590d8b52fa"
+  },
   "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/requirements.txt": {
     "mtime": 1777709814.0914304,
     "hash": "d158fe580501b2cda023d641048d5b5b"
@@ -107,9 +119,25 @@
     "mtime": 1777657207.4206524,
     "hash": "88adf34c95ef83bef626c3c5b747efbb"
   },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/_claude_dev/CONTEXT.md": {
+    "mtime": 1777888618.2046838,
+    "hash": "103b6c9c8b6d0391f50a0cac74ab85c0"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/_claude_dev/note_blocco1.md": {
+    "mtime": 1777888618.20534,
+    "hash": "3d181df32a9315161582f70f49605ec9"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/_claude_dev/README.md": {
+    "mtime": 1777888618.2048585,
+    "hash": "dde53a63f25af3d2b9341235d534975d"
+  },
+  "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/_claude_dev/prima_nota_section.html": {
+    "mtime": 1777888618.2062175,
+    "hash": "e5779eb99d15866aad4c8a47a895171b"
+  },
   "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/templates/index.html": {
-    "mtime": 1777709814.1001518,
-    "hash": "156fd17776b3005f564da614a21ff825"
+    "mtime": 1777888618.2171185,
+    "hash": "7601a219c567772c776563043350bf5c"
   },
   "/Users/davspiri/Documents/GitHub/Wolware/Wolware v1_0/templates/login.html": {
     "mtime": 1777657207.426532,
