@@ -59,6 +59,14 @@
           </svg>
           Prima Nota
         </a>
+        <a href="#" class="nav-item" data-tab="rendiconto">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          Rendiconto
+        </a>
         <a href="#" class="nav-item" data-tab="ditte">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="2" y="7" width="20" height="14" rx="2" />
@@ -134,6 +142,14 @@
               <line x1="2" y1="10" x2="22" y2="10"/>
             </svg>
             Prima Nota
+          </button>
+          <button class="tab-btn" data-tab="rendiconto">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+            </svg>
+            Rendiconto
           </button>
           <button class="tab-btn" data-tab="ditte">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -735,6 +751,73 @@
 
         </section>
         <!-- /PRIMA NOTA STUDIO -->
+
+        <!-- RENDICONTO -->
+        <section class="tab-panel" id="tab-rendiconto">
+
+          <!-- ── HEADER ─────────────────────────────────────────────────── -->
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Rendiconto</h1>
+              <p class="page-subtitle">Vista annuale dei flussi finanziari dello studio</p>
+            </div>
+            <div class="header-actions" style="flex-wrap:wrap;gap:var(--space-2)">
+              <button class="btn btn-secondary btn-sm" id="rdBtnEsportaPdf">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Esporta PDF
+              </button>
+              <button class="btn btn-secondary btn-sm" id="rdBtnEsportaExcel">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="8" y1="13" x2="16" y2="13"/>
+                  <line x1="8" y1="17" x2="16" y2="17"/>
+                </svg>
+                Esporta Excel
+              </button>
+            </div>
+          </div>
+
+          <!-- ── FILTRI ─────────────────────────────────────────────────── -->
+          <div class="filter-bar" style="flex-wrap:wrap">
+            <select class="filter-select" id="rdFiltroAnno" style="width:100px">
+              <option value="">Anno</option>
+            </select>
+            <select class="filter-select" id="rdFiltroMese" style="width:130px">
+              <option value="0">Tutti i mesi</option>
+              <option value="1">Gennaio</option>
+              <option value="2">Febbraio</option>
+              <option value="3">Marzo</option>
+              <option value="4">Aprile</option>
+              <option value="5">Maggio</option>
+              <option value="6">Giugno</option>
+              <option value="7">Luglio</option>
+              <option value="8">Agosto</option>
+              <option value="9">Settembre</option>
+              <option value="10">Ottobre</option>
+              <option value="11">Novembre</option>
+              <option value="12">Dicembre</option>
+            </select>
+            <label class="filter-check" style="display:flex;align-items:center;gap:var(--space-1);font-size:var(--text-sm);color:var(--color-text-muted)">
+              <input type="checkbox" id="rdMostraArchiviati"> Mostra archiviati
+            </label>
+          </div>
+
+          <!-- ── PLACEHOLDER ────────────────────────────────────────────── -->
+          <div class="section-block" style="padding:var(--space-8);text-align:center;color:var(--color-text-muted)">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:var(--space-3);opacity:.4">
+              <rect x="2" y="3" width="20" height="14" rx="2"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+            </svg>
+            <p style="font-size:var(--text-sm)">Caricamento dati in arrivo — passo 2</p>
+          </div>
+
+        </section>
+        <!-- /RENDICONTO -->
 
         <!-- ADMIN -->
         <section class="tab-panel" id="tab-admin">

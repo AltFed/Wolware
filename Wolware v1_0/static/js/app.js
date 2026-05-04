@@ -4434,7 +4434,36 @@ const _origSwitchTabPN = switchTab;
 window.switchTab = function (tabName) {
   _origSwitchTabPN(tabName);
   if (tabName === 'prima-nota') PrimaNota.init();
+  if (tabName === 'rendiconto') Rendiconto.init();
 };
+
+/* ─────────────────────────────────────────────────────────────────
+   RENDICONTO
+───────────────────────────────────────────────────────────────── */
+const Rendiconto = (() => {
+  let _initialized = false;
+
+  async function init() {
+    if (_initialized) return;
+    _initialized = true;
+    _populateAnni();
+  }
+
+  function _populateAnni() {
+    const sel = $('rdFiltroAnno');
+    const current = new Date().getFullYear();
+    sel.innerHTML = '';
+    for (let y = current + 2; y >= current - 5; y--) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      if (y === current) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  return { init };
+})();
 
 /* INIT */
 checkAuth();
