@@ -4457,6 +4457,7 @@ const Rendiconto = (() => {
         _caricaGiroconti();
       });
       $('rdMostraArchiviati').addEventListener('change', () => _caricaEntrate());
+      $('rdBtnEsportaPdf').addEventListener('click', _esportaPdf);
       _initialized = true;
     }
   }
@@ -4632,6 +4633,27 @@ const Rendiconto = (() => {
 
     html += '</tbody></table>';
     wrap.innerHTML = html;
+  }
+
+  async function _esportaPdf() {
+    const btn = $('rdBtnEsportaPdf');
+    btn.disabled = true;
+    btn.textContent = 'Generazione…';
+    try {
+      const p = new URLSearchParams({ anno: _anno });
+      const res = await fetch(`/api/rendiconto/export-pdf?${p}`);
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `Rendiconto_${_anno}.pdf`;
+      a.click(); URL.revokeObjectURL(url);
+    } catch (e) {
+      toast('Errore generazione PDF: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Esporta PDF';
+    }
   }
 
   async function _caricaGiroconti() {

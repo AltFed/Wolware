@@ -2,10 +2,11 @@
 # Blueprint Rendiconto Studio — Volume 4
 # Aggrega pagamenti, movimenti studio, giroconti per anno/mese.
 
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, request, session, send_file
 from database import get_db
 from functools import wraps
 from datetime import date
+import io
 
 bp = Blueprint('rendiconto', __name__)
 
@@ -319,3 +320,362 @@ def get_giroconti():
                'importo': round(r['importo'], 2)} for r in rows]
     db.close()
     return jsonify(result)
+
+
+# ─────────────────────────────────────────────────────────────────
+# GET /api/rendiconto/export-pdf?anno=XXXX
+# Genera Rendiconto_<anno>.pdf  A4 landscape, 10mm margini
+# ─────────────────────────────────────────────────────────────────
+@bp.get('/api/rendiconto/export-pdf')
+@login_required
+def export_pdf():
+    anno     = request.args.get('anno', str(date.today().year))
+    anno_str = str(anno)
+    db       = get_db()
+
+    # ── raccolta dati ────────────────────────────────────────────
+    # saldi
+    saldi_list = _query_saldi(db)
+    # riepilogo
+    riepilogo  = _query_riepilogo(db, anno_str)
+    # entrate
+    entrate    = _query_entrate(db, anno_str, mostra_archiviati=True)
+    # uscite
+    uscite     = _query_uscite(db, anno_str)
+    # giroconti
+    giroconti  = _query_giroconti(db, anno_str)
+    db.close()
+
+    buf = _genera_pdf(anno_str, saldi_list, riepilogo, entrate, uscite, giroconti)
+    return send_file(buf, mimetype='application/pdf',
+                     as_attachment=True,
+                     download_name=f'Rendiconto_{anno_str}.pdf')
+
+
+# ── helper query (riutilizzabili) ────────────────────────────────
+def _query_saldi(db):
+    saldi = []
+    ci  = db.execute("SELECT COALESCE(SUM(importo),0) FROM movimenti_studio WHERE tipologia='cassa' AND tipo='entrata'").fetchone()[0]
+    co  = db.execute("SELECT COALESCE(SUM(importo),0) FROM movimenti_studio WHERE tipologia='cassa' AND tipo='uscita'").fetchone()[0]
+    cgi = db.execute("SELECT COALESCE(SUM(importo),0) FROM movimenti_studio WHERE tipologia='cassa' AND tipo='giroconto' AND giroconto_dir='entrata'").fetchone()[0]
+    cgo = db.execute("SELECT COALESCE(SUM(importo),0) FROM movimenti_studio WHERE tipologia='cassa' AND tipo='giroconto' AND giroconto_dir='uscita'").fetchone()[0]
+    ini = 0.0
+    try:
+        r = db.execute("SELECT valore FROM impostazioni WHERE chiave='saldo_iniziale_cassa'").fetchone()
+        if r: ini = float(r['valore'])
+    except Exception: pass
+    saldi.append({'nome': 'Cassa', 'saldo': round(ini + ci - co + cgi - cgo, 2)})
+    for b in db.execute('SELECT * FROM banche_studio ORDER BY ordine, nome').fetchall():
+        tid = f"banca_{b['id']}"
+        bi  = db.execute("SELECT COALESCE(SUM(importo),0) FROM movimenti_studio WHERE tipologia=? AND tipo='entrata'", (tid,)).fetchone()[0]
+        bo  = db.execute("SELECT COALESCE(SUM(importo),0) FROM movimenti_studio WHERE tipologia=? AND tipo='uscita'", (tid,)).fetchone()[0]
+        bgi = db.execute("SELECT COALESCE(SUM(importo),0) FROM movimenti_studio WHERE tipologia=? AND tipo='giroconto' AND giroconto_dir='entrata'", (tid,)).fetchone()[0]
+        bgo = db.execute("SELECT COALESCE(SUM(importo),0) FROM movimenti_studio WHERE tipologia=? AND tipo='giroconto' AND giroconto_dir='uscita'", (tid,)).fetchone()[0]
+        saldi.append({'nome': b['nome'], 'saldo': round(b['saldo_iniziale'] + bi - bo + bgi - bgo, 2)})
+    return saldi
+
+
+def _query_riepilogo(db, anno_str):
+    pag   = db.execute("SELECT COALESCE(SUM(importo),0) FROM pagamenti WHERE anno=?", (anno_str,)).fetchone()[0]
+    altre = db.execute("SELECT COALESCE(SUM(importo),0) FROM movimenti_studio WHERE tipo='entrata' AND strftime('%Y',data)=?", (anno_str,)).fetchone()[0]
+    usc   = db.execute("SELECT COALESCE(SUM(importo),0) FROM movimenti_studio WHERE tipo='uscita'  AND strftime('%Y',data)=?", (anno_str,)).fetchone()[0]
+    tot_e = round(pag + altre, 2)
+    tot_u = round(usc, 2)
+    return {'tot_entrate': tot_e, 'tot_uscite': tot_u, 'differenza': round(tot_e - tot_u, 2)}
+
+
+def _query_entrate(db, anno_str, mostra_archiviati=True):
+    arch  = '' if mostra_archiviati else 'AND (d.archiviato IS NULL OR d.archiviato=0)'
+    ditte = db.execute(f'SELECT id,ragione_sociale,residuo_iniziale,inizio_paghe,fine_paghe,inizio_contabilita,fine_contabilita FROM ditte d WHERE 1=1 {arch} ORDER BY ragione_sociale').fetchall()
+    pag_r = db.execute("SELECT ditta_id, CAST(strftime('%m',data) AS INTEGER) AS mese, SUM(importo) AS tot FROM pagamenti WHERE anno=? GROUP BY ditta_id, mese", (anno_str,)).fetchall()
+    pag_d = {}
+    for r in pag_r: pag_d.setdefault(r['ditta_id'], {})[r['mese']] = r['tot']
+
+    sezioni = {'paghe':{'nome':'CLIENTI PAGHE','colore':'paghe','clienti':[]},'cont':{'nome':'CLIENTI CONTABILITÀ','colore':'cont','clienti':[]},'paghe_cont':{'nome':'CLIENTI PAGHE + CONTABILITÀ','colore':'paghe_cont','clienti':[]},'altro':{'nome':'CLIENTI (ALTRO)','colore':'altro','clienti':[]}}
+    for d in ditte:
+        d = dict(d)
+        mm = pag_d.get(d['id'], {})
+        mesi = [round(mm.get(m, 0.0), 2) for m in range(1, 13)]
+        tot  = round(sum(mesi), 2)
+        res  = _calcola_residuo(db, d['id'], anno_str)
+        if tot == 0 and res == 0: continue
+        ha_p = _gestione_attiva(d, int(anno_str), 'paghe')
+        ha_c = _gestione_attiva(d, int(anno_str), 'contabilita')
+        entry = {'id': d['id'], 'nome': d['ragione_sociale'], 'mesi': mesi, 'tot_pagato': tot, 'residuo': res}
+        if ha_p and ha_c: sezioni['paghe_cont']['clienti'].append(entry)
+        elif ha_p:        sezioni['paghe']['clienti'].append(entry)
+        elif ha_c:        sezioni['cont']['clienti'].append(entry)
+        else:             sezioni['altro']['clienti'].append(entry)
+
+    result_s = []
+    for sez in sezioni.values():
+        if not sez['clienti']: continue
+        sub = [round(sum(c['mesi'][i] for c in sez['clienti']), 2) for i in range(12)]
+        result_s.append({'nome': sez['nome'], 'colore': sez['colore'], 'clienti': sez['clienti'],
+                         'subtotali_mesi': sub, 'subtotale': round(sum(sub), 2),
+                         'subtotale_residui': round(sum(c['residuo'] for c in sez['clienti']), 2)})
+
+    ms = db.execute("SELECT macrogruppo_id, macrogruppo_nome, sottovoce_id, sottovoce_nome, CAST(strftime('%m',data) AS INTEGER) AS mese, SUM(importo) AS tot FROM movimenti_studio WHERE tipo='entrata' AND strftime('%Y',data)=? AND (macrogruppo_id IS NULL OR macrogruppo_id!='clienti') GROUP BY macrogruppo_id,sottovoce_id,mese ORDER BY macrogruppo_nome,sottovoce_nome,mese", (anno_str,)).fetchall()
+    mg_map = {}
+    for r in ms:
+        mgid = r['macrogruppo_id'] or '__altro__'; mgnome = r['macrogruppo_nome'] or 'Altre entrate'
+        svid = r['sottovoce_id'] or '__sv__'; svnome = r['sottovoce_nome'] or '—'
+        mg_map.setdefault(mgid, {'nome': mgnome, 'sottovoci': {}})
+        mg_map[mgid]['sottovoci'].setdefault(svid, {'nome': svnome, 'mesi': [0.0]*12})
+        mg_map[mgid]['sottovoci'][svid]['mesi'][r['mese']-1] = round(r['tot'], 2)
+    result_mg = []
+    for mg in mg_map.values():
+        svs = list(mg['sottovoci'].values())
+        for sv in svs: sv['totale'] = round(sum(sv['mesi']), 2)
+        sub = [round(sum(sv['mesi'][i] for sv in svs), 2) for i in range(12)]
+        result_mg.append({'nome': mg['nome'], 'sottovoci': svs, 'subtotali_mesi': sub, 'subtotale': round(sum(sub), 2)})
+
+    tot_mesi = [round(sum(s['subtotali_mesi'][i] for s in result_s) + sum(m['subtotali_mesi'][i] for m in result_mg), 2) for i in range(12)]
+    return {'sezioni_clienti': result_s, 'macrogruppi': result_mg, 'totali_mesi': tot_mesi,
+            'totale_annuale': round(sum(tot_mesi), 2),
+            'totale_residui': round(sum(s.get('subtotale_residui', 0) for s in result_s), 2)}
+
+
+def _query_uscite(db, anno_str):
+    rows = db.execute("SELECT macrogruppo_id, macrogruppo_nome, sottovoce_id, sottovoce_nome, CAST(strftime('%m',data) AS INTEGER) AS mese, SUM(importo) AS tot FROM movimenti_studio WHERE tipo='uscita' AND strftime('%Y',data)=? GROUP BY macrogruppo_id,sottovoce_id,mese ORDER BY macrogruppo_nome,sottovoce_nome,mese", (anno_str,)).fetchall()
+    mg_map = {}
+    for r in rows:
+        mgid = r['macrogruppo_id'] or '__altro__'; mgnome = r['macrogruppo_nome'] or 'Altre uscite'
+        svid = r['sottovoce_id'] or '__sv__'; svnome = r['sottovoce_nome'] or '—'
+        mg_map.setdefault(mgid, {'nome': mgnome, 'sottovoci': {}})
+        mg_map[mgid]['sottovoci'].setdefault(svid, {'nome': svnome, 'mesi': [0.0]*12})
+        mg_map[mgid]['sottovoci'][svid]['mesi'][r['mese']-1] = round(r['tot'], 2)
+    mgs = []
+    tot = [0.0]*12
+    for mg in mg_map.values():
+        svs = list(mg['sottovoci'].values())
+        for sv in svs: sv['totale'] = round(sum(sv['mesi']), 2)
+        sub = [round(sum(sv['mesi'][i] for sv in svs), 2) for i in range(12)]
+        for i in range(12): tot[i] += sub[i]
+        mgs.append({'nome': mg['nome'], 'sottovoci': svs, 'subtotali_mesi': sub, 'subtotale': round(sum(sub), 2)})
+    tot = [round(v, 2) for v in tot]
+    return {'macrogruppi': mgs, 'totali_mesi': tot, 'totale_annuale': round(sum(tot), 2)}
+
+
+def _query_giroconti(db, anno_str):
+    rows = db.execute("SELECT m.data, CASE WHEN m.tipologia='cassa' THEN 'Cassa' ELSE COALESCE(b.nome, m.tipologia) END AS da, m.sottovoce_nome AS a, m.descrizione, m.importo FROM movimenti_studio m LEFT JOIN banche_studio b ON ('banca_'||b.id=m.tipologia) WHERE m.tipo='giroconto' AND m.giroconto_dir='uscita' AND strftime('%Y',m.data)=? ORDER BY m.data DESC, m.id DESC", (anno_str,)).fetchall()
+    return [{'data': r['data'], 'da': r['da'] or '—', 'a': r['a'] or '—', 'descrizione': r['descrizione'] or '', 'importo': round(r['importo'], 2)} for r in rows]
+
+
+# ── generazione PDF ──────────────────────────────────────────────
+def _genera_pdf(anno_str, saldi_list, riepilogo, entrate, uscite, giroconti):
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, KeepTogether
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+
+    MESI_BREVI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic']
+    C_DARK   = colors.HexColor('#1a202c')
+    C_GREEN  = colors.HexColor('#16a34a')
+    C_RED    = colors.HexColor('#dc2626')
+    C_PURPLE = colors.HexColor('#7c3aed')
+    C_MUTED  = colors.HexColor('#94a3b8')
+    C_PAGHE      = colors.HexColor('#dcfce7')
+    C_CONT       = colors.HexColor('#dbeafe')
+    C_PAGHE_CONT = colors.HexColor('#fed7aa')
+    C_ALTRO      = colors.HexColor('#f1f5f9')
+    C_MACRO      = colors.HexColor('#e2e8f0')
+    C_HEADER_ROW = colors.HexColor('#f8fafc')
+    C_TOTAL      = colors.HexColor('#1e293b')
+
+    def _n(v, color=None):
+        """Formatta numero con separatore migliaia italiano."""
+        if v == 0:
+            return '—'
+        s = f'{abs(v):,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+        return ('-' if v < 0 else '') + s
+
+    PAGE = landscape(A4)
+    M    = 10 * mm
+    W    = PAGE[0] - 2 * M  # 277mm contenuto
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=PAGE,
+                            leftMargin=M, rightMargin=M,
+                            topMargin=M, bottomMargin=M)
+
+    sNorm  = ParagraphStyle('n', fontName='Helvetica',      fontSize=8,  leading=10)
+    sBold  = ParagraphStyle('b', fontName='Helvetica-Bold', fontSize=8,  leading=10)
+    sTitle = ParagraphStyle('t', fontName='Helvetica-Bold', fontSize=18, leading=22, textColor=colors.white, alignment=TA_CENTER)
+    sSub   = ParagraphStyle('s', fontName='Helvetica',      fontSize=9,  leading=11, textColor=colors.HexColor('#64748b'))
+    sRight = ParagraphStyle('r', fontName='Helvetica',      fontSize=8,  leading=10, alignment=TA_RIGHT)
+
+    oggi_fmt = date.today().strftime('%d/%m/%Y')
+    story = []
+
+    # ── 1. BANNER COPERTINA ──────────────────────────────────────
+    banner = Table([[Paragraph(f'RENDICONTO ANNUALE {anno_str}', sTitle)]], colWidths=[W])
+    banner.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), C_DARK),
+        ('TOPPADDING',  (0,0), (-1,-1), 14),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 14),
+        ('ROUNDEDCORNERS', [4]),
+    ]))
+    story.append(banner)
+    story.append(Spacer(1, 4*mm))
+    story.append(Paragraph(f'Generato il {oggi_fmt}', sSub))
+    story.append(Spacer(1, 6*mm))
+
+    # ── 2. RIEPILOGO ────────────────────────────────────────────
+    sGreenBig = ParagraphStyle('gb', fontName='Helvetica-Bold', fontSize=14, textColor=C_GREEN, alignment=TA_CENTER)
+    sRedBig   = ParagraphStyle('rb', fontName='Helvetica-Bold', fontSize=14, textColor=C_RED,   alignment=TA_CENTER)
+    sDiffBig  = ParagraphStyle('db', fontName='Helvetica-Bold', fontSize=14,
+                                textColor=(C_GREEN if riepilogo['differenza'] >= 0 else C_RED), alignment=TA_CENTER)
+    sLabel    = ParagraphStyle('lb', fontName='Helvetica',      fontSize=7, textColor=C_MUTED,  alignment=TA_CENTER)
+    W3 = W / 3
+    riepilogo_table = Table([
+        [Paragraph('TOTALE ENTRATE', sLabel), Paragraph('TOTALE USCITE', sLabel), Paragraph('DIFFERENZA', sLabel)],
+        [Paragraph(_n(riepilogo['tot_entrate']), sGreenBig),
+         Paragraph(_n(riepilogo['tot_uscite']),  sRedBig),
+         Paragraph(('+' if riepilogo['differenza'] >= 0 else '') + _n(riepilogo['differenza']), sDiffBig)],
+    ], colWidths=[W3, W3, W3])
+    riepilogo_table.setStyle(TableStyle([
+        ('BACKGROUND',    (0,0), (-1,-1), C_HEADER_ROW),
+        ('BOX',           (0,0), (-1,-1), 0.5, C_MUTED),
+        ('INNERGRID',     (0,0), (-1,-1), 0.5, C_MUTED),
+        ('TOPPADDING',    (0,0), (-1,-1), 8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+    ]))
+    story.append(riepilogo_table)
+    story.append(Spacer(1, 8*mm))
+
+    # ── helper stili tabella ─────────────────────────────────────
+    BASE_GRID = [('GRID', (0,0), (-1,-1), 0.3, colors.HexColor('#e2e8f0')),
+                 ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+                 ('FONTSIZE', (0,0), (-1,-1), 7),
+                 ('TOPPADDING', (0,0), (-1,-1), 3),
+                 ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+                 ('ALIGN', (1,0), (-1,-1), 'RIGHT')]
+
+    # ── 3. TABELLA ENTRATE ───────────────────────────────────────
+    story.append(Paragraph('Dettaglio Entrate', ParagraphStyle('h2', fontName='Helvetica-Bold', fontSize=10, leading=14, spaceBefore=4)))
+    story.append(Spacer(1, 2*mm))
+
+    # Larghezze colonne entrate: 60 + 14×12 + 25 + 24 = 277mm
+    W_E = [60*mm] + [14*mm]*12 + [25*mm, 24*mm]
+    hdr_e = ['Voce'] + MESI_BREVI + ['Tot.Pag.', 'Residuo']
+    rows_e = [hdr_e]
+    COLORE_SEZ = {'paghe': C_PAGHE, 'cont': C_CONT, 'paghe_cont': C_PAGHE_CONT, 'altro': C_ALTRO}
+    style_e = list(BASE_GRID) + [
+        ('BACKGROUND', (0,0), (-1,0), C_DARK),
+        ('TEXTCOLOR',  (0,0), (-1,0), colors.white),
+        ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE',   (0,0), (-1,0), 7),
+    ]
+    idx = 1
+
+    for sez in entrate['sezioni_clienti']:
+        bg = COLORE_SEZ.get(sez['colore'], C_ALTRO)
+        row_sez = [sez['nome']] + [_n(v) for v in sez['subtotali_mesi']] + [_n(sez['subtotale']), _n(sez['subtotale_residui'])]
+        rows_e.append(row_sez)
+        style_e += [('BACKGROUND', (0,idx), (-1,idx), bg),
+                    ('FONTNAME',   (0,idx), (-1,idx), 'Helvetica-Bold'),
+                    ('TEXTCOLOR',  (0,idx), (-1,idx), C_DARK)]
+        idx += 1
+        for c in sez['clienti']:
+            row_c = ['  › ' + c['nome']] + [_n(v) for v in c['mesi']] + [_n(c['tot_pagato'])]
+            res_v = c['residuo']
+            row_c.append(_n(res_v))
+            rows_e.append(row_c)
+            if res_v > 0:
+                style_e.append(('TEXTCOLOR', (14, idx), (14, idx), C_RED))
+            elif res_v < 0:
+                style_e.append(('TEXTCOLOR', (14, idx), (14, idx), C_GREEN))
+            idx += 1
+
+    for mg in entrate['macrogruppi']:
+        row_mg = [mg['nome']] + [_n(v) for v in mg['subtotali_mesi']] + [_n(mg['subtotale']), '—']
+        rows_e.append(row_mg)
+        style_e += [('BACKGROUND', (0,idx), (-1,idx), C_MACRO),
+                    ('FONTNAME',   (0,idx), (-1,idx), 'Helvetica-Bold')]
+        idx += 1
+        for sv in mg['sottovoci']:
+            rows_e.append(['  › ' + sv['nome']] + [_n(v) for v in sv['mesi']] + [_n(sv['totale']), '—'])
+            idx += 1
+
+    # Riga totale
+    row_tot = ['TOTALE GENERALE'] + [_n(v) for v in entrate['totali_mesi']] + [_n(entrate['totale_annuale']), _n(entrate['totale_residui'])]
+    rows_e.append(row_tot)
+    style_e += [('BACKGROUND', (0,idx), (-1,idx), C_TOTAL),
+                ('TEXTCOLOR',  (0,idx), (-1,idx), colors.white),
+                ('FONTNAME',   (0,idx), (-1,idx), 'Helvetica-Bold')]
+
+    t_e = Table(rows_e, colWidths=W_E, repeatRows=1)
+    t_e.setStyle(TableStyle(style_e))
+    story.append(t_e)
+    story.append(Spacer(1, 8*mm))
+
+    # ── 4. TABELLA USCITE ────────────────────────────────────────
+    story.append(Paragraph('Dettaglio Uscite', ParagraphStyle('h2u', fontName='Helvetica-Bold', fontSize=10, leading=14, spaceBefore=4)))
+    story.append(Spacer(1, 2*mm))
+
+    # Larghezze: 80 + 14×12 + 29 = 277mm
+    W_U = [80*mm] + [14*mm]*12 + [29*mm]
+    rows_u = [['Voce'] + MESI_BREVI + ['Totale']]
+    style_u = list(BASE_GRID) + [
+        ('BACKGROUND', (0,0), (-1,0), C_DARK),
+        ('TEXTCOLOR',  (0,0), (-1,0), colors.white),
+        ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+    ]
+    idx = 1
+    for mg in uscite['macrogruppi']:
+        rows_u.append([mg['nome']] + [_n(v) for v in mg['subtotali_mesi']] + [_n(mg['subtotale'])])
+        style_u += [('BACKGROUND', (0,idx), (-1,idx), C_MACRO),
+                    ('FONTNAME',   (0,idx), (-1,idx), 'Helvetica-Bold'),
+                    ('TEXTCOLOR',  (1,idx), (-1,idx), C_RED)]
+        idx += 1
+        for sv in mg['sottovoci']:
+            rows_u.append(['  › ' + sv['nome']] + [_n(v) for v in sv['mesi']] + [_n(sv['totale'])])
+            style_u.append(('TEXTCOLOR', (1,idx), (-1,idx), C_RED))
+            idx += 1
+    rows_u.append(['TOTALE GENERALE'] + [_n(v) for v in uscite['totali_mesi']] + [_n(uscite['totale_annuale'])])
+    style_u += [('BACKGROUND', (0,idx), (-1,idx), C_TOTAL),
+                ('TEXTCOLOR',  (0,idx), (-1,idx), colors.white),
+                ('FONTNAME',   (0,idx), (-1,idx), 'Helvetica-Bold'),
+                ('TEXTCOLOR',  (1,idx), (-1,idx), colors.HexColor('#fca5a5'))]
+
+    t_u = Table(rows_u, colWidths=W_U, repeatRows=1)
+    t_u.setStyle(TableStyle(style_u))
+    story.append(t_u)
+    story.append(Spacer(1, 8*mm))
+
+    # ── 5. TABELLA GIROCONTI ─────────────────────────────────────
+    if giroconti:
+        story.append(Paragraph('Giroconti', ParagraphStyle('h2g', fontName='Helvetica-Bold', fontSize=10, leading=14, spaceBefore=4)))
+        story.append(Spacer(1, 2*mm))
+        # Larghezze: 25+50+50+90+62 = 277mm
+        W_G = [25*mm, 50*mm, 50*mm, 90*mm, 62*mm]
+        rows_g = [['Data', 'Da', 'A', 'Descrizione', 'Importo']]
+        for r in giroconti:
+            rows_g.append([r['data'], r['da'], r['a'], r['descrizione'], _n(r['importo'])])
+        style_g = list(BASE_GRID) + [
+            ('BACKGROUND', (0,0), (-1,0), C_DARK),
+            ('TEXTCOLOR',  (0,0), (-1,0), colors.white),
+            ('FONTNAME',   (0,0), (-1,0), 'Helvetica-Bold'),
+            ('TEXTCOLOR',  (4,1), (4,-1), C_PURPLE),
+            ('FONTNAME',   (4,1), (4,-1), 'Helvetica-Bold'),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, C_HEADER_ROW]),
+        ]
+        t_g = Table(rows_g, colWidths=W_G, repeatRows=1)
+        t_g.setStyle(TableStyle(style_g))
+        story.append(t_g)
+
+    # ── footer su ogni pagina ────────────────────────────────────
+    def _footer(canvas, doc):
+        canvas.saveState()
+        canvas.setFont('Helvetica', 7)
+        canvas.setFillColor(C_MUTED)
+        canvas.drawString(M, 6*mm, f'Documento generato il {oggi_fmt}')
+        canvas.drawRightString(PAGE[0] - M, 6*mm, f'Pagina {doc.page}')
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
+    buf.seek(0)
+    return buf
