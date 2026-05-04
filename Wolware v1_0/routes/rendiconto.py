@@ -7,6 +7,9 @@ from database import get_db
 from functools import wraps
 from datetime import date
 import io
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 bp = Blueprint('rendiconto', __name__)
 
@@ -677,5 +680,277 @@ def _genera_pdf(anno_str, saldi_list, riepilogo, entrate, uscite, giroconti):
         canvas.restoreState()
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
+    buf.seek(0)
+    return buf
+
+
+# ─────────────────────────────────────────────────────────────────
+# GET /api/rendiconto/export-excel?anno=XXXX
+# Genera Rendiconto_<anno>.xlsx  (4 fogli)
+# ─────────────────────────────────────────────────────────────────
+@bp.get('/api/rendiconto/export-excel')
+@login_required
+def export_excel():
+    anno     = request.args.get('anno', str(date.today().year))
+    anno_str = str(anno)
+    db       = get_db()
+
+    saldi_list = _query_saldi(db)
+    riepilogo  = _query_riepilogo(db, anno_str)
+    entrate    = _query_entrate(db, anno_str, mostra_archiviati=True)
+    uscite     = _query_uscite(db, anno_str)
+    giroconti  = _query_giroconti(db, anno_str)
+    db.close()
+
+    buf = _genera_excel(anno_str, saldi_list, riepilogo, entrate, uscite, giroconti)
+    return send_file(buf, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     as_attachment=True,
+                     download_name=f'Rendiconto_{anno_str}.xlsx')
+
+
+def _genera_excel(anno_str, saldi_list, riepilogo, entrate, uscite, giroconti):
+    MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+            'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre']
+    FMT_EURO = '#,##0.00'
+    oggi_fmt = date.today().strftime('%d/%m/%Y')
+
+    # Stili riutilizzabili
+    def _fill(hex_color):
+        return PatternFill('solid', fgColor=hex_color)
+
+    def _font(bold=False, color='000000', size=10):
+        return Font(bold=bold, color=color, size=size)
+
+    def _align(h='left', wrap=False):
+        return Alignment(horizontal=h, vertical='center', wrap_text=wrap)
+
+    BORDER_THIN = Border(
+        left=Side(style='thin', color='D1D5DB'),
+        right=Side(style='thin', color='D1D5DB'),
+        top=Side(style='thin', color='D1D5DB'),
+        bottom=Side(style='thin', color='D1D5DB'),
+    )
+
+    F_DARK   = _fill('1A202C'); F_HDR = _fill('F1F5F9')
+    F_PAGHE  = _fill('DCFCE7'); F_CONT = _fill('DBEAFE')
+    F_PC     = _fill('FED7AA'); F_ALTRO = _fill('F1F5F9')
+    F_MACRO  = _fill('E2E8F0'); F_TOTAL = _fill('1E293B')
+    F_WHITE  = _fill('FFFFFF')
+
+    def _style_row(ws, row_idx, col_start, col_end, fill=None, bold=False,
+                   font_color='000000', num_fmt=None, align_right_from=None):
+        for c in range(col_start, col_end + 1):
+            cell = ws.cell(row=row_idx, column=c)
+            if fill:  cell.fill = fill
+            cell.font = _font(bold=bold, color=font_color)
+            cell.border = BORDER_THIN
+            if num_fmt and c >= (align_right_from or col_start):
+                cell.number_format = num_fmt
+                cell.alignment = _align('right')
+            else:
+                cell.alignment = _align('left')
+
+    wb = openpyxl.Workbook()
+
+    # ── FOGLIO 1: RIEPILOGO ──────────────────────────────────────
+    ws1 = wb.active
+    ws1.title = 'Riepilogo'
+    ws1.column_dimensions['A'].width = 28
+    ws1.column_dimensions['B'].width = 18
+
+    ws1.append([f'RENDICONTO ANNUALE {anno_str}'])
+    ws1['A1'].font = _font(bold=True, size=14)
+    ws1.append([f'Generato il {oggi_fmt}'])
+    ws1['A2'].font = _font(color='64748B')
+    ws1.append([])
+    ws1.append(['Saldi conti'])
+    ws1['A4'].font = _font(bold=True, size=11)
+
+    saldo_start = 5
+    for s in saldi_list:
+        ws1.append([s['nome'], s['saldo']])
+        r = ws1.max_row
+        ws1[f'A{r}'].font = _font()
+        ws1[f'B{r}'].number_format = FMT_EURO
+        ws1[f'B{r}'].alignment = _align('right')
+
+    saldo_end = ws1.max_row
+    ws1.append(['Totale Disponibilità',
+                f'=SUM(B{saldo_start}:B{saldo_end})'])
+    r = ws1.max_row
+    ws1[f'A{r}'].font = _font(bold=True)
+    ws1[f'B{r}'].font = _font(bold=True)
+    ws1[f'B{r}'].number_format = FMT_EURO
+    ws1[f'B{r}'].alignment = _align('right')
+    ws1[f'A{r}'].fill = F_HDR; ws1[f'B{r}'].fill = F_HDR
+
+    ws1.append([])
+    ws1.append(['Riepilogo annuale'])
+    ws1[f'A{ws1.max_row}'].font = _font(bold=True, size=11)
+
+    r_e = ws1.max_row + 1
+    ws1.append(['Totale Entrate', riepilogo['tot_entrate']])
+    ws1[f'B{r_e}'].number_format = FMT_EURO
+    ws1[f'B{r_e}'].font = _font(bold=True, color='16A34A')
+    ws1[f'B{r_e}'].alignment = _align('right')
+
+    r_u = ws1.max_row + 1
+    ws1.append(['Totale Uscite', riepilogo['tot_uscite']])
+    ws1[f'B{r_u}'].number_format = FMT_EURO
+    ws1[f'B{r_u}'].font = _font(bold=True, color='DC2626')
+    ws1[f'B{r_u}'].alignment = _align('right')
+
+    ws1.append(['Differenza', f'=B{r_e}-B{r_u}'])
+    r = ws1.max_row
+    ws1[f'A{r}'].font = _font(bold=True)
+    ws1[f'B{r}'].number_format = FMT_EURO
+    ws1[f'B{r}'].font = _font(bold=True)
+    ws1[f'B{r}'].alignment = _align('right')
+    ws1[f'A{r}'].fill = F_HDR; ws1[f'B{r}'].fill = F_HDR
+
+    # ── FOGLIO 2: ENTRATE ────────────────────────────────────────
+    ws2 = wb.create_sheet('Entrate')
+    HDR_E = ['Voce', 'Tipo'] + MESI + ['Tot. Pagato', 'Residuo']
+    ws2.append(HDR_E)
+    # Header style
+    for c in range(1, len(HDR_E) + 1):
+        cell = ws2.cell(row=1, column=c)
+        cell.fill = F_DARK
+        cell.font = _font(bold=True, color='FFFFFF', size=9)
+        cell.alignment = _align('center' if c == 1 else 'right')
+        cell.border = BORDER_THIN
+
+    SEZ_FILL = {'paghe': F_PAGHE, 'cont': F_CONT, 'paghe_cont': F_PC, 'altro': F_ALTRO}
+    SEZ_TIPO = {'paghe': 'Paghe', 'cont': 'Contabilità', 'paghe_cont': 'Paghe+Cont.', 'altro': 'Altro'}
+
+    def _append_money_row(ws, values, fill, bold, font_color='000000', indent=''):
+        row_vals = [indent + str(values[0]), values[1]] + [v if v != 0 else None for v in values[2:]]
+        ws.append(row_vals)
+        ri = ws.max_row
+        _style_row(ws, ri, 1, len(HDR_E), fill=fill, bold=bold,
+                   font_color=font_color, num_fmt=FMT_EURO, align_right_from=3)
+        ws.cell(ri, 1).alignment = _align('left')
+        ws.cell(ri, 2).alignment = _align('center')
+        return ri
+
+    for sez in entrate['sezioni_clienti']:
+        sfill = SEZ_FILL.get(sez['colore'], F_ALTRO)
+        # riga subtotale sezione
+        sub_row = [sez['nome'], SEZ_TIPO.get(sez['colore'], '')] + sez['subtotali_mesi'] + [sez['subtotale'], sez['subtotale_residui']]
+        ri = _append_money_row(ws2, sub_row, sfill, True)
+        # Formula subtotale (colonne 3..14 → mesi)
+        ncol = len(HDR_E)
+        for sez_c_idx in range(1, len(sez['clienti']) + 1):
+            pass  # lasciamo i valori precalcolati
+
+        for c in sez['clienti']:
+            crow = ['  › ' + c['nome'], SEZ_TIPO.get(sez['colore'], '')] + c['mesi'] + [c['tot_pagato'], c['residuo']]
+            ri = _append_money_row(ws2, crow, F_WHITE, False)
+            # Formattazione condizionale residuo (col 16)
+            res_cell = ws2.cell(ri, 16)
+            if c['residuo'] > 0:
+                res_cell.font = _font(color='DC2626')
+            elif c['residuo'] < 0:
+                res_cell.font = _font(color='16A34A')
+
+    for mg in entrate['macrogruppi']:
+        mg_row = [mg['nome'], ''] + mg['subtotali_mesi'] + [mg['subtotale'], None]
+        _append_money_row(ws2, mg_row, F_MACRO, True)
+        for sv in mg['sottovoci']:
+            sv_row = ['  › ' + sv['nome'], ''] + sv['mesi'] + [sv['totale'], None]
+            _append_money_row(ws2, sv_row, F_WHITE, False)
+
+    # Riga TOTALE GENERALE
+    last_data = ws2.max_row
+    tot_row = ['TOTALE GENERALE', ''] + entrate['totali_mesi'] + [entrate['totale_annuale'], entrate['totale_residui']]
+    ws2.append(tot_row)
+    ri = ws2.max_row
+    _style_row(ws2, ri, 1, len(HDR_E), fill=F_TOTAL, bold=True,
+               font_color='FFFFFF', num_fmt=FMT_EURO, align_right_from=3)
+    ws2.cell(ri, 1).alignment = _align('left')
+
+    # Auto-filter, freeze, larghezze
+    ws2.auto_filter.ref = f'A1:{get_column_letter(len(HDR_E))}1'
+    ws2.freeze_panes = 'C2'
+    ws2.column_dimensions['A'].width = 35
+    ws2.column_dimensions['B'].width = 14
+    for i in range(3, 17):  ws2.column_dimensions[get_column_letter(i)].width = 12
+    ws2.column_dimensions[get_column_letter(15)].width = 14
+    ws2.column_dimensions[get_column_letter(16)].width = 14
+
+    # ── FOGLIO 3: USCITE ─────────────────────────────────────────
+    ws3 = wb.create_sheet('Uscite')
+    HDR_U = ['Voce', 'Macrogruppo'] + MESI + ['Totale']
+    ws3.append(HDR_U)
+    for c in range(1, len(HDR_U) + 1):
+        cell = ws3.cell(row=1, column=c)
+        cell.fill = F_DARK; cell.font = _font(bold=True, color='FFFFFF', size=9)
+        cell.alignment = _align('center' if c <= 2 else 'right')
+        cell.border = BORDER_THIN
+
+    for mg in uscite['macrogruppi']:
+        mg_row = [mg['nome'], mg['nome']] + mg['subtotali_mesi'] + [mg['subtotale']]
+        ws3.append(mg_row)
+        ri = ws3.max_row
+        _style_row(ws3, ri, 1, len(HDR_U), fill=F_MACRO, bold=True,
+                   font_color='DC2626', num_fmt=FMT_EURO, align_right_from=3)
+        ws3.cell(ri, 1).font = _font(bold=True, color='000000')
+        ws3.cell(ri, 1).alignment = _align('left')
+        ws3.cell(ri, 2).alignment = _align('left')
+        for sv in mg['sottovoci']:
+            sv_row = ['  › ' + sv['nome'], mg['nome']] + sv['mesi'] + [sv['totale']]
+            ws3.append(sv_row)
+            ri = ws3.max_row
+            _style_row(ws3, ri, 1, len(HDR_U), fill=F_WHITE, bold=False,
+                       font_color='DC2626', num_fmt=FMT_EURO, align_right_from=3)
+            ws3.cell(ri, 1).font = _font(color='000000')
+            ws3.cell(ri, 1).alignment = _align('left')
+            ws3.cell(ri, 2).alignment = _align('left')
+
+    ws3.append(['TOTALE GENERALE', ''] + uscite['totali_mesi'] + [uscite['totale_annuale']])
+    ri = ws3.max_row
+    _style_row(ws3, ri, 1, len(HDR_U), fill=F_TOTAL, bold=True,
+               font_color='FFFFFF', num_fmt=FMT_EURO, align_right_from=3)
+    ws3.cell(ri, 1).alignment = _align('left')
+    ws3.cell(ri, len(HDR_U)).font = _font(bold=True, color='FCA5A5')
+
+    ws3.auto_filter.ref = f'A1:{get_column_letter(len(HDR_U))}1'
+    ws3.freeze_panes = 'C2'
+    ws3.column_dimensions['A'].width = 35
+    ws3.column_dimensions['B'].width = 18
+    for i in range(3, len(HDR_U) + 1):
+        ws3.column_dimensions[get_column_letter(i)].width = 12
+
+    # ── FOGLIO 4: GIROCONTI ──────────────────────────────────────
+    ws4 = wb.create_sheet('Giroconti')
+    HDR_G = ['Data', 'Da', 'A', 'Descrizione', 'Importo']
+    ws4.append(HDR_G)
+    for c in range(1, 6):
+        cell = ws4.cell(row=1, column=c)
+        cell.fill = F_DARK; cell.font = _font(bold=True, color='FFFFFF', size=9)
+        cell.alignment = _align('center' if c < 5 else 'right')
+        cell.border = BORDER_THIN
+
+    alt = False
+    for g in giroconti:
+        ws4.append([g['data'], g['da'], g['a'], g['descrizione'], g['importo']])
+        ri = ws4.max_row
+        fill = _fill('F8FAFC') if alt else F_WHITE
+        for c in range(1, 6):
+            cell = ws4.cell(ri, c)
+            cell.fill = fill; cell.border = BORDER_THIN
+            cell.alignment = _align('right' if c == 5 else 'left')
+        ws4.cell(ri, 5).number_format = FMT_EURO
+        ws4.cell(ri, 5).font = _font(color='7C3AED', bold=True)
+        alt = not alt
+
+    ws4.auto_filter.ref = 'A1:E1'
+    ws4.freeze_panes = 'A2'
+    widths = [12, 20, 20, 40, 16]
+    for i, w in enumerate(widths, 1):
+        ws4.column_dimensions[get_column_letter(i)].width = w
+
+    buf = io.BytesIO()
+    wb.save(buf)
     buf.seek(0)
     return buf
