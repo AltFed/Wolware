@@ -300,3 +300,50 @@ def delete_voce(vid):
         return jsonify({'ok': True})
     finally:
         db.close()
+
+# GET /api/ditte/<id>/previsione?mesi=12
+@tariffari_bp.route('/api/ditte/<int:id>/previsione')
+@login_required
+def previsione_cliente(id):
+    mesi = int(request.args.get('mesi', 12))
+    db = get_db()
+
+    ditta = db.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()
+    if not ditta or not ditta['tariffario_id']:
+        return jsonify({'fissi': [], 'totale_fisso': 0, 'mesi': mesi})
+
+    tid = ditta['tariffario_id']
+
+    # Prende tutti i macrogruppi FISSI con le loro voci
+    gruppi = db.execute(
+        '''SELECT g.id, g.nome, g.tipo, v.id as vid, v.nome as vnome, v.prezzo
+           FROM tariffario_macrogruppi g
+           JOIN tariffario_voci v ON v.macrogruppo_id = g.id
+           WHERE g.tariffario_id = ? AND g.tipo IN ('fisso_mensile','fisso_annuale')
+           AND v.prezzo IS NOT NULL AND v.prezzo > 0
+           ORDER BY g.tipo, g.nome, v.nome''',
+        (tid,)
+    ).fetchall()
+
+    voci_out = []
+    totale = 0.0
+    for r in gruppi:
+        moltiplicatore = mesi if r['tipo'] == 'fisso_mensile' else (mesi / 12)
+        importo = round(float(r['prezzo']) * moltiplicatore, 2)
+        totale += importo
+        voci_out.append({
+            'macrogruppo': r['nome'],
+            'tipo': r['tipo'],
+            'voce': r['vnome'],
+            'prezzo_unitario': float(r['prezzo']),
+            'moltiplicatore': moltiplicatore,
+            'importo': importo
+        })
+
+    return jsonify({
+        'cliente': ditta['ragione_sociale'],
+        'tariffario_id': tid,
+        'mesi': mesi,
+        'fissi': voci_out,
+        'totale_fisso': round(totale, 2)
+    })
