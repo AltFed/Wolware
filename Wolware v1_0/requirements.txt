@@ -4,3 +4,4 @@ werkzeug>=3.0.0
 python-dotenv>=0.19.0
 openpyxl>=3.1.0
 reportlab>=3.0.0
+graphifyy
