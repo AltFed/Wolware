@@ -27,4 +27,8 @@ accounts.json.bak
 loggin_errore_auth.log
 .secret_key
 .env
-
+# Strumenti IA - Graphify
+graphify-out/
+.graphify/
+.graphify_root
+graphify.txt

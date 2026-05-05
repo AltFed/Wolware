@@ -727,3 +727,41 @@ tr.row-archiviato .denom-name {
 tr.row-archiviato .ditta-avatar {
   filter: grayscale(1);
 }
+/* ─── RENDICONTO TABLE ──────────────────────────────────────── */
+.rd-table-wrap{overflow-x:auto;border-radius:var(--radius-md);border:1px solid var(--color-border)}
+.rd-table{width:100%;border-collapse:collapse;font-size:var(--text-sm);white-space:nowrap}
+.rd-table th,.rd-table td{padding:6px 10px;border-bottom:1px solid var(--color-border)}
+.rd-table th{background:var(--color-surface-raised);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted);position:sticky;top:0;z-index:2}
+.rd-table th:first-child,.rd-table td:first-child{position:sticky;left:0;z-index:1;background:var(--color-surface)}
+.rd-table th:first-child{z-index:3;background:var(--color-surface-raised)}
+.rd-table tr:hover td{background:var(--color-surface-hover,var(--color-surface-raised))}
+.rd-col-money{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
+.rd-val-pos{color:var(--color-success)}
+.rd-val-neg{color:var(--color-error)}
+.rd-zero{color:var(--color-text-muted);opacity:.5}
+/* Section headers */
+.rd-sez-hdr td{font-weight:700;font-size:11px;letter-spacing:.05em;padding:5px 10px}
+.rd-sez-paghe td{background:#dcfce7;color:#166534}
+.rd-sez-cont td{background:#dbeafe;color:#1e40af}
+.rd-sez-paghe-cont td{background:#fed7aa;color:#9a3412}
+.rd-sez-altro td{background:var(--color-surface-raised);color:var(--color-text-muted)}
+.rd-sez-macro td{background:var(--color-surface-raised);color:var(--color-text);font-weight:700;font-size:11px}
+[data-theme="dark"] .rd-sez-paghe td{background:#14532d;color:#86efac}
+[data-theme="dark"] .rd-sez-cont td{background:#1e3a5f;color:#93c5fd}
+[data-theme="dark"] .rd-sez-paghe-cont td{background:#7c2d12;color:#fdba74}
+/* Subtotali e righe speciali */
+.rd-subtotale td{font-weight:600;background:var(--color-surface-raised)}
+.rd-cliente td:first-child{padding-left:24px}
+.rd-sottovoce td:first-child{padding-left:24px;color:var(--color-text-muted)}
+.rd-totale-gen td{font-weight:700;background:var(--color-surface-raised);border-top:2px solid var(--color-border)}
+.rd-totale-gen td:first-child{background:var(--color-surface-raised)}
+.rd-col-residuo{border-left:2px solid var(--color-border)!important}
+.rd-cliente-link{cursor:pointer;color:var(--color-primary);text-decoration:none}
+.rd-cliente-link:hover{text-decoration:underline}
+
+/* ─── RENDICONTO — mese evidenziato e sezioni collassabili ─── */
+.rd-mese-sel{background:rgba(99,102,241,.10)!important;color:var(--color-text)!important}
+th.rd-mese-sel{background:rgba(99,102,241,.22)!important}
+.rd-sez-hdr td:first-child{cursor:pointer;user-select:none}
+.rd-chevron{display:inline-block;transition:transform .2s;margin-right:6px;font-size:10px}
+.rd-collapsed .rd-chevron{transform:rotate(-90deg)}
