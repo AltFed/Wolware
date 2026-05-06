@@ -2595,6 +2595,23 @@
       <button class="btn-icon" data-close="modalFattura">✕</button>
     </div>
     <div class="modal-body" style="overflow-y:auto">
+    <!-- Selezione cliente (visibile solo se aperto da fuori scheda ditta) -->
+      <div class="dettaglio-section" id="fatDittaSection" style="display:none">
+        <div class="form-row">
+          <div class="form-field col-span-2">
+            <label>Cliente</label>
+            <select id="fat_ditta_id"></select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modalità compilazione -->
+      <div class="dettaglio-section">
+        <div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-3)">
+          <button class="btn btn-sm" id="fatModoImporta" style="background:var(--color-primary);color:#fff">📋 Da Pratiche</button>
+          <button class="btn btn-sm btn-secondary" id="fatModoLibero">✏️ Importo Libero</button>
+        </div>
+      </div>
 
       <!-- Nuova fattura -->
       <div class="dettaglio-section">

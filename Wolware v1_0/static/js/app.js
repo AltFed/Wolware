@@ -2917,20 +2917,45 @@ function _buildPrAnnoSel() {
   document.getElementById('pr_mese').value = String(new Date().getMonth() + 1);
 }
 
+function _aggiornaIvaRiga(i) {
+  const r = prRigheData[i];
+  const iva = r.esente ? 0 : Math.round(r.costo * 22) / 100;
+  const totale = r.esente ? r.costo : Math.round((r.costo + iva) * 100) / 100;
+  const ivaEl = document.getElementById(`pr-iva-${i}`);
+  const totEl = document.getElementById(`pr-tot-${i}`);
+  if (ivaEl) ivaEl.textContent = r.esente ? 'IVA zero' : `IVA € ${iva.toFixed(2)}`;
+  if (totEl) totEl.textContent = `€ ${totale.toFixed(2)}`;
+}
+
 function _renderPrRighe() {
   const el = document.getElementById('prRighe');
   if (!prRigheData.length) { el.innerHTML = ''; return; }
-  el.innerHTML = prRigheData.map((r, i) => `
-    <div style="display:grid;grid-template-columns:130px 1fr 90px 120px 32px;gap:var(--space-2);align-items:center;margin-bottom:var(--space-2)">
-      <input type="date" value="${r.data}" oninput="prRigheData[${i}].data=this.value" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
-      <input type="text" value="${r.descrizione}" placeholder="Descrizione" oninput="prRigheData[${i}].descrizione=this.value" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
-      <input type="number" value="${r.costo}" placeholder="€" min="0" step="0.01" oninput="prRigheData[${i}].costo=parseFloat(this.value)||0" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
-      <label class="filter-check" style="white-space:nowrap">
-        <input type="checkbox" ${r.esente ? 'checked' : ''} onchange="prRigheData[${i}].esente=this.checked" />
+  el.innerHTML = prRigheData.map((r, i) => {
+    const iva = r.esente ? 0 : Math.round(r.costo * 22) / 100;
+    const totale = r.esente ? r.costo : Math.round((r.costo + iva) * 100) / 100;
+    const ivaLabel = r.esente
+      ? `<span id="pr-iva-${i}" style="color:var(--color-text-muted);font-size:var(--text-xs)">IVA zero</span>`
+      : `<span id="pr-iva-${i}" style="font-size:var(--text-xs)">IVA € ${iva.toFixed(2)}</span>`;
+    return `
+    <div style="display:grid;grid-template-columns:2fr 1fr auto auto auto;gap:var(--space-2);align-items:center;margin-bottom:var(--space-2)">
+      <input type="text" value="${r.descrizione}" placeholder="Nome pratica"
+        oninput="prRigheData[${i}].descrizione=this.value"
+        style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
+      <input type="number" value="${r.costo}" placeholder="Importo €" min="0" step="0.01"
+        oninput="prRigheData[${i}].costo=parseFloat(this.value)||0;_aggiornaIvaRiga(${i})"
+        onblur="_renderPrRighe()"
+        style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
+      <label style="display:flex;align-items:center;gap:4px;font-size:var(--text-xs);white-space:nowrap;cursor:pointer">
+        <input type="checkbox" ${r.esente ? 'checked' : ''}
+          onchange="prRigheData[${i}].esente=this.checked;_renderPrRighe()" />
         Esente IVA
       </label>
-      <button class="btn btn-icon btn-ghost" style="color:var(--color-error)" onclick="prRigheData.splice(${i},1);_renderPrRighe()">✕</button>
-    </div>`).join('');
+      ${ivaLabel}
+      <span id="pr-tot-${i}" style="font-size:var(--text-xs);font-weight:600;min-width:60px;text-align:right">€ ${totale.toFixed(2)}</span>
+      <button class="btn btn-icon btn-ghost" style="color:var(--color-error)"
+        onclick="prRigheData.splice(${i},1);_renderPrRighe()">✕</button>
+    </div>`;
+  }).join('');
 }
 
 document.getElementById('btnDetPratiche')?.addEventListener('click', () => {
@@ -3166,20 +3191,45 @@ function _renderIvTabella() {
   const ths = colonne.map(c =>
     `<th title="${c.mg_nome}">${c.nome}</th>`).join('');
   const trs = righe.map(r => {
+    let totaleCliente = 0;
     const celle = colonne.map(c => {
       const cella = r.celle[c.voce_id];
       if (!cella || !cella.applicabile)
         return `<td><span class="variabili-cell-na">×</span></td>`;
-      return `<td><input type="number" min="0" step="1" value="${cella.qta ?? 0}"
-        data-ditta="${r.ditta_id}" data-voce="${c.voce_id}"
-        class="iv-input" /></td>`;
+      const qta = cella.qta ?? 0;
+      const importo = qta * (cella.prezzo || 0);
+      totaleCliente += importo;
+      const compilata = qta > 0 ? 'style="background:var(--color-primary-highlight)"' : '';
+      return `<td ${compilata}><input type="number" min="0" step="1" value="${qta}"
+        data-ditta="${r.ditta_id}" data-voce="${c.voce_id}" data-prezzo="${cella.prezzo || 0}"
+        class="iv-input"
+        oninput="this.closest('td').style.background=+this.value>0?'var(--color-primary-highlight)':'';_aggiornaRigaTotale(this)"
+        /></td>`;
     }).join('');
-    return `<tr><td class="col-cliente">${r.ditta_nome}</td>${celle}</tr>`;
+    return `<tr>
+      <td class="col-cliente">${r.ditta_nome}</td>
+      ${celle}
+      <td class="iv-tot-cliente" id="iv-tot-${r.ditta_id}" style="font-weight:600;text-align:right;white-space:nowrap;color:var(--color-primary)">
+        € ${totaleCliente.toFixed(2)}
+      </td>
+    </tr>`;
   }).join('');
   el.innerHTML = `<table class="variabili-table">
-    <thead><tr><th>Cliente</th>${ths}</tr></thead>
+    <thead><tr><th>Cliente</th>${ths}<th style="text-align:right">Totale</th></tr></thead>
     <tbody>${trs}</tbody>
   </table>`;
+}
+
+function _aggiornaRigaTotale(input) {
+  const dittaId = input.dataset.ditta;
+  const riga = input.closest('tr');
+  const inputs = riga.querySelectorAll('.iv-input');
+  let tot = 0;
+  inputs.forEach(inp => {
+    tot += (parseFloat(inp.value) || 0) * (parseFloat(inp.dataset.prezzo) || 0);
+  });
+  const totEl = document.getElementById(`iv-tot-${dittaId}`);
+  if (totEl) totEl.textContent = `€ ${tot.toFixed(2)}`;
 }
 
 document.getElementById('btnCaricaVariabili')?.addEventListener('click', async () => {
@@ -3310,9 +3360,25 @@ function _buildAnnoSel(selId, defaultAnno) {
 /* ── 5.2 Fattura ─────────────────────────────────────────────────────────── */
 let fatRighe = [];
 
-function _openFattura() {
+function _openFattura(dittaId = null) {
   const anno = currentDetAnno;
+  // Se passato dittaId esplicito (da fuori scheda) mostra il select cliente
+  const useDittaId = dittaId || currentDetId;
   document.getElementById('fatturaTitle').textContent = `Fattura — ${anno}`;
+  document.getElementById('fatturaTitle').dataset.dittaId = useDittaId;
+
+  // Popola select clienti se necessario
+  const dittaSec = document.getElementById('fatDittaSection');
+  if (!currentDetId) {
+    dittaSec.style.display = '';
+    const sel = document.getElementById('fat_ditta_id');
+    sel.innerHTML = ditteGlobali.map(d =>
+      `<option value="${d.id}"${d.id==useDittaId?' selected':''}>${d.nome}</option>`
+    ).join('');
+  } else {
+    dittaSec.style.display = 'none';
+  }
+
   _buildAnnoSel('fat_anno', anno);
   _buildAnnoSel('fat_da_anno', anno);
   _buildAnnoSel('fat_a_anno', anno);
@@ -3325,6 +3391,25 @@ function _openFattura() {
   _loadFatStorico();
   openModal('modalFattura');
 }
+
+document.getElementById('fatModoImporta')?.addEventListener('click', () => {
+  document.getElementById('fatModoImporta').style.cssText += ';background:var(--color-primary);color:#fff';
+  document.getElementById('fatModoLibero').removeAttribute('style');
+  document.getElementById('fat_da_mese').closest('.form-row').style.display = '';
+  document.getElementById('btnFatImportaPratiche').style.display = '';
+});
+
+document.getElementById('fatModoLibero')?.addEventListener('click', () => {
+  document.getElementById('fatModoLibero').style.cssText += ';background:var(--color-primary);color:#fff';
+  document.getElementById('fatModoImporta').removeAttribute('style');
+  document.getElementById('fat_da_mese').closest('.form-row').style.display = 'none';
+  document.getElementById('btnFatImportaPratiche').style.display = 'none';
+  if (!fatRighe.length) {
+    fatRighe.push({ descrizione: '', mese_label: '', qta: 1, prezzo: 0, esente_iva: false, aliquota_iva: 22, totale: 0 });
+    _renderFatRighe();
+  }
+});
+
 
 function _renderFatRighe() {
   const tbody = document.getElementById('fatRigheTbody');
