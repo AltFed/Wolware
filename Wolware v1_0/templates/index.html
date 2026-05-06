@@ -711,6 +711,11 @@
               <option value="uscite">Uscite</option>
               <option value="giroconti">Giroconti</option>
             </select>
+            <select class="filter-select" id="pnFiltroFatturato" style="width:150px">
+              <option value="tutti">Tutti gli stati</option>
+              <option value="no">Da fatturare</option>
+              <option value="si">Già fatturati</option>
+            </select>
             <input type="text" class="filter-input" id="pnFiltroCerca"
               placeholder="Cerca cliente, categoria, note…"
               style="min-width:200px;flex:1" />
@@ -3072,6 +3077,51 @@
   </div>
 </div>
 <!-- /MODAL Gestione Macrogruppi -->
+
+<!-- MODAL Esporta PDF Riepilogo -->
+<div class="modal-overlay" id="modalEsporta">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <h3 class="modal-title">📥 Esporta Riepilogo PDF</h3>
+      <button class="modal-close" data-close="modalEsporta">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-3)">
+        Seleziona i mesi da includere nel riepilogo. Il PDF conterrà entrate, uscite e giroconti
+        con totali per mese e saldo netto del periodo.
+      </p>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2)">
+        <label style="font-size:var(--text-sm);font-weight:600">Mesi disponibili</label>
+        <div style="display:flex;gap:var(--space-2)">
+          <button class="btn btn-ghost btn-sm" id="pnEsportaSelAll">Seleziona tutti</button>
+          <button class="btn btn-ghost btn-sm" id="pnEsportaDeselAll">Deseleziona</button>
+        </div>
+      </div>
+      <div id="pnEsportaMesiList"
+        style="max-height:320px;overflow-y:auto;border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-2)">
+        <div style="color:var(--color-text-muted);font-size:var(--text-sm);padding:var(--space-3);text-align:center">
+          Caricamento mesi…
+        </div>
+      </div>
+      <div id="pnEsportaRiepilogo"
+        style="margin-top:var(--space-3);font-size:var(--text-sm);color:var(--color-text-muted)">
+        Nessun mese selezionato
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalEsporta">Annulla</button>
+      <button class="btn btn-primary" id="pnBtnGeneraPdf" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+        Genera PDF
+      </button>
+    </div>
+  </div>
+</div>
+<!-- /MODAL Esporta PDF Riepilogo -->
 
 <div class="toast-container" id="toastContainer"></div>
   <script src="/static/js/app.js" defer></script>

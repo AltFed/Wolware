@@ -201,6 +201,12 @@ def get_movimenti():
         like = f'%{cerca}%'
         params.extend([like, like, like, like])
 
+    fatturato = request.args.get('fatturato', 'tutti')
+    if fatturato == 'si':
+        query += " AND mf.movimento_id IS NOT NULL"
+    elif fatturato == 'no':
+        query += " AND mf.movimento_id IS NULL AND m.tipo = 'entrata'"
+
     query += " ORDER BY m.data DESC, m.id DESC"
 
     rows = db.execute(query, params).fetchall()
@@ -988,3 +994,284 @@ def elimina_sottovoce(tipo, macro_id, sottovoce_id):
     db.commit()
     db.close()
     return jsonify({'ok': True})
+
+
+# ─────────────────────────────────────────────────────────────────
+# PUT /api/prima-nota/movimenti/<id>
+# Modifica data, importo, descrizione di un movimento (non giroconti).
+# Body: {data, importo, descrizione}
+# ─────────────────────────────────────────────────────────────────
+@bp.route('/api/prima-nota/movimenti/<int:mov_id>', methods=['PUT'])
+@login_required
+def aggiorna_movimento(mov_id):
+    db = get_db()
+    mov = db.execute('SELECT * FROM movimenti_studio WHERE id=?', (mov_id,)).fetchone()
+    if not mov:
+        db.close()
+        return jsonify({'error': 'Movimento non trovato'}), 404
+    if mov['tipo'] == 'giroconto':
+        db.close()
+        return jsonify({'error': 'Modifica diretta di giroconti non supportata'}), 400
+
+    d = request.get_json() or {}
+    nuova_data       = d.get('data', mov['data'])
+    nuovo_importo    = float(d.get('importo', mov['importo']))
+    nuova_descr      = d.get('descrizione', mov['descrizione'] or '')
+
+    db.execute(
+        'UPDATE movimenti_studio SET data=?, importo=?, descrizione=? WHERE id=?',
+        (nuova_data, nuovo_importo, nuova_descr, mov_id)
+    )
+    # Sincronizza pagamento collegato (entrata cliente)
+    if mov['tipo'] == 'entrata' and mov['macrogruppo_id'] == 'clienti':
+        db.execute(
+            'UPDATE pagamenti SET importo=?, data_pagamento=? WHERE movimenti_studio_id=?',
+            (nuovo_importo, nuova_data, mov_id)
+        )
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+
+# ─────────────────────────────────────────────────────────────────
+# GET /api/prima-nota/mesi-disponibili
+# Lista year-month con movimenti (per il modal esporta)
+# ─────────────────────────────────────────────────────────────────
+@bp.route('/api/prima-nota/mesi-disponibili')
+@login_required
+def get_mesi_disponibili():
+    db = get_db()
+    rows = db.execute(
+        "SELECT strftime('%Y-%m', data) AS mese, COUNT(*) AS n_mov "
+        "FROM movimenti_studio GROUP BY mese ORDER BY mese DESC"
+    ).fetchall()
+    db.close()
+    return jsonify([dict(r) for r in rows])
+
+
+# ─────────────────────────────────────────────────────────────────
+# POST /api/prima-nota/esporta/pdf
+# Genera un PDF riepilogativo per i mesi selezionati.
+# Body: {mesi: ['2026-01', '2026-03', ...]}
+# ─────────────────────────────────────────────────────────────────
+@bp.route('/api/prima-nota/esporta/pdf', methods=['POST'])
+@login_required
+def esporta_pdf():
+    db = get_db()
+    d = request.get_json() or {}
+    mesi = d.get('mesi', [])
+    if not mesi:
+        db.close()
+        return jsonify({'error': 'Seleziona almeno un mese'}), 400
+
+    placeholders = ','.join('?' * len(mesi))
+    rows = db.execute(f"""
+        SELECT m.*,
+               CASE WHEN m.tipo='entrata' AND m.macrogruppo_id='clienti'
+                    THEN dz.ragione_sociale ELSE m.sottovoce_nome END AS nome_display,
+               CASE WHEN mf.movimento_id IS NOT NULL THEN 1 ELSE 0 END AS fatturato
+        FROM movimenti_studio m
+        LEFT JOIN ditte dz ON (m.macrogruppo_id='clienti'
+                               AND m.sottovoce_id = CAST(dz.id AS TEXT))
+        LEFT JOIN movimenti_fatturati mf ON mf.movimento_id = m.id
+        WHERE strftime('%Y-%m', m.data) IN ({placeholders})
+        ORDER BY m.data ASC, m.id ASC
+    """, mesi).fetchall()
+    db.close()
+
+    buf = _genera_pdf_riepilogo([dict(r) for r in rows], sorted(mesi))
+    nome = f"Riepilogo_PrimaNota_{date.today()}.pdf"
+    return send_file(buf, mimetype='application/pdf',
+                     as_attachment=True, download_name=nome)
+
+
+def _genera_pdf_riepilogo(movimenti, mesi):
+    """Genera PDF riepilogo mensile della prima nota."""
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                        Table, TableStyle, HRFlowable)
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    except ImportError:
+        raise RuntimeError('reportlab non installato')
+
+    MESI_ITA = {
+        '01': 'Gennaio', '02': 'Febbraio', '03': 'Marzo', '04': 'Aprile',
+        '05': 'Maggio',  '06': 'Giugno',   '07': 'Luglio', '08': 'Agosto',
+        '09': 'Settembre','10': 'Ottobre', '11': 'Novembre','12': 'Dicembre',
+    }
+
+    def _fmt_eur(v):
+        s = f"{abs(float(v)):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+        return f"€ {s}"
+
+    def _fmt_data(s):
+        if not s:
+            return '—'
+        return '/'.join(reversed(s.split('-')))
+
+    C_HDR  = colors.HexColor('#1e293b')
+    C_ENT  = colors.HexColor('#166534')
+    C_USC  = colors.HexColor('#991b1b')
+    C_GIR  = colors.HexColor('#5b21b6')
+    C_GRAY = colors.HexColor('#64748b')
+    C_SURF = colors.HexColor('#f8fafc')
+    C_BRD  = colors.HexColor('#e2e8f0')
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                             leftMargin=2*cm, rightMargin=2*cm,
+                             topMargin=2.5*cm, bottomMargin=2.5*cm)
+
+    TITLE  = ParagraphStyle('T', fontSize=16, leading=20, fontName='Helvetica-Bold', spaceAfter=2)
+    SUB    = ParagraphStyle('S', fontSize=10, leading=14, fontName='Helvetica',
+                             textColor=C_GRAY, spaceAfter=12)
+    H2     = ParagraphStyle('H2', fontSize=12, leading=16, fontName='Helvetica-Bold',
+                             textColor=C_HDR, spaceBefore=14, spaceAfter=6)
+    NORM   = ParagraphStyle('N', fontSize=9, leading=13)
+    SMALL  = ParagraphStyle('SM', fontSize=8, leading=12, textColor=C_GRAY)
+    FOOT   = ParagraphStyle('F', fontSize=7.5, leading=11, textColor=C_GRAY)
+
+    def _mese_label(ym):
+        y, m = ym.split('-')
+        return f"{MESI_ITA.get(m, m)} {y}"
+
+    story = []
+    oggi_fmt = date.today().strftime('%d/%m/%Y')
+
+    # ── Intestazione ──────────────────────────────────────────────
+    periodo = ' · '.join(_mese_label(m) for m in mesi)
+    story.append(Paragraph('RIEPILOGO PRIMA NOTA STUDIO', TITLE))
+    story.append(Paragraph(f'Periodo: {periodo}   —   Generato il {oggi_fmt}', SUB))
+
+    # Raggruppa movimenti per mese
+    from collections import defaultdict
+    per_mese = defaultdict(list)
+    for mv in movimenti:
+        ym = mv['data'][:7] if mv['data'] else '????-??'
+        per_mese[ym].append(mv)
+
+    tot_entrate_periodo = 0.0
+    tot_uscite_periodo  = 0.0
+
+    for ym in mesi:
+        mvs = per_mese.get(ym, [])
+        story.append(HRFlowable(width='100%', thickness=0.5, color=C_BRD,
+                                spaceBefore=8, spaceAfter=4))
+        story.append(Paragraph(_mese_label(ym), H2))
+
+        if not mvs:
+            story.append(Paragraph('Nessun movimento in questo mese.', SMALL))
+            continue
+
+        # Separa entrate/uscite/giroconti
+        entrate   = [m for m in mvs if m['tipo'] == 'entrata']
+        uscite    = [m for m in mvs if m['tipo'] == 'uscita']
+        giroconti = [m for m in mvs if m['tipo'] == 'giroconto']
+
+        tot_e = sum(float(m['importo']) for m in entrate)
+        tot_u = sum(float(m['importo']) for m in uscite)
+        tot_entrate_periodo += tot_e
+        tot_uscite_periodo  += tot_u
+
+        col_w = [2*cm, 4.5*cm, 3.5*cm, 2.5*cm, 2.5*cm]
+
+        def _build_section(rows_data, color, label):
+            if not rows_data:
+                return
+            story.append(Paragraph(f'<font color="{color.hexval()}"><b>{label}</b></font>', NORM))
+            tbl_data = [['Data', 'Soggetto / Categoria', 'Note', 'Conto', 'Importo']]
+            for mv in rows_data:
+                nome = mv.get('nome_display') or mv.get('macrogruppo_nome') or '—'
+                conto = mv.get('tipologia', '') or '—'
+                if conto.startswith('banca_'):
+                    conto = 'Banca'
+                elif conto == 'cassa':
+                    conto = 'Cassa'
+                tbl_data.append([
+                    _fmt_data(mv.get('data', '')),
+                    nome[:35],
+                    (mv.get('descrizione') or '')[:28],
+                    conto,
+                    _fmt_eur(mv.get('importo', 0)),
+                ])
+            t = Table(tbl_data, colWidths=col_w, repeatRows=1)
+            t.setStyle(TableStyle([
+                ('BACKGROUND',    (0, 0), (-1, 0),  C_HDR),
+                ('TEXTCOLOR',     (0, 0), (-1, 0),  colors.white),
+                ('FONTNAME',      (0, 0), (-1, 0),  'Helvetica-Bold'),
+                ('FONTSIZE',      (0, 0), (-1, 0),  8),
+                ('FONTSIZE',      (0, 1), (-1, -1),  8),
+                ('ROWBACKGROUNDS',(0, 1), (-1, -1), [colors.white, C_SURF]),
+                ('ALIGN',         (4, 0), (4, -1),  'RIGHT'),
+                ('GRID',          (0, 0), (-1, -1),  0.25, C_BRD),
+                ('TOPPADDING',    (0, 0), (-1, -1),  3),
+                ('BOTTOMPADDING', (0, 0), (-1, -1),  3),
+                ('LEFTPADDING',   (0, 0), (-1, -1),  5),
+            ]))
+            story.append(t)
+            story.append(Spacer(1, 0.3*cm))
+
+        _build_section(entrate,   C_ENT, f'Entrate  ({len(entrate)} movimenti)')
+        _build_section(uscite,    C_USC, f'Uscite  ({len(uscite)} movimenti)')
+        _build_section(giroconti, C_GIR, f'Giroconti  ({len(giroconti)} movimenti)')
+
+        # Riepilogo mese
+        saldo = tot_e - tot_u
+        saldo_col = C_ENT if saldo >= 0 else C_USC
+        riepilogo = [
+            ['', 'Totale entrate', _fmt_eur(tot_e)],
+            ['', 'Totale uscite',  _fmt_eur(tot_u)],
+            ['', 'Saldo mese',     _fmt_eur(saldo)],
+        ]
+        rt = Table(riepilogo, colWidths=[9*cm, 4*cm, 2*cm])
+        rt.setStyle(TableStyle([
+            ('ALIGN',   (2, 0), (2, -1), 'RIGHT'),
+            ('FONTNAME',(1, 0), (1, -1), 'Helvetica'),
+            ('FONTNAME',(1, 2), (1, 2),  'Helvetica-Bold'),
+            ('FONTSIZE',(0, 0), (-1, -1), 8),
+            ('TEXTCOLOR',(2, 0),(2, 0),   C_ENT),
+            ('TEXTCOLOR',(2, 1),(2, 1),   C_USC),
+            ('TEXTCOLOR',(2, 2),(2, 2),   saldo_col),
+            ('FONTNAME', (2, 2),(2, 2),   'Helvetica-Bold'),
+            ('TOPPADDING',(0,0),(-1,-1),  2),
+            ('BOTTOMPADDING',(0,0),(-1,-1),2),
+        ]))
+        story.append(rt)
+
+    # ── Riepilogo finale periodo ───────────────────────────────────
+    story.append(HRFlowable(width='100%', thickness=1, color=C_HDR,
+                             spaceBefore=14, spaceAfter=6))
+    saldo_periodo = tot_entrate_periodo - tot_uscite_periodo
+    sc = C_ENT if saldo_periodo >= 0 else C_USC
+    sommario = [
+        ['TOTALE ENTRATE PERIODO',  _fmt_eur(tot_entrate_periodo)],
+        ['TOTALE USCITE PERIODO',   _fmt_eur(tot_uscite_periodo)],
+        ['SALDO NETTO PERIODO',     _fmt_eur(saldo_periodo)],
+    ]
+    st = Table(sommario, colWidths=[12.5*cm, 3*cm])
+    st.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1),  C_HDR),
+        ('TEXTCOLOR',  (0, 0), (-1, -1),  colors.white),
+        ('FONTNAME',   (0, 0), (-1, -1),  'Helvetica-Bold'),
+        ('FONTSIZE',   (0, 0), (-1, -1),  9),
+        ('ALIGN',      (1, 0), (1, -1),   'RIGHT'),
+        ('TEXTCOLOR',  (1, 0), (1, 0),    colors.HexColor('#86efac')),
+        ('TEXTCOLOR',  (1, 1), (1, 1),    colors.HexColor('#fca5a5')),
+        ('TEXTCOLOR',  (1, 2), (1, 2),    colors.HexColor('#fde047') if saldo_periodo < 0 else colors.HexColor('#86efac')),
+        ('TOPPADDING', (0, 0), (-1, -1),  5),
+        ('BOTTOMPADDING',(0,0),(-1,-1),   5),
+        ('LEFTPADDING',(0, 0), (-1, -1),  8),
+    ]))
+    story.append(st)
+    story.append(Spacer(1, 0.6*cm))
+    story.append(Paragraph(
+        f'Documento generato il {oggi_fmt} — Prima Nota Studio · Wolware',
+        FOOT
+    ))
+
+    doc.build(story)
+    buf.seek(0)
+    return buf

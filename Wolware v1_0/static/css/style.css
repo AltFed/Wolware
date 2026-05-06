@@ -727,3 +727,16 @@ th.rd-mese-sel{background:rgba(99,102,241,.22)!important}
 .rd-sez-hdr td:first-child{cursor:pointer;user-select:none}
 .rd-chevron{display:inline-block;transition:transform .2s;margin-right:6px;font-size:10px}
 .rd-collapsed .rd-chevron{transform:rotate(-90deg)}
+
+/* ─── PRIMA NOTA — matitina, edit row, filtro fatturato, modal esporta ─── */
+.pn-btn-modifica{color:var(--color-text-muted);padding:2px;background:none;border:none;cursor:pointer;border-radius:var(--radius-sm);transition:color .15s,background .15s}
+.pn-btn-modifica:hover{color:var(--color-primary);background:var(--color-surface-raised)}
+.pn-edit-input{height:28px;padding:0 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm);background:var(--color-surface);color:var(--color-text);box-sizing:border-box}
+.pn-edit-input:focus{outline:none;border-color:var(--color-primary);box-shadow:0 0 0 2px rgba(99,102,241,.18)}
+.pn-edit-importo{font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
+/* Esporta modal */
+.pn-esporta-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-2);border-radius:var(--radius-sm);cursor:pointer;transition:background .1s}
+.pn-esporta-row:hover{background:var(--color-surface-raised)}
+.pn-esporta-row input[type=checkbox]{accent-color:var(--color-primary);width:15px;height:15px;flex-shrink:0;cursor:pointer}
+.pn-esporta-label{flex:1;font-size:var(--text-sm);font-weight:500}
+.pn-esporta-count{font-size:var(--text-xs);color:var(--color-text-muted);font-variant-numeric:tabular-nums}

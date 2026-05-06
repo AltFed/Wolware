@@ -3498,6 +3498,7 @@ const PrimaNota = (() => {
   let _filtroMese = '0';
   let _filtroTipo = 'tutti';
   let _filtroCerca = '';
+  let _filtroFatturato = 'tutti';
   let _sollecitiEspansi = false;
   let _debounceTimer = null;
   let _initialized = false;
@@ -3576,6 +3577,7 @@ const PrimaNota = (() => {
     if (_filtroMese && _filtroMese !== '0') p.set('mese', _filtroMese);
     if (_filtroTipo && _filtroTipo !== 'tutti') p.set('tipo', _filtroTipo);
     if (_filtroCerca) p.set('cerca', _filtroCerca);
+    if (_filtroFatturato !== 'tutti') p.set('fatturato', _filtroFatturato);
     try {
       _movimenti = await fetch(`/api/prima-nota/movimenti?${p}`).then(r => r.json());
       _render(_movimenti);
@@ -3615,6 +3617,13 @@ const PrimaNota = (() => {
         <td>${_esc(conto)}</td>
         <td class="col-money"><span class="${cls}">${_eur(m.importo)}</span></td>
         <td class="col-actions">
+          ${m.tipo !== 'giroconto' ? `<button class="btn-icon pn-btn-modifica" title="Modifica"
+            onclick="PrimaNota.modificaMovimento(${m.id})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>` : ''}
           <button class="btn-icon pn-btn-elimina" title="Elimina"
             onclick="PrimaNota.eliminaMovimento(${m.id},${m.tipo === 'giroconto'})">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3653,6 +3662,7 @@ const PrimaNota = (() => {
     $('pnFiltroAnno').addEventListener('change', e => { _filtroAnno = e.target.value; _caricaMovimenti(); });
     $('pnFiltroMese').addEventListener('change', e => { _filtroMese = e.target.value; _caricaMovimenti(); });
     $('pnFiltroTipo').addEventListener('change', e => { _filtroTipo = e.target.value; _caricaMovimenti(); });
+    $('pnFiltroFatturato').addEventListener('change', e => { _filtroFatturato = e.target.value; _caricaMovimenti(); });
     $('pnFiltroCerca').addEventListener('input', e => {
       clearTimeout(_debounceTimer);
       _debounceTimer = setTimeout(() => { _filtroCerca = e.target.value.trim(); _caricaMovimenti(); }, 300);
@@ -4036,6 +4046,18 @@ const PrimaNota = (() => {
     $('pnBtnEntrate').addEventListener('click', () => openModalMacrogruppi('entrate'));
     $('pnBtnUscite').addEventListener('click', () => openModalMacrogruppi('uscite'));
     $('pnBtnAggiungiMacro').addEventListener('click', _aggiungiNuovoMacro);
+
+    // Esporta
+    $('pnBtnEsporta').addEventListener('click', openModalEsporta);
+    $('pnEsportaSelAll').addEventListener('click', () => {
+      document.querySelectorAll('.pn-esporta-cb').forEach(cb => { cb.checked = true; });
+      _aggiornaRiepilogoEsporta();
+    });
+    $('pnEsportaDeselAll').addEventListener('click', () => {
+      document.querySelectorAll('.pn-esporta-cb').forEach(cb => { cb.checked = false; });
+      _aggiornaRiepilogoEsporta();
+    });
+    $('pnBtnGeneraPdf').addEventListener('click', _generaPdfEsporta);
 
     $('pnFattMaster').addEventListener('change', e => {
       document.querySelectorAll('.pn-fatt-cb').forEach(cb => {
@@ -4422,11 +4444,142 @@ const PrimaNota = (() => {
     }
   }
 
+  // ── Inline edit movimento ────────────────────────────────────────
+  function modificaMovimento(id) {
+    const m = _movimenti.find(x => x.id === id);
+    if (!m) return;
+    const tr = document.querySelector(`tr[data-id="${id}"]`);
+    if (!tr) return;
+    const tipoHtml = m.tipo === 'entrata'
+      ? '<span class="badge-tipo badge-entrata">Entrata</span>'
+      : '<span class="badge-tipo badge-uscita">Uscita</span>';
+    const cls = m.tipo === 'entrata' ? 'pn-importo-entrata' : 'pn-importo-uscita';
+    const nomeHtml = (m.tipo === 'entrata' && m.macrogruppo_id === 'clienti' && m.sottovoce_id)
+      ? `<span class="pn-nome-cliente">${_esc(m.nome_display || '—')}</span>`
+      : _esc(m.nome_display || m.sottovoce_nome || '—');
+    tr.dataset.editId = id;
+    tr.innerHTML = `
+      <td class="pn-col-flag"></td>
+      <td><input type="date" id="pnEditData${id}" class="pn-edit-input"
+            value="${_esc(m.data || '')}" style="width:120px"></td>
+      <td>${tipoHtml}</td>
+      <td>${_esc(m.macrogruppo_nome || '—')}</td>
+      <td>${nomeHtml}</td>
+      <td><input type="text" id="pnEditDescr${id}" class="pn-edit-input"
+            value="${_esc(m.descrizione || '')}" placeholder="Note…" style="width:100%;min-width:80px"></td>
+      <td>${_esc(_formatConto(m.tipologia))}</td>
+      <td class="col-money">
+        <input type="number" id="pnEditImporto${id}" class="pn-edit-input pn-edit-importo ${cls}"
+          value="${m.importo}" step="0.01" min="0" style="width:90px;text-align:right">
+      </td>
+      <td class="col-actions">
+        <button class="btn btn-primary btn-sm" onclick="PrimaNota.salvaMovimento(${id})">Salva</button>
+        <button class="btn btn-ghost btn-sm" onclick="PrimaNota.cancelMovimentoEdit()">✕</button>
+      </td>`;
+    document.getElementById(`pnEditData${id}`).focus();
+  }
+
+  async function salvaMovimento(id) {
+    const nuovaData    = (document.getElementById(`pnEditData${id}`)    || {}).value;
+    const nuovaDescr   = (document.getElementById(`pnEditDescr${id}`)   || {}).value;
+    const nuovoImporto = (document.getElementById(`pnEditImporto${id}`) || {}).value;
+    if (!nuovaData || !nuovoImporto) { toast('Data e importo obbligatori', 'error'); return; }
+    try {
+      const res = await fetch(`/api/prima-nota/movimenti/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: nuovaData, importo: parseFloat(nuovoImporto), descrizione: nuovaDescr })
+      });
+      const data = await res.json();
+      if (data.ok) { await _caricaMovimenti(); toast('Movimento aggiornato', 'success'); }
+      else toast(data.error || 'Errore salvataggio', 'error');
+    } catch(e) { toast('Errore di rete', 'error'); }
+  }
+
+  function cancelMovimentoEdit() { _render(_movimenti); }
+
+  // ── Modal Esporta PDF ────────────────────────────────────────────
+  async function openModalEsporta() {
+    openModal('modalEsporta');
+    const list = $('pnEsportaMesiList');
+    list.innerHTML = '<div style="color:var(--color-text-muted);font-size:var(--text-sm);padding:var(--space-3);text-align:center">Caricamento…</div>';
+    $('pnEsportaRiepilogo').textContent = 'Nessun mese selezionato';
+    $('pnBtnGeneraPdf').disabled = true;
+    try {
+      const mesi = await fetch('/api/prima-nota/mesi-disponibili').then(r => r.json());
+      if (!mesi.length) {
+        list.innerHTML = '<div style="color:var(--color-text-muted);font-size:var(--text-sm);padding:var(--space-3);text-align:center">Nessun movimento registrato.</div>';
+        return;
+      }
+      const MESI_ITA = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                        'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+      list.innerHTML = mesi.map(m => {
+        const [y, mo] = m.mese.split('-');
+        const label = `${MESI_ITA[parseInt(mo)] || mo} ${y}`;
+        return `<label class="pn-esporta-row">
+          <input type="checkbox" class="pn-esporta-cb" value="${_esc(m.mese)}"
+            onchange="PrimaNota._aggiornaRiepilogoEsporta()">
+          <span class="pn-esporta-label">${_esc(label)}</span>
+          <span class="pn-esporta-count">${m.n_mov} moviment${m.n_mov === 1 ? 'o' : 'i'}</span>
+        </label>`;
+      }).join('');
+    } catch(e) { list.innerHTML = '<div style="color:var(--color-error);padding:var(--space-3)">Errore caricamento mesi</div>'; }
+  }
+
+  function _aggiornaRiepilogoEsporta() {
+    const cbs = [...document.querySelectorAll('.pn-esporta-cb:checked')];
+    const btn = $('pnBtnGeneraPdf');
+    const info = $('pnEsportaRiepilogo');
+    if (!cbs.length) {
+      btn.disabled = true;
+      info.textContent = 'Nessun mese selezionato';
+    } else {
+      btn.disabled = false;
+      info.textContent = `${cbs.length} mese${cbs.length > 1 ? 'i' : ''} selezionato${cbs.length > 1 ? 'i' : ''}`;
+    }
+  }
+
+  async function _generaPdfEsporta() {
+    const mesi = [...document.querySelectorAll('.pn-esporta-cb:checked')].map(cb => cb.value);
+    if (!mesi.length) { toast('Seleziona almeno un mese', 'error'); return; }
+    const btn = $('pnBtnGeneraPdf');
+    const origHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Generazione…';
+    try {
+      const res = await fetch('/api/prima-nota/esporta/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mesi })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Errore generazione PDF');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Riepilogo_PrimaNota_${new Date().toISOString().slice(0,10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      closeModal('modalEsporta');
+      toast('PDF esportato con successo', 'success');
+    } catch(e) {
+      toast(e.message || 'Errore di rete', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origHTML;
+    }
+  }
+
   return { init, refresh, eliminaMovimento, rimuoviFatturato, apriSollecito,
            openModalMovimento, openModalGiroconto, openModalFatturazione,
            openModalBanche, modificaBanca, salvaBanca, eliminaBanca, cancelBancaEdit,
            openModalMacrogruppi, modificaMacro, salvaMacro, eliminaMacro, cancelMacroEdit,
-           modificaSv, salvaSv, eliminaSv, aggiungiSv };
+           modificaSv, salvaSv, eliminaSv, aggiungiSv,
+           modificaMovimento, salvaMovimento, cancelMovimentoEdit,
+           openModalEsporta, _aggiornaRiepilogoEsporta };
 })();
 
 /* Aggancia switchTab per Prima Nota */
