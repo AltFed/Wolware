@@ -24,7 +24,8 @@ def login_required(f):
 
 
 def _gestione_attiva(ditta: dict, anno: int, tipo: str) -> bool:
-    """True se la gestione (paghe/contabilita) era attiva durante l'anno."""
+    """True se la gestione (paghe/contabilita) era attiva durante l'anno.
+    Se fine_X è impostata, l'anno di fine è già considerato chiuso (>=)."""
     inizio = ditta.get(f'inizio_{tipo}')
     fine   = ditta.get(f'fine_{tipo}')
     if not inizio:
@@ -32,7 +33,7 @@ def _gestione_attiva(ditta: dict, anno: int, tipo: str) -> bool:
     try:
         if anno < int(str(inizio)[:4]):
             return False
-        if fine and anno > int(str(fine)[:4]):
+        if fine and anno >= int(str(fine)[:4]):
             return False
     except Exception:
         pass
