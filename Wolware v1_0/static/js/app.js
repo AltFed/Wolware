@@ -463,6 +463,70 @@ function resetModalTabs() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   CADENZE — Mese-indicator nel tab Cadenze del modale ditta
+══════════════════════════════════════════════════════════ */
+(function() {
+  const LABELS = ['G','F','M','A','M','G','L','A','S','O','N','D'];
+
+  // Popola il select anno nel tab cadenze
+  function _initAnnoSel() {
+    const sel = document.getElementById('cadenzeAnnoSel');
+    if (!sel || sel.options.length > 0) return;
+    const cur = new Date().getFullYear();
+    for (let y = cur + 1; y >= cur - 4; y--) {
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = y;
+      if (y === cur) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    sel.addEventListener('change', _loadCadenze);
+  }
+
+  async function _loadCadenze() {
+    const dittaId = document.getElementById('dittaId').value;
+    if (!dittaId) return;
+    const anno = document.getElementById('cadenzeAnnoSel').value;
+    const wrap = document.getElementById('cadenzeWrap');
+    wrap.innerHTML = '<div style="padding:var(--space-4);color:var(--color-text-muted);font-size:var(--text-xs)">Caricamento…</div>';
+    try {
+      const data = await fetch(`/api/ditte/${dittaId}/cadenze?anno=${anno}`).then(r => r.json());
+      if (!data.cadenze || data.cadenze.length === 0) {
+        wrap.innerHTML = '<div class="empty-state" style="min-height:120px"><span class="empty-glyph">📅</span><span class="empty-title">Nessuna pratica registrata</span><span class="empty-sub">Non ci sono pratiche per questa ditta nell\'anno ' + anno + '</span></div>';
+        return;
+      }
+      let html = '';
+      data.cadenze.forEach(mg => {
+        html += `<div class="mese-row"><span class="mese-tag" title="${mg.macrogruppo}">${mg.macrogruppo}</span><div class="mese-cells">`;
+        mg.stati.forEach((stato, i) => {
+          html += `<span class="mese-cell ${stato}">${LABELS[i]}</span>`;
+        });
+        html += '</div></div>';
+      });
+      wrap.innerHTML = html;
+    } catch(e) {
+      wrap.innerHTML = '<div style="color:var(--color-error);font-size:var(--text-xs);padding:var(--space-3)">Errore nel caricamento delle cadenze.</div>';
+    }
+  }
+
+  // Hook sul tab Cadenze
+  document.querySelectorAll('.modal-tab[data-mtab="cadenze"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _initAnnoSel();
+      _loadCadenze();
+    });
+  });
+
+  // Espone per uso esterno (es. quando editDitta precarga)
+  window._caricaCadenzeIfOpen = function() {
+    const panel = document.getElementById('mtab-cadenze');
+    if (panel && panel.classList.contains('active')) {
+      _initAnnoSel();
+      _loadCadenze();
+    }
+  };
+})();
+
+/* ══════════════════════════════════════════════════════════
    SEDI LAVORATIVE — Carousel
 ══════════════════════════════════════════════════════════ */
 let sedi = [];
@@ -2594,7 +2658,9 @@ function _renderDetHeader(d) {
   `;
 
   const btnArch = document.getElementById('btnDetArchivia');
-  btnArch.textContent = d.archiviato ? '↩ Ripristina' : '📦 Archivia';
+  btnArch.innerHTML = d.archiviato
+    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.75"/></svg> Ripristina`
+    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg> Archivia`;
   btnArch.dataset.archiviato = d.archiviato ? '1' : '0';
 
   const annotEl = document.getElementById('dettaglioAnnotazioni');
@@ -3879,10 +3945,14 @@ const PrimaNota = (() => {
       row.innerHTML = '';
       saldi.forEach(s => {
         const card = document.createElement('div');
-        card.className = 'pn-saldo-card' + (s.saldo < 0 ? ' pn-saldo-negativo' : '');
+        card.className = 'pn-saldo-card' + (s.saldo < 0 ? ' pn-saldo-negativo' : s.saldo > 0 ? ' pn-saldo-positivo' : '');
         if (s.id && s.id.startsWith('banca_')) {
           card.dataset.bancaId = s.id.split('_')[1];
           card.dataset.bancaNome = s.nome;
+          if (s.colore) {
+            card.classList.add('pn-saldo-banca');
+            card.style.setProperty('--pn-bank-color', s.colore);
+          }
         }
         card.innerHTML = `<span class="pn-saldo-label">${_esc(s.nome)}</span>
           <span class="pn-saldo-value">${_eur(s.saldo)}</span>`;
@@ -4998,15 +5068,19 @@ const Rendiconto = (() => {
 
       // Card "Totale Disponibilità" in evidenza
       const totCard = document.createElement('div');
-      totCard.className = 'pn-saldo-card' + (tot < 0 ? ' pn-saldo-negativo' : '');
-      totCard.style.cssText = 'background:var(--color-surface-raised);border-color:var(--color-primary);min-width:160px';
+      totCard.className = 'pn-saldo-card' + (tot < 0 ? ' pn-saldo-negativo' : tot > 0 ? ' pn-saldo-positivo' : '');
+      totCard.style.cssText = 'background:var(--color-surface-2);border-color:var(--color-primary);border-left:3px solid var(--color-primary);min-width:160px';
       totCard.innerHTML = `<span class="pn-saldo-label">Totale Disponibilità</span>
         <span class="pn-saldo-value" style="color:${tot >= 0 ? 'var(--color-success)' : 'var(--color-error)'}">${_fmt(tot)}</span>`;
       row.appendChild(totCard);
 
       saldi.forEach(s => {
         const card = document.createElement('div');
-        card.className = 'pn-saldo-card' + (s.saldo < 0 ? ' pn-saldo-negativo' : '');
+        card.className = 'pn-saldo-card' + (s.saldo < 0 ? ' pn-saldo-negativo' : s.saldo > 0 ? ' pn-saldo-positivo' : '');
+        if (s.id && s.id.startsWith('banca_') && s.colore) {
+          card.classList.add('pn-saldo-banca');
+          card.style.setProperty('--pn-bank-color', s.colore);
+        }
         card.innerHTML = `<span class="pn-saldo-label">${s.nome}</span>
           <span class="pn-saldo-value">${_fmt(s.saldo)}</span>`;
         row.appendChild(card);

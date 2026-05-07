@@ -283,12 +283,12 @@
                   id="kpiChiuse">—</span></div>
             </div>
           </div>
-          <div class="section-block">
-            <div class="section-header">
-              <h2 class="section-title">Ultime Pratiche</h2>
+          <div class="home-section-block">
+            <div class="home-sec-head">
+              <h2 class="home-sec-title">Ultime Pratiche</h2>
               <button class="btn btn-ghost btn-sm" onclick="switchTab('pratiche')">Vedi tutte →</button>
             </div>
-            <div class="table-wrapper">
+            <div class="home-table-wrapper">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -302,8 +302,11 @@
                 </thead>
                 <tbody id="homeTableBody">
                   <tr>
-                    <td colspan="6" class="empty-row"><span class="empty-icon">📋</span><br>Nessuna pratica. Crea la tua
-                      prima pratica!</td>
+                    <td colspan="6" class="empty-row">
+                      <span class="empty-glyph">📋</span>
+                      <span class="empty-title">Nessuna pratica</span>
+                      <span class="empty-sub">Crea la tua prima pratica!</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -396,7 +399,10 @@
                 </thead>
                 <tbody id="praticheTableBody">
                   <tr>
-                    <td colspan="9" class="empty-row"><span class="empty-icon">📋</span><br>Nessuna pratica trovata.
+                    <td colspan="9" class="empty-row">
+                      <span class="empty-glyph">📋</span>
+                      <span class="empty-title">Nessuna pratica trovata</span>
+                      <span class="empty-sub">Prova a modificare i filtri di ricerca</span>
                     </td>
                   </tr>
                 </tbody>
@@ -462,8 +468,10 @@
               </thead>
               <tbody id="ditteBody">
                 <tr><td colspan="8" class="empty-state-row">
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                  <p>Nessun cliente attivo.<br><button class="btn btn-primary btn-sm" style="margin-top:var(--space-3)" id="btnEmptyAddCliente">+ Aggiungi cliente</button></p>
+                  <span class="empty-glyph">🏢</span>
+                  <span class="empty-title">Nessun cliente attivo</span>
+                  <span class="empty-sub">Aggiungi il tuo primo cliente per iniziare</span>
+                  <button class="btn btn-primary btn-sm" id="btnEmptyAddCliente">+ Aggiungi cliente</button>
                 </td></tr>
               </tbody>
             </table>
@@ -503,17 +511,10 @@
                 I tuoi tariffari
               </div>
               <div id="tariffariList" style="flex:1;overflow-y:auto;padding:var(--space-2)">
-                <div class="empty-state" style="padding:var(--space-10) var(--space-4)">
-                  <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-                    opacity="0.25">
-                    <line x1="8" y1="6" x2="21" y2="6" />
-                    <line x1="8" y1="12" x2="21" y2="12" />
-                    <line x1="8" y1="18" x2="21" y2="18" />
-                    <line x1="3" y1="6" x2="3.01" y2="6" />
-                    <line x1="3" y1="12" x2="3.01" y2="12" />
-                    <line x1="3" y1="18" x2="3.01" y2="18" />
-                  </svg>
-                  <p>Nessun tariffario.<br>Clicca <strong>Nuovo Tariffario</strong>.</p>
+                <div class="empty-state">
+                  <span class="empty-glyph">📋</span>
+                  <span class="empty-title">Nessun tariffario</span>
+                  <span class="empty-sub">Clicca <strong>Nuovo Tariffario</strong> per iniziare</span>
                 </div>
               </div>
             </div>
@@ -523,16 +524,9 @@
 
               <!-- Placeholder quando niente è selezionato -->
               <div id="tariffarioPlaceholder" class="empty-state" style="min-height:480px">
-                <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
-                  opacity="0.18">
-                  <line x1="8" y1="6" x2="21" y2="6" />
-                  <line x1="8" y1="12" x2="21" y2="12" />
-                  <line x1="8" y1="18" x2="21" y2="18" />
-                  <line x1="3" y1="6" x2="3.01" y2="6" />
-                  <line x1="3" y1="12" x2="3.01" y2="12" />
-                  <line x1="3" y1="18" x2="3.01" y2="18" />
-                </svg>
-                <p>Seleziona un tariffario dalla lista oppure creane uno nuovo.</p>
+                <span class="empty-glyph">📋</span>
+                <span class="empty-title">Nessun tariffario selezionato</span>
+                <span class="empty-sub">Seleziona un tariffario dalla lista oppure creane uno nuovo</span>
               </div>
 
               <!-- Editor visibile quando un tariffario è selezionato -->
@@ -618,8 +612,7 @@
                 </svg>
                 Entrate
               </button>
-              <button class="btn btn-sm" id="pnBtnFatturazione"
-                style="background:var(--color-success);color:#fff;border:none">
+              <button class="btn btn-sm btn-success" id="pnBtnFatturazione">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                   <polyline points="14 2 14 8 20 8"/>
@@ -628,8 +621,7 @@
                 </svg>
                 Fatturazione
               </button>
-              <button class="btn btn-sm" id="pnBtnGiroconto"
-                style="background:#7c3aed;color:#fff;border:none">
+              <button class="btn btn-sm btn-purple" id="pnBtnGiroconto">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="17 1 21 5 17 9"/>
                   <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
@@ -651,7 +643,7 @@
                   <line x1="12" y1="5" x2="12" y2="19"/>
                   <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
-                + Movimento
+                Movimento
               </button>
             </div>
           </div>
@@ -863,9 +855,7 @@
               <span style="font-weight:600;font-size:var(--text-sm)">Dettaglio Entrate</span>
             </div>
             <div class="rd-table-wrap" id="rdEntrateWrap">
-              <div style="padding:var(--space-6);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)" id="rdEntrateEmpty">
-                Nessuna entrata nel periodo selezionato
-              </div>
+              <div class="rd-empty-msg" id="rdEntrateEmpty">Nessuna entrata nel periodo selezionato</div>
             </div>
           </div>
 
@@ -876,9 +866,7 @@
               <span style="font-weight:600;font-size:var(--text-sm)">Dettaglio Uscite</span>
             </div>
             <div class="rd-table-wrap" id="rdUsciteWrap">
-              <div style="padding:var(--space-6);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)">
-                Nessuna uscita nel periodo selezionato
-              </div>
+              <div class="rd-empty-msg">Nessuna uscita nel periodo selezionato</div>
             </div>
           </div>
 
@@ -889,9 +877,7 @@
               <span style="font-weight:600;font-size:var(--text-sm)">Giroconti</span>
             </div>
             <div id="rdGirocontiWrap" style="padding:0">
-              <div style="padding:var(--space-6);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)">
-                Nessun giroconto nel periodo selezionato
-              </div>
+              <div class="rd-empty-msg">Nessun giroconto nel periodo selezionato</div>
             </div>
           </div>
 
@@ -954,6 +940,7 @@
           <button class="modal-tab" data-mtab="inps">INPS</button>
           <button class="modal-tab" data-mtab="contatti">Contatti</button>
           <button class="modal-tab" data-mtab="tariffario">Tariffario</button>
+          <button class="modal-tab" data-mtab="cadenze">Cadenze</button>
         </div>
 
         <input type="hidden" id="dittaId" />
@@ -1087,9 +1074,7 @@
               <div class="form-field">
                 <label>Residuo Iniziale (€)</label>
                 <input type="number" id="residuo_iniziale" value="0" step="0.01" placeholder="0.00" />
-                <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-1)">
-                  Positivo = debito · Negativo = credito
-                </div>
+                <div class="field-hint">Positivo = debito · Negativo = credito</div>
               </div>
               <div class="form-field">
                 <label>Annotazioni</label>
@@ -1159,10 +1144,8 @@
           <div class="form-section">
             <div class="tariff-toggle-row">
               <div>
-                <div style="font-weight:600;font-size:var(--text-sm)">Cedolino Onnicomprensivo</div>
-                <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:2px">
-                  Se attivo, il costo del cedolino include assunzioni, variazioni e cessazioni
-                </div>
+                <div class="toggle-lbl">Cedolino Onnicomprensivo</div>
+                <div class="toggle-hint">Se attivo, il costo del cedolino include assunzioni, variazioni e cessazioni</div>
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" id="cedolino_onnicomprensivo" />
@@ -1242,19 +1225,38 @@
           </div>
 
         </div><!-- /mtab-tariffario -->
+
+        <!-- TAB CADENZE -->
+        <div class="modal-tab-panel" id="mtab-cadenze">
+          <div class="form-section">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4)">
+              <div>
+                <div class="form-section-title" style="margin:0 0 2px">Cadenze pratiche ricorrenti</div>
+                <p style="margin:0;font-size:var(--text-xs);color:var(--color-text-muted)">Stato mensile per macrogruppo — <span style="color:var(--color-success)">■</span> elaborato &nbsp;<span style="color:var(--color-success);opacity:.5">■</span> in lavorazione &nbsp;<span style="color:var(--color-text-faint)">■</span> da fare</p>
+              </div>
+              <select id="cadenzeAnnoSel" class="select" style="width:90px"></select>
+            </div>
+            <div id="cadenzeWrap">
+              <div class="empty-state" style="min-height:160px">
+                <span class="empty-glyph">📅</span>
+                <span class="empty-title">Seleziona un cliente</span>
+                <span class="empty-sub">Le cadenze si caricano aprendo la scheda di una ditta esistente</span>
+              </div>
+            </div>
+          </div>
+        </div><!-- /mtab-cadenze -->
+
       </div><!-- chiude modal-body-tabs -->
       <div class="modal-footer">
-        <button class="btn btn-danger" id="btnDeleteDittaModal"
-          style="display:none;margin-right:auto;color:var(--color-error);
-                 background:transparent;border:1px solid var(--color-error)">
+        <button class="btn btn-ghost-danger" id="btnDeleteDittaModal"
+          style="display:none;margin-right:auto">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           </svg>
           Elimina Ditta
         </button>
-        <button class="btn" id="btnArchiviaDittaModal"
-          style="display:none;color:var(--color-warning);
-                 background:transparent;border:1px solid var(--color-warning)">
+        <button class="btn btn-ghost-warning" id="btnArchiviaDittaModal"
+          style="display:none">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
             <line x1="10" y1="12" x2="14" y2="12"/>
@@ -1362,9 +1364,8 @@
               <div class="form-field col-span-2">
                 <div class="tariff-toggle-row">
                   <div>
-                    <div style="font-weight:600;font-size:var(--text-sm)">Pubblica Amministrazione</div>
-                    <div style="font-size:var(--text-xs);color:var(--color-text-muted)">Attiva per enti pubblici
-                    </div>
+                    <div class="toggle-lbl">Pubblica Amministrazione</div>
+                    <div class="toggle-hint">Attiva per enti pubblici</div>
                   </div>
                   <label class="toggle-switch"><input type="checkbox" id="ass_pubblica_amm"><span
                       class="toggle-slider"></span></label>
@@ -1489,9 +1490,8 @@
             <div class="form-field col-span-2" style="margin-bottom:var(--space-3)">
               <div class="tariff-toggle-row">
                 <div>
-                  <div style="font-weight:600;font-size:var(--text-sm)">Lavoratore Straniero</div>
-                  <div style="font-size:var(--text-xs);color:var(--color-text-muted)">Mostra sezione permesso di
-                    soggiorno</div>
+                  <div class="toggle-lbl">Lavoratore Straniero</div>
+                  <div class="toggle-hint">Mostra sezione permesso di soggiorno</div>
                 </div>
                 <label class="toggle-switch"><input type="checkbox" id="ass_straniero"><span
                     class="toggle-slider"></span></label>
@@ -2197,10 +2197,10 @@
         <div class="dettaglio-anagrafica-panel">
           <div id="dettaglioAnagraficaInfo" class="dettaglio-info-list"><!-- JS --></div>
           <div class="dettaglio-azioni-row">
-            <button class="btn btn-secondary btn-sm" id="btnDetModifica">✏️ Modifica</button>
-            <button class="btn btn-secondary btn-sm" id="btnDetDate">📅 Date</button>
-            <button class="btn btn-secondary btn-sm" id="btnDetArchivia">📦 Archivia</button>
-            <button class="btn btn-sm" id="btnDetElimina" style="color:var(--color-error);border:1px solid var(--color-border)">🗑 Elimina</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetModifica"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg> Modifica</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetDate"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Date</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetArchivia"><!-- innerHTML set by JS --></button>
+            <button class="btn btn-sm" id="btnDetElimina" style="color:var(--color-error);border:1px solid var(--color-border)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> Elimina</button>
           </div>
         </div>
         <div class="dettaglio-strumenti-panel">
@@ -2209,12 +2209,12 @@
             <select id="dettaglioAnnoSel" class="dettaglio-anno-sel"></select>
           </div>
           <div class="dettaglio-btn-grid">
-            <button class="btn btn-primary btn-sm" id="btnDetPratiche">+ Pratiche</button>
-            <button class="btn btn-secondary btn-sm" id="btnDetEstratto">📄 Estratto</button>
-            <button class="btn btn-secondary btn-sm" id="btnDetFattura">🧾 Fattura</button>
-            <button class="btn btn-secondary btn-sm" id="btnDetPrevisionale">📈 Previsionale</button>
-            <button class="btn btn-secondary btn-sm" id="btnDetArrotondamento">⚖️ Arrotondamento</button>
-            <button class="btn btn-secondary btn-sm" id="btnDetSollecito">📬 Sollecito</button>
+            <button class="btn btn-primary btn-sm" id="btnDetPratiche"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Pratiche</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetEstratto"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Estratto</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetFattura"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> Fattura</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetPrevisionale"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Previsionale</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetArrotondamento"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> Arrotondamento</button>
+            <button class="btn btn-secondary btn-sm" id="btnDetSollecito"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Sollecito</button>
           </div>
         </div>
       </div>
@@ -2740,19 +2740,19 @@
 <div class="modal-overlay" id="modalEstrattoPdf">
   <div class="modal" style="max-width:500px">
     <div class="modal-header">
-      <h3>Estratto Conto PDF</h3>
-      <button class="btn-icon" data-close="modalEstrattoPdf">✕</button>
+      <h2 class="modal-title">Estratto Conto PDF</h2>
+      <button class="modal-close" data-close="modalEstrattoPdf">&#x2715;</button>
     </div>
-    <div class="modal-body">
-      <div class="form-field">
-        <label>Formato</label>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4)">
+      <div class="est-group">
+        <span class="est-group-label">Formato</span>
         <div class="radio-group">
           <label><input type="radio" name="est_formato" value="completo" checked> Completo</label>
           <label><input type="radio" name="est_formato" value="sintetico"> Sintetico</label>
         </div>
       </div>
-      <div class="form-field">
-        <label>Periodo</label>
+      <div class="est-group">
+        <span class="est-group-label">Periodo</span>
         <div class="radio-group">
           <label><input type="radio" name="est_periodo" value="anno" checked> Anno</label>
           <label><input type="radio" name="est_periodo" value="mese"> Mese</label>
@@ -2760,66 +2760,73 @@
           <label><input type="radio" name="est_periodo" value="storico"> Storico</label>
         </div>
       </div>
-      <div id="estPeriodoAnno" class="form-row">
-        <div class="form-field">
-          <label>Anno</label>
-          <select id="est_anno"></select>
+      <div id="estPeriodoAnno">
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="form-field">
+            <label>Anno</label>
+            <select id="est_anno"></select>
+          </div>
         </div>
       </div>
-      <div id="estPeriodoMese" class="form-row" style="display:none">
-        <div class="form-field">
-          <label>Anno</label>
-          <select id="est_anno_mese"></select>
-        </div>
-        <div class="form-field">
-          <label>Mese</label>
-          <select id="est_mese">
-            <option value="1">Gennaio</option><option value="2">Febbraio</option>
-            <option value="3">Marzo</option><option value="4">Aprile</option>
-            <option value="5">Maggio</option><option value="6">Giugno</option>
-            <option value="7">Luglio</option><option value="8">Agosto</option>
-            <option value="9">Settembre</option><option value="10">Ottobre</option>
-            <option value="11">Novembre</option><option value="12">Dicembre</option>
-          </select>
-        </div>
-      </div>
-      <div id="estPeriodoRange" class="form-row" style="display:none">
-        <div class="form-field">
-          <label>Anno</label>
-          <select id="est_anno_range"></select>
-        </div>
-        <div class="form-field">
-          <label>Da Mese</label>
-          <select id="est_da_mese">
-            <option value="1">Gennaio</option><option value="2">Febbraio</option>
-            <option value="3">Marzo</option><option value="4">Aprile</option>
-            <option value="5">Maggio</option><option value="6">Giugno</option>
-            <option value="7">Luglio</option><option value="8">Agosto</option>
-            <option value="9">Settembre</option><option value="10">Ottobre</option>
-            <option value="11">Novembre</option><option value="12">Dicembre</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <label>A Mese</label>
-          <select id="est_a_mese">
-            <option value="1">Gennaio</option><option value="2">Febbraio</option>
-            <option value="3">Marzo</option><option value="4">Aprile</option>
-            <option value="5">Maggio</option><option value="6">Giugno</option>
-            <option value="7">Luglio</option><option value="8">Agosto</option>
-            <option value="9">Settembre</option><option value="10">Ottobre</option>
-            <option value="11">Novembre</option><option value="12">Dicembre</option>
-          </select>
+      <div id="estPeriodoMese" style="display:none">
+        <div class="form-grid">
+          <div class="form-field">
+            <label>Anno</label>
+            <select id="est_anno_mese"></select>
+          </div>
+          <div class="form-field">
+            <label>Mese</label>
+            <select id="est_mese">
+              <option value="1">Gennaio</option><option value="2">Febbraio</option>
+              <option value="3">Marzo</option><option value="4">Aprile</option>
+              <option value="5">Maggio</option><option value="6">Giugno</option>
+              <option value="7">Luglio</option><option value="8">Agosto</option>
+              <option value="9">Settembre</option><option value="10">Ottobre</option>
+              <option value="11">Novembre</option><option value="12">Dicembre</option>
+            </select>
+          </div>
         </div>
       </div>
-      <div class="form-field">
-        <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer">
-          <input type="checkbox" id="est_includi_tariffario"> Includi tariffario applicato
-        </label>
+      <div id="estPeriodoRange" style="display:none">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
+          <div class="form-field">
+            <label>Anno</label>
+            <select id="est_anno_range"></select>
+          </div>
+          <div class="form-field">
+            <label>Da Mese</label>
+            <select id="est_da_mese">
+              <option value="1">Gennaio</option><option value="2">Febbraio</option>
+              <option value="3">Marzo</option><option value="4">Aprile</option>
+              <option value="5">Maggio</option><option value="6">Giugno</option>
+              <option value="7">Luglio</option><option value="8">Agosto</option>
+              <option value="9">Settembre</option><option value="10">Ottobre</option>
+              <option value="11">Novembre</option><option value="12">Dicembre</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>A Mese</label>
+            <select id="est_a_mese">
+              <option value="1">Gennaio</option><option value="2">Febbraio</option>
+              <option value="3">Marzo</option><option value="4">Aprile</option>
+              <option value="5">Maggio</option><option value="6">Giugno</option>
+              <option value="7">Luglio</option><option value="8">Agosto</option>
+              <option value="9">Settembre</option><option value="10">Ottobre</option>
+              <option value="11">Novembre</option><option value="12">Dicembre</option>
+            </select>
+          </div>
+        </div>
       </div>
+      <label class="est-check-label">
+        <input type="checkbox" id="est_includi_tariffario"> Includi tariffario applicato
+      </label>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-close="modalEstrattoPdf">Annulla</button>
-      <button class="btn btn-primary" id="btnEstGeneraPdf">📄 Genera PDF</button>
+      <button class="btn btn-primary" id="btnEstGeneraPdf">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Genera PDF
+      </button>
     </div>
   </div>
 </div>
@@ -2992,8 +2999,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-close="modalGiroconto">Annulla</button>
-      <button class="btn btn-primary" id="pnBtnSalvaGiroconto"
-        style="background:#7c3aed;border-color:#7c3aed">
+      <button class="btn btn-purple" id="pnBtnSalvaGiroconto">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="17 1 21 5 17 9"/>
           <path d="M3 11V9a4 4 0 0 1 4-4h14"/>

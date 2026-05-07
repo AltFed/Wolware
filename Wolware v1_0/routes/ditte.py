@@ -371,85 +371,50 @@ def update_date_gestione(id):
     finally:
         conn.close()
 
-# ── GET /api/ditte/<id>/previsione ────────────────────────────────────────────
-@ditte_bp.route('/api/ditte/<int:id>/previsione', methods=['GET'])
+
+@ditte_bp.route('/api/ditte/<int:id>/cadenze', methods=['GET'])
 @login_required
-def previsione_cliente(id):
-    mesi = int(request.args.get('mesi', 12))
-    mese_da = int(request.args.get('mese_da', 1))
-    conn = get_db()
+def get_cadenze(id):
+    """Restituisce lo stato mese per mese delle pratiche ricorrenti di una ditta.
+    Raggruppate per macrogruppo_nome, con stato: 'done' | 'cur' | 'empty'."""
+    from datetime import date
+    anno = request.args.get('anno', str(date.today().year))
+    mese_corrente = date.today().month
+
+    db = get_db()
     try:
-        ditta = conn.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()
-        if not ditta or not ditta['tariffario_id']:
-            return jsonify({'fissi_mensili': [], 'fissi_annuali': [], 'totale': 0, 'mesi': mesi})
-
-        tid = ditta['tariffario_id']
-
-        # Prende tutti i macrogruppi con le loro voci
-        gruppi = conn.execute(
-            'SELECT id, nome, tipo FROM macrogruppi WHERE tariffario_id=?', (tid,)
+        rows = db.execute(
+            '''SELECT macrogruppo_nome, mese,
+                      MAX(CASE WHEN data_esecuzione IS NOT NULL THEN 1 ELSE 0 END) AS eseguita
+               FROM pratiche
+               WHERE ditta_id=? AND anno=? AND macrogruppo_nome IS NOT NULL
+               GROUP BY macrogruppo_nome, mese
+               ORDER BY macrogruppo_nome, mese''',
+            (id, anno)
         ).fetchall()
 
-        fissi_mensili = []
-        fissi_annuali = []
+        # Aggrega per macrogruppo
+        macro_map = {}
+        for r in rows:
+            mg = r['macrogruppo_nome']
+            if mg not in macro_map:
+                macro_map[mg] = {}
+            macro_map[mg][r['mese']] = r['eseguita']
 
-        for g in gruppi:
-            voci = conn.execute(
-                'SELECT * FROM voci_costo  WHERE macrogruppo_id=?', (g['id'],)
-            ).fetchall()
+        result = []
+        for mg_nome, mesi_data in macro_map.items():
+            stati = []
+            for m in range(1, 13):
+                if m not in mesi_data:
+                    stati.append('empty')
+                elif mesi_data[m]:
+                    stati.append('done')
+                elif m == int(mese_corrente):
+                    stati.append('cur')
+                else:
+                    stati.append('open')
+            result.append({'macrogruppo': mg_nome, 'stati': stati})
 
-            for v in voci:
-                prezzo = float(v['prezzo'] or 0)
-                if g['tipo'] in ('fisso_mensile', 'costifissimensili'):
-                    # Controlla mesi di applicazione
-                    mesi_voce = None
-                    if v['mesi']:
-                        try:
-                            mesi_voce = json.loads(v['mesi'])
-                        except:
-                            pass
-                    # Conta quanti mesi del periodo si applicano
-                    if mesi_voce and 0 not in mesi_voce:
-                        mesi_applicabili = len([
-                            m for m in mesi_voce
-                            if m >= mese_da and m < mese_da + mesi
-                        ])
-                    else:
-                        mesi_applicabili = mesi
-
-                    totale_voce = round(prezzo * mesi_applicabili, 2)
-                    fissi_mensili.append({
-                        'nome': v['nome'],
-                        'macrogruppo': g['nome'],
-                        'prezzo_unitario': prezzo,
-                        'mesi': mesi_applicabili,
-                        'totale': totale_voce,
-                        'esente_iva': bool(v['esente_iva'])
-                    })
-
-                elif g['tipo'] in ('fisso_annuale', 'costifissiannuali'):
-                    anni = max(1, round(mesi / 12))
-                    totale_voce = round(prezzo * anni, 2)
-                    fissi_annuali.append({
-                        'nome': v['nome'],
-                        'macrogruppo': g['nome'],
-                        'prezzo_unitario': prezzo,
-                        'anni': anni,
-                        'totale': totale_voce,
-                        'esente_iva': bool(v['esente_iva'])
-                    })
-
-        tot_mensili = sum(v['totale'] for v in fissi_mensili)
-        tot_annuali = sum(v['totale'] for v in fissi_annuali)
-        totale = round(tot_mensili + tot_annuali, 2)
-
-        return jsonify({
-            'fissi_mensili': fissi_mensili,
-            'fissi_annuali': fissi_annuali,
-            'totale_mensili': round(tot_mensili, 2),
-            'totale_annuali': round(tot_annuali, 2),
-            'totale': totale,
-            'mesi': mesi
-        })
+        return jsonify({'anno': anno, 'cadenze': result})
     finally:
-        conn.close()
+        db.close()

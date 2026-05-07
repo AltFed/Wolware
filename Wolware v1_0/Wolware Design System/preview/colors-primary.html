@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><style>
+body{margin:0;background:var(--color-surface);font-family:var(--font-body);color:var(--color-text);padding:18px;display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;align-items:center}
+.swatch{width:54px;height:54px;border-radius:var(--radius-md);border:1px solid var(--color-border);flex-shrink:0;position:relative;overflow:hidden;display:flex;align-items:flex-end;padding:6px}
+.swatch .hex{font-size:9px;font-family:var(--font-mono);color:rgba(255,255,255,.95);font-weight:600;text-shadow:0 1px 1px rgba(0,0,0,.25)}
+.swatch.lt .hex{color:#1a1d23;text-shadow:none}
+.lbl{font-size:11px;color:var(--color-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.name{font-size:13px;font-weight:600;color:var(--color-text)}
+.code{font-size:10px;font-family:var(--font-mono);color:var(--color-text-faint)}
+</style></head><body>
+<div class="row">
+<div class="swatch" style="background:#1a6f5c"><span class="hex">#1a6f5c</span></div>
+<div><div class="lbl">Primary</div><div class="name">Wolware Teal</div><div class="code">--color-primary</div></div>
+<div class="swatch" style="background:#145a4a"><span class="hex">#145a4a</span></div>
+<div><div class="lbl">Hover</div><div class="name">Primary Hover</div><div class="code">--color-primary-hover</div></div>
+</div>
+<div class="row">
+<div class="swatch" style="background:#0e4438"><span class="hex">#0e4438</span></div>
+<div><div class="lbl">Active</div><div class="name">Primary Active</div><div class="code">--color-primary-active</div></div>
+<div class="swatch lt" style="background:#e8f5f2"><span class="hex">#e8f5f2</span></div>
+<div><div class="lbl">Tinted</div><div class="name">Primary Light</div><div class="code">--color-primary-light</div></div>
+</div>
+</body></html>

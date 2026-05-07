@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><style>
+body{margin:0;background:#f4f5f7;font-family:var(--font-body);color:var(--color-text);padding:20px;display:flex;flex-direction:column;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px}
+label{font-size:11px;font-weight:600;color:#6b7280}
+.input,.select{height:36px;padding:0 12px;background:#f9fafb;border:1px solid #e2e5e9;border-radius:8px;font-size:14px;color:#1a1d23;font-family:inherit;width:280px;outline:none}
+.input.focus{border-color:#1a6f5c;box-shadow:0 0 0 3px rgba(26,111,92,.15);background:#fff}
+.row{display:flex;gap:10px;align-items:flex-end}
+.required{color:#dc2626}
+</style></head><body>
+<div class="row">
+<div class="field"><label>Denominazione <span class="required">*</span></label><input class="input" value="Bianchi & C. SRL"></div>
+<div class="field"><label>Forma Giuridica</label><select class="select"><option>SRL</option></select></div>
+</div>
+<div class="row">
+<div class="field"><label>P.IVA</label><input class="input focus" value="02184750328"></div>
+<div class="field"><label>Email</label><input class="input" placeholder="info@esempio.it"></div>
+</div>
+</body></html>

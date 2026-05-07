@@ -147,7 +147,7 @@ def get_saldi():
             "SELECT COALESCE(SUM(importo),0) FROM movimenti_studio WHERE tipologia=? AND tipo='giroconto' AND giroconto_dir='uscita'", (tid,)
         ).fetchone()[0]
         saldo_banca = banca['saldo_iniziale'] + b_in - b_out + b_giro_in - b_giro_out
-        saldi.append({'id': tid, 'nome': banca['nome'], 'saldo': round(saldo_banca, 2)})
+        saldi.append({'id': tid, 'nome': banca['nome'], 'saldo': round(saldo_banca, 2), 'colore': banca['colore'] or '#6366f1'})
 
     db.close()
     return jsonify(saldi)
