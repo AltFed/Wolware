@@ -689,6 +689,44 @@ td.empty-state-row p{font-size:var(--text-sm);line-height:1.7}
 .pn-macro-group{border:1px solid var(--color-border);border-radius:var(--radius-md);
   margin-bottom:var(--space-2);overflow:hidden}
 
+/* ── Modal Arrotondamento ───────────────────────────────────── */
+#modalArrotondamento > .modal {
+  max-width: 760px;
+  width: 100%;
+}
+#modalArrotondamento .modal-body {
+  overflow-y: visible;
+}
+#modalArrotondamento .form-grid {
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+}
+#modalArrotondamento .form-field input,
+#modalArrotondamento .form-field select {
+  font-size: var(--text-base);
+  padding: var(--space-3) var(--space-4);
+  height: 44px;
+}
+/* Clienti archiviati nella lista */
+tr.row-archiviato {
+  opacity: 0.45;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 6px,
+    oklch(0.5 0 0 / 0.03) 6px,
+    oklch(0.5 0 0 / 0.03) 12px
+  );
+}
+
+tr.row-archiviato .denom-name {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+tr.row-archiviato .ditta-avatar {
+  filter: grayscale(1);
+}
 /* ─── RENDICONTO TABLE ──────────────────────────────────────── */
 .rd-table-wrap{overflow-x:auto;border-radius:var(--radius-md);border:1px solid var(--color-border)}
 .rd-table{width:100%;border-collapse:collapse;font-size:var(--text-sm);white-space:nowrap}

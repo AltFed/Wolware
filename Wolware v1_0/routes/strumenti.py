@@ -28,14 +28,10 @@ MESI_NOMI = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio',
 # ═══════════════════════════════════════════════════════════
 
 def _voce_attiva_nel_mese(voce, mese: int, tipo: str) -> bool:
-    """
-    Costi Fissi Mensili → attivi in tutti i 12 mesi.
-    Costi Fissi Annuali → attivi solo nei mesi presenti in mesi_json.
-    """
-    if tipo == 'costi_fissi_mensili':
+    if tipo in ('costi_fissi_mensili', 'costi_variabili_mensili'):
         return True
     # annuali: controlla mesi_json
-    mesi_json = voce['mesi_json']
+    mesi_json = voce.get('mesi_json') if isinstance(voce, dict) else voce['mesi_json']
     if not mesi_json:
         return False
     try:
@@ -43,7 +39,6 @@ def _voce_attiva_nel_mese(voce, mese: int, tipo: str) -> bool:
         return mese in mesi
     except Exception:
         return False
-
 
 def _gestione_attiva(ditta, anno: int, tipo_gestione: str) -> bool:
     """Verifica se la gestione (paghe/contabilita) era attiva nell'anno."""

@@ -195,7 +195,12 @@ def create_ditta():
 def get_ditta(id):
     conn = get_db()
     try:
-        d = conn.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()
+        d = conn.execute('''
+            SELECT d.*, t.nome AS tariffario_nome
+            FROM ditte d
+            LEFT JOIN tariffari t ON d.tariffario_id = t.id
+            WHERE d.id=?
+        ''', (id,)).fetchone()
         return jsonify(dict(d)) if d else (jsonify({'error': 'Non trovata'}), 404)
     finally:
         conn.close()
@@ -363,5 +368,88 @@ def update_date_gestione(id):
         d = conn.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()
         notify_all('ditta_updated', dict(d))
         return jsonify(dict(d))
+    finally:
+        conn.close()
+
+# ── GET /api/ditte/<id>/previsione ────────────────────────────────────────────
+@ditte_bp.route('/api/ditte/<int:id>/previsione', methods=['GET'])
+@login_required
+def previsione_cliente(id):
+    mesi = int(request.args.get('mesi', 12))
+    mese_da = int(request.args.get('mese_da', 1))
+    conn = get_db()
+    try:
+        ditta = conn.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()
+        if not ditta or not ditta['tariffario_id']:
+            return jsonify({'fissi_mensili': [], 'fissi_annuali': [], 'totale': 0, 'mesi': mesi})
+
+        tid = ditta['tariffario_id']
+
+        # Prende tutti i macrogruppi con le loro voci
+        gruppi = conn.execute(
+            'SELECT id, nome, tipo FROM macrogruppi WHERE tariffario_id=?', (tid,)
+        ).fetchall()
+
+        fissi_mensili = []
+        fissi_annuali = []
+
+        for g in gruppi:
+            voci = conn.execute(
+                'SELECT * FROM voci_costo  WHERE macrogruppo_id=?', (g['id'],)
+            ).fetchall()
+
+            for v in voci:
+                prezzo = float(v['prezzo'] or 0)
+                if g['tipo'] in ('fisso_mensile', 'costifissimensili'):
+                    # Controlla mesi di applicazione
+                    mesi_voce = None
+                    if v['mesi']:
+                        try:
+                            mesi_voce = json.loads(v['mesi'])
+                        except:
+                            pass
+                    # Conta quanti mesi del periodo si applicano
+                    if mesi_voce and 0 not in mesi_voce:
+                        mesi_applicabili = len([
+                            m for m in mesi_voce
+                            if m >= mese_da and m < mese_da + mesi
+                        ])
+                    else:
+                        mesi_applicabili = mesi
+
+                    totale_voce = round(prezzo * mesi_applicabili, 2)
+                    fissi_mensili.append({
+                        'nome': v['nome'],
+                        'macrogruppo': g['nome'],
+                        'prezzo_unitario': prezzo,
+                        'mesi': mesi_applicabili,
+                        'totale': totale_voce,
+                        'esente_iva': bool(v['esente_iva'])
+                    })
+
+                elif g['tipo'] in ('fisso_annuale', 'costifissiannuali'):
+                    anni = max(1, round(mesi / 12))
+                    totale_voce = round(prezzo * anni, 2)
+                    fissi_annuali.append({
+                        'nome': v['nome'],
+                        'macrogruppo': g['nome'],
+                        'prezzo_unitario': prezzo,
+                        'anni': anni,
+                        'totale': totale_voce,
+                        'esente_iva': bool(v['esente_iva'])
+                    })
+
+        tot_mensili = sum(v['totale'] for v in fissi_mensili)
+        tot_annuali = sum(v['totale'] for v in fissi_annuali)
+        totale = round(tot_mensili + tot_annuali, 2)
+
+        return jsonify({
+            'fissi_mensili': fissi_mensili,
+            'fissi_annuali': fissi_annuali,
+            'totale_mensili': round(tot_mensili, 2),
+            'totale_annuali': round(tot_annuali, 2),
+            'totale': totale,
+            'mesi': mesi
+        })
     finally:
         conn.close()

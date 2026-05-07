@@ -43,14 +43,122 @@ document.querySelectorAll('[data-tab]').forEach(el => {
   el.addEventListener('click', e => { e.preventDefault(); switchTab(el.dataset.tab); });
 });
 
-/* MODAL */
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+/* MODAL + UNSAVED CHANGES GUARD */
+const UnsavedGuard = (() => {
+  let _dirty = false;
+  let _pendingSaveId = null;   // id del modal corrente aperto
+  let _resolveCallback = null; // callback da chiamare dopo la scelta utente
+
+  const GUARDED = [
+    'modalDitta','modalAssunzione','modalPratica','modalNuovoTariffario',
+    'modalNuovoMacrogruppo','modalDateGestione','modalCambiaTariffario',
+    'modalVoceCustom','modalInserimentoVariabili','modalCostiMassivi',
+    'modalArrotondamento','modalNuovoUtente','modalResetPassword'
+  ];
+
+  // Mappa modalId → id del bottone Salva corrispondente
+  const SAVE_BUTTONS = {
+    'modalDitta':                'btnSaveDitta',
+    'modalNuovoUtente':          'btnSalvaNuovoUtente',
+    'modalNuovoTariffario':      'btnSalvaNuovoTariffario',
+    'modalNuovoMacrogruppo':     'btnSalvaNuovoMacrogruppo',
+    'modalVoceCustom':           'btnSalvaVoceCustom',
+    'modalDateGestione':         'btnSalvaDateGestione',
+    'modalArrotondamento':       'btnSalvaArrotondamento',
+    'modalInserimentoVariabili': 'btnSalvaInserimentoVariabili',
+    'modalCostiMassivi':         'btnContabilizzaEsegui',
+    'modalAssunzione':           'btnSalvaBozzaAssunzione',
+  };
+
+  const _mark = () => { _dirty = true; };
+
+  function activate(id) {
+    _dirty = false;
+    _pendingSaveId = id;
+    if (!GUARDED.includes(id)) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.querySelectorAll('input,select,textarea').forEach(f => {
+      f.addEventListener('input', _mark);
+      f.addEventListener('change', _mark);
+    });
+  }
+
+  function markSaved() { _dirty = false; }
+
+  // Apre il dialog custom — ritorna una Promise che risolve con:
+  // 'save' | 'discard' | 'cancel'
+  function _showDialog() {
+    return new Promise(resolve => {
+      _resolveCallback = resolve;
+      document.getElementById('modalUnsavedChanges').classList.add('open');
+    });
+  }
+
+  // Chiamato prima di chiudere: se non dirty chiude subito,
+  // altrimenti mostra il dialog e gestisce la risposta
+async function requestClose(modalIdToClose) {
+  if (!_dirty) return true;
+  _pendingSaveId = modalIdToClose || _pendingSaveId;
+  document.getElementById('modalUnsavedChanges').classList.add('open');
+  return false; // blocca sempre — i bottoni gestiscono tutto
+}
+
+  // Wire up i tre bottoni del dialog
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('unsavedBtnSalva')?.addEventListener('click', () => {
+  // Chiude il dialog e lascia il modal aperto — l'utente clicca Salva
+  document.getElementById('modalUnsavedChanges').classList.remove('open');
+  _resolveCallback = null;
+  _dirty = false;
+  // Clicca direttamente il bottone Salva del modal corrente
+  const saveBtnId = SAVE_BUTTONS[_pendingSaveId];
+  if (saveBtnId) {
+    const saveBtn = document.getElementById(saveBtnId);
+    if (saveBtn) saveBtn.click();
+  }
+  });
+    document.getElementById('unsavedBtnEsci')?.addEventListener('click', () => {
+      const idDaChiudere = _pendingSaveId;
+      document.getElementById('modalUnsavedChanges').classList.remove('open');
+      _resolveCallback = null;
+      _dirty = false;
+      if (idDaChiudere) closeModal(idDaChiudere);
+    });
+  document.getElementById('unsavedBtnAnnulla')?.addEventListener('click', () => {
+    document.getElementById('modalUnsavedChanges').classList.remove('open');
+    _resolveCallback = null;
+    // _dirty rimane true — l'utente torna a modificare
+  });
+  });
+
+  return { activate, markSaved, requestClose };
+})();
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  UnsavedGuard.activate(id);
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Intercetta [data-close] e .modal-close
 document.querySelectorAll('[data-close]').forEach(btn => {
-  btn.addEventListener('click', () => closeModal(btn.dataset.close));
+  btn.addEventListener('click', async () => {
+    const targetId = btn.dataset.close;
+    const ok = await UnsavedGuard.requestClose(targetId);
+    if (ok) closeModal(targetId);
+  });
 });
+// Click sull'overlay
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+  if (overlay.id === 'modalUnsavedChanges') return; // skip il guard stesso
+  overlay.addEventListener('click', async e => {
+    if (e.target !== overlay) return;
+    const ok = await UnsavedGuard.requestClose(overlay.id);
+    if (ok) overlay.classList.remove('open');
+  });
 });
 
 /* DROPDOWN */
@@ -239,7 +347,8 @@ function renderDitte(list) {
       ? `<span class="badge-cadenza">${d.cadenza}</span>`
       : '<span style="color:var(--color-text-faint)">—</span>';
 
-    return `<tr class="cliente-row" onclick="openDettaglioCliente(${d.id})" title="${d.ragione_sociale}">
+    return `<tr class="cliente-row${d.archiviato ? ' row-archiviato' : ''}" 
+onclick="openDettaglioCliente(${d.id})" title="${d.ragione_sociale}">
       <td class="col-denom">
         <div class="denom-wrap">
           <div class="ditta-avatar ditta-avatar-sm">${d.ragione_sociale.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
@@ -660,6 +769,7 @@ async function editDitta(id) {
 }
 
 document.getElementById('btnSaveDitta').addEventListener('click', async () => {
+  UnsavedGuard.markSaved(); 
   const errEl = document.getElementById('formDittaError');
   errEl.style.display = 'none';
   if (!document.getElementById('ragione_sociale').value.trim()) {
@@ -933,6 +1043,7 @@ document.getElementById('modalAssunzione').addEventListener('input', () => {
 });
 
 document.getElementById('btnSalvaBozzaAssunzione').addEventListener('click', () => {
+  UnsavedGuard.markSaved();
   toast('Bozza salvata', 'success');
 });
 document.getElementById('btnDuplicaAssunzione').addEventListener('click', () => {
@@ -1156,6 +1267,7 @@ document.getElementById('nuovoUtentePassword').addEventListener('keydown', e => 
 
 // Salva nuovo utente
 document.getElementById('btnSalvaNuovoUtente').addEventListener('click', async () => {
+  UnsavedGuard.markSaved();
   const username = document.getElementById('nuovoUtenteUsername').value.trim();
   const password = document.getElementById('nuovoUtentePassword').value;
   const role = document.getElementById('nuovoUtenteRuolo').value;
@@ -1559,19 +1671,24 @@ async function renderMacrogruppi(tariffarioId) {
 
       return `
         <div id="voce-row-${v.id}"
-             style="display:flex;align-items:center;justify-content:space-between;
+             style="display:flex;align-items:center;gap:var(--space-3);
                     padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);
                     background:var(--color-bg);margin-bottom:var(--space-1);
                     opacity:${frozen&&!isEditing?'0.4':'1'};
                     pointer-events:${frozen&&!isEditing?'none':'auto'}">
+          <span style="font-size:var(--text-sm);font-weight:700;font-variant-numeric:tabular-nums;
+                       color:var(--color-primary);flex-shrink:0;min-width:64px;text-align:right">
+            ${v.prezzo > 0 ? '€ '+Number(v.prezzo).toFixed(2) : '—'}
+          </span>
+          <span style="font-size:var(--text-xs);font-weight:600;padding:2px 7px;flex-shrink:0;
+                       border-radius:var(--radius-full);background:${tipo.bg};color:${tipo.color}">
+            ${tipo.label}
+          </span>
           <div style="flex:1;min-width:0">
             <span style="font-size:var(--text-sm);color:var(--color-text)">${v.nome}</span>
             ${flagsHtml ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${flagsHtml}</div>` : ''}
           </div>
-          <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0">
-            <span style="font-size:var(--text-sm);font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-text)">
-              ${v.prezzo > 0 ? '€ '+Number(v.prezzo).toFixed(2) : '—'}
-            </span>
+          <div style="display:flex;align-items:center;gap:var(--space-2);flex-shrink:0">
             <button onclick="avviaEditVoce(${g.id},${JSON.stringify(v).replace(/"/g,'&quot;')})"
                     class="btn btn-icon btn-ghost" title="Modifica voce"
                     ${frozen?'disabled style="opacity:.3;cursor:not-allowed"':''}>
@@ -1605,11 +1722,11 @@ async function renderMacrogruppi(tariffarioId) {
         <div style="padding:var(--space-3) var(--space-4);background:var(--color-surface-offset);
                     display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)">
           <div style="display:flex;align-items:center;gap:var(--space-3)">
+            <span style="font-size:var(--text-sm);font-weight:600;color:var(--color-text)">${g.nome}</span>
             <span style="font-size:var(--text-xs);font-weight:600;padding:2px var(--space-2);
-                         border-radius:var(--radius-full);background:${tipo.bg};color:${tipo.color}">
+                        border-radius:var(--radius-full);background:${tipo.bg};color:${tipo.color}">
               ${tipo.label}
             </span>
-            <span style="font-size:var(--text-sm);font-weight:600;color:var(--color-text)">${g.nome}</span>
           </div>
           <button onclick="eliminaMacrogruppo(${g.id}, ${g.voci?g.voci.length:0})"
                   class="btn btn-icon btn-ghost" title="Elimina macrogruppo"
@@ -1721,10 +1838,17 @@ async function aggiungiVoce(gid) {
   const annopEl  = document.getElementById(`add-annop-${gid}`);
   const mesi = getMesiSelezionati(`mesi-add-${gid}`);
 
-  // Trova il gruppo per sapere se annuale
   try {
     const gruppi = await api(`/api/tariffari/${activeTariffarioId}/macrogruppi`);
     const g = gruppi.find(x => x.id === gid);
+
+    // ── Validazione: fisso annuale senza mesi ─────────────────
+    if (isAnnuale(g.tipo) && (!mesi || mesi.length === 0)) {
+      toast('Seleziona almeno un mese di applicazione per i costi fissi annuali.', 'error');
+      document.getElementById(`mesi-add-${gid}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+
     await api(`/api/macrogruppi/${gid}/voci`, 'POST', {
       nome,
       prezzo,
@@ -1733,6 +1857,23 @@ async function aggiungiVoce(gid) {
       mesi,
     });
     toast('Voce aggiunta', 'success');
+    // Reset form aggiunta
+    const nEl = document.getElementById(`add-nome-${gid}`);
+    const pEl = document.getElementById(`add-prezzo-${gid}`);
+    const eEl = document.getElementById(`add-esente-${gid}`);
+    const aEl = document.getElementById(`add-annop-${gid}`);
+    if (nEl) nEl.value = '';
+    if (pEl) pEl.value = '';
+    if (eEl) eEl.checked = false;
+    if (aEl) aEl.checked = false;
+    // Reset mesi se annuale
+    const mesiContainer = document.getElementById(`mesi-add-${gid}`);
+    if (mesiContainer) {
+      mesiContainer.querySelectorAll('button[data-mese]').forEach(b => {
+        b.setAttribute('data-sel','0');
+        _applyMeseStyle(b, false);
+      });
+    }
     await renderMacrogruppi(activeTariffarioId);
   } catch(e) {
     toast('Errore nell\'aggiunta voce: '+(e.message||''), 'error');
@@ -1819,6 +1960,8 @@ async function eliminaMacrogruppo(gid, numVoci) {
 document.getElementById('btnNuovoTariffario').addEventListener('click', () => {
   document.getElementById('inputNomeTariffario').value = '';
   document.getElementById('inputNoteTariffario').value = '';
+  document.getElementById('ntPreviewNome').textContent = 'Nome tariffario';
+  document.getElementById('ntPreviewNote').textContent = 'Descrizione opzionale';
   document.getElementById('errNuovoTariffario').style.display = 'none';
   openModal('modalNuovoTariffario');
   setTimeout(() => document.getElementById('inputNomeTariffario').focus(), 120);
@@ -1826,6 +1969,7 @@ document.getElementById('btnNuovoTariffario').addEventListener('click', () => {
 
 // ── Salva nuovo tariffario ────────────────────────────────────
 document.getElementById('btnSalvaNuovoTariffario').addEventListener('click', async () => {
+  UnsavedGuard.markSaved();
   const nome = document.getElementById('inputNomeTariffario').value.trim();
   const errEl = document.getElementById('errNuovoTariffario');
   errEl.style.display = 'none';
@@ -1896,6 +2040,7 @@ document.getElementById('btnNuovoMacrogruppo').addEventListener('click', () => {
 });
 
 document.getElementById('btnSalvaNuovoMacrogruppo').addEventListener('click', async () => {
+  UnsavedGuard.markSaved();
   const nome = document.getElementById('inputNomeMacrogruppo').value.trim();
   const tipo = document.getElementById('inputTipoMacrogruppo').value;
   const errEl = document.getElementById('errNuovoMacrogruppo');
@@ -2081,15 +2226,15 @@ function renderDittaVoci(voci) {
       <div style="border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-3)">
         <div style="padding:var(--space-2) var(--space-4);background:var(--color-surface-offset);
                     display:flex;align-items:center;gap:var(--space-3)">
+          <span style="font-size:var(--text-sm);font-weight:600;color:var(--color-text)">${g.nome}</span>
           <span style="font-size:var(--text-xs);font-weight:600;padding:2px var(--space-2);
-                       border-radius:var(--radius-full);background:${meta.bg};color:${meta.color}">
+                      border-radius:var(--radius-full);background:${meta.bg};color:${meta.color}">
             ${meta.label}
           </span>
-          <span style="font-size:var(--text-sm);font-weight:600;color:var(--color-text)">${g.nome}</span>
         </div>
         <div style="padding:var(--space-3) var(--space-4)">${vociHtml}</div>
       </div>`;
-  }).join('');
+    }).join('');
 }
 
 // Carica voci dal server
@@ -2297,6 +2442,7 @@ function openEditVoceCustom(id, v) {
 
 // Salva voce custom (nuova o modifica)
 document.getElementById('btnSalvaVoceCustom')?.addEventListener('click', async function () {
+  UnsavedGuard.markSaved();
   const errEl = document.getElementById('errVoceCustom');
   errEl.style.display = 'none';
   const nome = document.getElementById('vcNome').value.trim();
@@ -2677,6 +2823,7 @@ document.getElementById('dettaglioAnnotazioni')?.addEventListener('blur', async 
 
 /* ── Modal Date Gestione ─────────────────────────────────────────────────── */
 document.getElementById('btnSalvaDateGestione')?.addEventListener('click', async () => {
+  UnsavedGuard.markSaved();
   const body = {
     inizio_paghe:        document.getElementById('dg_inizio_paghe').value || null,
     fine_paghe:          document.getElementById('dg_fine_paghe').value || null,
@@ -2691,6 +2838,24 @@ document.getElementById('btnSalvaDateGestione')?.addEventListener('click', async
     _renderDetHeader(d);
     loadDitte();
   } catch(e) { toast('Errore: ' + e.message, 'error'); }
+});
+
+/* Date gestione — salvataggio real time al cambio campo */
+['inizio_paghe','fine_paghe','inizio_contabilita','fine_contabilita'].forEach(campo => {
+  document.getElementById('dg_' + campo)?.addEventListener('change', async () => {
+    const body = {
+      inizio_paghe:       document.getElementById('dg_inizio_paghe').value || null,
+      fine_paghe:         document.getElementById('dg_fine_paghe').value || null,
+      inizio_contabilita: document.getElementById('dg_inizio_contabilita').value || null,
+      fine_contabilita:   document.getElementById('dg_fine_contabilita').value || null,
+    };
+    try {
+      await api(`/api/ditte/${currentDetId}/date-gestione`, 'PATCH', body);
+      toast('Date aggiornate', 'success');
+      const d = await api(`/api/ditte/${currentDetId}`);
+      _renderDetHeader(d);
+    } catch(e) { toast('Errore salvataggio date: ' + e.message, 'error'); }
+  });
 });
 
 /* ── Modal Arrotondamento ────────────────────────────────────────────────── */
@@ -2718,6 +2883,7 @@ async function _aggiornAAnteprimaArrot() {
 }
 
 document.getElementById('btnSalvaArrotondamento')?.addEventListener('click', async () => {
+  UnsavedGuard.markSaved();
   const data   = document.getElementById('arrot_data').value;
   const tipo   = document.getElementById('arrot_tipo').value;
   const imp    = parseFloat(document.getElementById('arrot_importo').value);
@@ -2751,20 +2917,45 @@ function _buildPrAnnoSel() {
   document.getElementById('pr_mese').value = String(new Date().getMonth() + 1);
 }
 
+function _aggiornaIvaRiga(i) {
+  const r = prRigheData[i];
+  const iva = r.esente ? 0 : Math.round(r.costo * 22) / 100;
+  const totale = r.esente ? r.costo : Math.round((r.costo + iva) * 100) / 100;
+  const ivaEl = document.getElementById(`pr-iva-${i}`);
+  const totEl = document.getElementById(`pr-tot-${i}`);
+  if (ivaEl) ivaEl.textContent = r.esente ? 'IVA zero' : `IVA € ${iva.toFixed(2)}`;
+  if (totEl) totEl.textContent = `€ ${totale.toFixed(2)}`;
+}
+
 function _renderPrRighe() {
   const el = document.getElementById('prRighe');
   if (!prRigheData.length) { el.innerHTML = ''; return; }
-  el.innerHTML = prRigheData.map((r, i) => `
-    <div style="display:grid;grid-template-columns:130px 1fr 90px 120px 32px;gap:var(--space-2);align-items:center;margin-bottom:var(--space-2)">
-      <input type="date" value="${r.data}" oninput="prRigheData[${i}].data=this.value" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
-      <input type="text" value="${r.descrizione}" placeholder="Descrizione" oninput="prRigheData[${i}].descrizione=this.value" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
-      <input type="number" value="${r.costo}" placeholder="€" min="0" step="0.01" oninput="prRigheData[${i}].costo=parseFloat(this.value)||0" style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
-      <label class="filter-check" style="white-space:nowrap">
-        <input type="checkbox" ${r.esente ? 'checked' : ''} onchange="prRigheData[${i}].esente=this.checked" />
+  el.innerHTML = prRigheData.map((r, i) => {
+    const iva = r.esente ? 0 : Math.round(r.costo * 22) / 100;
+    const totale = r.esente ? r.costo : Math.round((r.costo + iva) * 100) / 100;
+    const ivaLabel = r.esente
+      ? `<span id="pr-iva-${i}" style="color:var(--color-text-muted);font-size:var(--text-xs)">IVA zero</span>`
+      : `<span id="pr-iva-${i}" style="font-size:var(--text-xs)">IVA € ${iva.toFixed(2)}</span>`;
+    return `
+    <div style="display:grid;grid-template-columns:2fr 1fr auto auto auto;gap:var(--space-2);align-items:center;margin-bottom:var(--space-2)">
+      <input type="text" value="${r.descrizione}" placeholder="Nome pratica"
+        oninput="prRigheData[${i}].descrizione=this.value"
+        style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
+      <input type="number" value="${r.costo}" placeholder="Importo €" min="0" step="0.01"
+        oninput="prRigheData[${i}].costo=parseFloat(this.value)||0;_aggiornaIvaRiga(${i})"
+        onblur="_renderPrRighe()"
+        style="font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)" />
+      <label style="display:flex;align-items:center;gap:4px;font-size:var(--text-xs);white-space:nowrap;cursor:pointer">
+        <input type="checkbox" ${r.esente ? 'checked' : ''}
+          onchange="prRigheData[${i}].esente=this.checked;_renderPrRighe()" />
         Esente IVA
       </label>
-      <button class="btn btn-icon btn-ghost" style="color:var(--color-error)" onclick="prRigheData.splice(${i},1);_renderPrRighe()">✕</button>
-    </div>`).join('');
+      ${ivaLabel}
+      <span id="pr-tot-${i}" style="font-size:var(--text-xs);font-weight:600;min-width:60px;text-align:right">€ ${totale.toFixed(2)}</span>
+      <button class="btn btn-icon btn-ghost" style="color:var(--color-error)"
+        onclick="prRigheData.splice(${i},1);_renderPrRighe()">✕</button>
+    </div>`;
+  }).join('');
 }
 
 document.getElementById('btnDetPratiche')?.addEventListener('click', () => {
@@ -2781,6 +2972,7 @@ document.getElementById('btnAddPraticaRichiesta')?.addEventListener('click', () 
 });
 
 document.getElementById('btnSalvaPratiche')?.addEventListener('click', async () => {
+  UnsavedGuard.markSaved();
   const anno = +document.getElementById('pr_anno').value;
   const mese = +document.getElementById('pr_mese').value;
   const valide = prRigheData.filter(r => r.descrizione && r.costo > 0);
@@ -2830,7 +3022,7 @@ document.getElementById('btnDetFattura')?.addEventListener('click', () => {
   _openFattura();
 });
 document.getElementById('btnDetPrevisionale')?.addEventListener('click', () => {
-  _openPrevisionale();
+  openPrevisionale();
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2999,20 +3191,45 @@ function _renderIvTabella() {
   const ths = colonne.map(c =>
     `<th title="${c.mg_nome}">${c.nome}</th>`).join('');
   const trs = righe.map(r => {
+    let totaleCliente = 0;
     const celle = colonne.map(c => {
       const cella = r.celle[c.voce_id];
       if (!cella || !cella.applicabile)
         return `<td><span class="variabili-cell-na">×</span></td>`;
-      return `<td><input type="number" min="0" step="1" value="${cella.qta ?? 0}"
-        data-ditta="${r.ditta_id}" data-voce="${c.voce_id}"
-        class="iv-input" /></td>`;
+      const qta = cella.qta ?? 0;
+      const importo = qta * (cella.prezzo || 0);
+      totaleCliente += importo;
+      const compilata = qta > 0 ? 'style="background:var(--color-primary-highlight)"' : '';
+      return `<td ${compilata}><input type="number" min="0" step="1" value="${qta}"
+        data-ditta="${r.ditta_id}" data-voce="${c.voce_id}" data-prezzo="${cella.prezzo || 0}"
+        class="iv-input"
+        oninput="this.closest('td').style.background=+this.value>0?'var(--color-primary-highlight)':'';_aggiornaRigaTotale(this)"
+        /></td>`;
     }).join('');
-    return `<tr><td class="col-cliente">${r.ditta_nome}</td>${celle}</tr>`;
+    return `<tr>
+      <td class="col-cliente">${r.ditta_nome}</td>
+      ${celle}
+      <td class="iv-tot-cliente" id="iv-tot-${r.ditta_id}" style="font-weight:600;text-align:right;white-space:nowrap;color:var(--color-primary)">
+        € ${totaleCliente.toFixed(2)}
+      </td>
+    </tr>`;
   }).join('');
   el.innerHTML = `<table class="variabili-table">
-    <thead><tr><th>Cliente</th>${ths}</tr></thead>
+    <thead><tr><th>Cliente</th>${ths}<th style="text-align:right">Totale</th></tr></thead>
     <tbody>${trs}</tbody>
   </table>`;
+}
+
+function _aggiornaRigaTotale(input) {
+  const dittaId = input.dataset.ditta;
+  const riga = input.closest('tr');
+  const inputs = riga.querySelectorAll('.iv-input');
+  let tot = 0;
+  inputs.forEach(inp => {
+    tot += (parseFloat(inp.value) || 0) * (parseFloat(inp.dataset.prezzo) || 0);
+  });
+  const totEl = document.getElementById(`iv-tot-${dittaId}`);
+  if (totEl) totEl.textContent = `€ ${tot.toFixed(2)}`;
 }
 
 document.getElementById('btnCaricaVariabili')?.addEventListener('click', async () => {
@@ -3055,6 +3272,7 @@ async function _populateCcfDitta() {
 }
 
 document.getElementById('btnCcfPreview')?.addEventListener('click', async () => {
+  document.getElementById('btnContabilizzaEsegui').disabled = true; // reset stato pulsante
   const anno    = document.getElementById('ccf_anno').value;
   const meseDa  = document.getElementById('ccf_mese_da').value;
   const meseA   = document.getElementById('ccf_mese_a').value;
@@ -3110,6 +3328,7 @@ document.getElementById('btnContabilizzaEsegui')?.addEventListener('click', asyn
     const res = await api('/api/strumenti/contabilizza', 'POST',
       { anno, mese_da: meseDa, mese_a: meseA, ...(dittaId ? { ditta_id: +dittaId } : {}) });
     toast(`Contabilizzate ${res.aggiunte} voci (${res.saltate} già presenti)`, 'success');
+    UnsavedGuard.markSaved();
     closeModal('modalContabilizzaCostiFissi');
     loadDitte();
   } catch(e) { toast('Errore: ' + e.message, 'error'); }
@@ -3141,9 +3360,25 @@ function _buildAnnoSel(selId, defaultAnno) {
 /* ── 5.2 Fattura ─────────────────────────────────────────────────────────── */
 let fatRighe = [];
 
-function _openFattura() {
+function _openFattura(dittaId = null) {
   const anno = currentDetAnno;
+  // Se passato dittaId esplicito (da fuori scheda) mostra il select cliente
+  const useDittaId = dittaId || currentDetId;
   document.getElementById('fatturaTitle').textContent = `Fattura — ${anno}`;
+  document.getElementById('fatturaTitle').dataset.dittaId = useDittaId;
+
+  // Popola select clienti se necessario
+  const dittaSec = document.getElementById('fatDittaSection');
+  if (!currentDetId) {
+    dittaSec.style.display = '';
+    const sel = document.getElementById('fat_ditta_id');
+    sel.innerHTML = ditteGlobali.map(d =>
+      `<option value="${d.id}"${d.id==useDittaId?' selected':''}>${d.nome}</option>`
+    ).join('');
+  } else {
+    dittaSec.style.display = 'none';
+  }
+
   _buildAnnoSel('fat_anno', anno);
   _buildAnnoSel('fat_da_anno', anno);
   _buildAnnoSel('fat_a_anno', anno);
@@ -3156,6 +3391,25 @@ function _openFattura() {
   _loadFatStorico();
   openModal('modalFattura');
 }
+
+document.getElementById('fatModoImporta')?.addEventListener('click', () => {
+  document.getElementById('fatModoImporta').style.cssText += ';background:var(--color-primary);color:#fff';
+  document.getElementById('fatModoLibero').removeAttribute('style');
+  document.getElementById('fat_da_mese').closest('.form-row').style.display = '';
+  document.getElementById('btnFatImportaPratiche').style.display = '';
+});
+
+document.getElementById('fatModoLibero')?.addEventListener('click', () => {
+  document.getElementById('fatModoLibero').style.cssText += ';background:var(--color-primary);color:#fff';
+  document.getElementById('fatModoImporta').removeAttribute('style');
+  document.getElementById('fat_da_mese').closest('.form-row').style.display = 'none';
+  document.getElementById('btnFatImportaPratiche').style.display = 'none';
+  if (!fatRighe.length) {
+    fatRighe.push({ descrizione: '', mese_label: '', qta: 1, prezzo: 0, esente_iva: false, aliquota_iva: 22, totale: 0 });
+    _renderFatRighe();
+  }
+});
+
 
 function _renderFatRighe() {
   const tbody = document.getElementById('fatRigheTbody');
@@ -3393,62 +3647,146 @@ document.getElementById('btnEstGeneraPdf')?.addEventListener('click', async () =
 });
 
 /* ── 5.4 Previsionale ─────────────────────────────────────────────────────── */
-function _openPrevisionale() {
-  _buildAnnoSel('prev_anno', currentDetAnno);
-  _loadPrevisionale();
-  openModal('modalPrevisionale');
+// ── PREVISIONALE ──────────────────────────────────────────────────────────────
+let _prevId = null;
+let _prevFissi = 0;
+
+async function openPrevisionale() {
+  _prevId = currentDetId;
+  const d = allDitte?.find(x => x.id === currentDetId);
+  document.getElementById('previsioneClienteNome').textContent = d?.ragionesociale || '';
+  document.getElementById('prevMesi').value = '12';
+  document.getElementById('stimaPratichePanel').style.display = 'none';
+  document.getElementById('btnStimaPratiche').textContent = 'Stima Pratiche';
+  document.getElementById('stimaNumPratiche').value = '3';
+  document.getElementById('stimaPrezzoPratica').value = '30';
+  document.getElementById('previsioneVociContainer').innerHTML = '';
+  document.getElementById('prevTotaleFisso').textContent = eur(0);
+  document.getElementById('prevTotaleFinale').textContent = eur(0);
+  document.getElementById('prevMesi').onchange = async () => {
+    await calcolaPrevisione();
+    ricalcolaStima();
+  };
+
+  openModal('modalPrevisione');
+  await calcolaPrevisione();
 }
 
-async function _loadPrevisionale() {
-  const anno = +document.getElementById('prev_anno').value || currentDetAnno;
-  const el   = document.getElementById('prevTabella');
-  el.innerHTML = '<p style="color:var(--color-text-muted)">Caricamento...</p>';
+async function calcolaPrevisione() {
+  const mesi = parseInt(document.getElementById('prevMesi').value) || 12;
   try {
-    const data = await api(`/api/ditte/${currentDetId}/previsionale/${anno}`);
-    _renderPrevTabella(data);
+    const data = await api(`/api/ditte/${_prevId}/previsione?mesi=${mesi}`);
+    renderPrevisioneVoci(data);
   } catch(e) {
-    el.innerHTML = `<p style="color:var(--color-danger, var(--color-error))">Errore: ${e.message}</p>`;
+    toast('Errore previsione: ' + e.message, 'error');
   }
 }
 
-function _renderPrevTabella(data) {
-  const el   = document.getElementById('prevTabella');
-  const rows = data.mesi.map(m => {
-    const diff      = m.differenza;
-    const diffCls   = diff > 0 ? 'prev-diff-pos' : diff < 0 ? 'prev-diff-neg' : '';
-    const diffSign  = diff > 0 ? '+' : '';
-    return `<tr>
-      <td>${m.mese_label}</td>
-      <td style="text-align:right">${formatEur(m.previsto)}</td>
-      <td style="text-align:right">${formatEur(m.effettivo)}</td>
-      <td style="text-align:right" class="${diffCls}">${diffSign}${formatEur(diff)}</td>
-    </tr>`;
-  }).join('');
-  const dTot    = data.differenza_tot;
-  const dTotCls = dTot > 0 ? 'prev-diff-pos' : dTot < 0 ? 'prev-diff-neg' : '';
-  el.innerHTML = `
-    <table class="prev-table">
-      <thead><tr>
-        <th>Mese</th>
-        <th style="text-align:right">Previsto</th>
-        <th style="text-align:right">Effettivo</th>
-        <th style="text-align:right">Differenza</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr class="prev-tot-row">
-        <td><strong>TOTALE</strong></td>
-        <td style="text-align:right"><strong>${formatEur(data.totale_previsto)}</strong></td>
-        <td style="text-align:right"><strong>${formatEur(data.totale_effettivo)}</strong></td>
-        <td style="text-align:right" class="${dTotCls}"><strong>${dTot > 0 ? '+' : ''}${formatEur(dTot)}</strong></td>
-      </tr></tfoot>
-    </table>
-    <p style="margin-top:var(--space-2);font-size:var(--font-size-sm);color:var(--color-text-muted)">
-      Tariffario: <strong>${data.tariffario_nome || '—'}</strong>
-      &nbsp;·&nbsp; Cadenza: <strong>${data.cadenza || '—'}</strong>
-    </p>`;
+function renderPrevisioneVoci(data) {
+  _prevFissi = data.totale || 0;
+  const container = document.getElementById('previsioneVociContainer');
+  let html = '';
+
+  if (data.fissi_mensili?.length) {
+    html += `<div style="font-size:var(--text-xs);color:var(--color-text-muted);font-weight:600;
+                         padding:var(--space-1) var(--space-2);margin-bottom:var(--space-1)">
+               Fissi Mensili
+             </div>`;
+    html += data.fissi_mensili.map(v => `
+      <div style="display:flex;justify-content:space-between;align-items:center;
+                  padding:var(--space-2) var(--space-3);margin-bottom:2px;
+                  border-radius:var(--radius-sm);background:var(--color-surface)">
+        <div>
+          <span style="font-size:var(--text-sm);color:var(--color-text)">${v.nome}</span>
+          <span style="font-size:var(--text-xs);color:var(--color-text-muted);
+                       margin-left:var(--space-2)">${v.macrogruppo}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0">
+          <span style="font-size:var(--text-xs);color:var(--color-text-muted)">
+            ${eur(v.prezzo_unitario)} × ${v.mesi} mesi
+          </span>
+          <span style="font-size:var(--text-sm);font-weight:600;min-width:72px;
+                       text-align:right;font-variant-numeric:tabular-nums">
+            ${eur(v.totale)}
+          </span>
+        </div>
+      </div>`).join('');
+  }
+
+  if (data.fissi_annuali?.length) {
+    html += `<div style="font-size:var(--text-xs);color:var(--color-text-muted);font-weight:600;
+                         padding:var(--space-1) var(--space-2);margin-top:var(--space-2);
+                         margin-bottom:var(--space-1)">
+               Fissi Annuali
+             </div>`;
+    html += data.fissi_annuali.map(v => `
+      <div style="display:flex;justify-content:space-between;align-items:center;
+                  padding:var(--space-2) var(--space-3);margin-bottom:2px;
+                  border-radius:var(--radius-sm);background:var(--color-surface)">
+        <div>
+          <span style="font-size:var(--text-sm);color:var(--color-text)">${v.nome}</span>
+          <span style="font-size:var(--text-xs);color:var(--color-text-muted);
+                       margin-left:var(--space-2)">${v.macrogruppo}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0">
+          <span style="font-size:var(--text-xs);color:var(--color-text-muted)">
+            ${eur(v.prezzo_unitario)} × ${v.anni} ann${v.anni === 1 ? 'o' : 'i'}
+          </span>
+          <span style="font-size:var(--text-sm);font-weight:600;min-width:72px;
+                       text-align:right;font-variant-numeric:tabular-nums">
+            ${eur(v.totale)}
+          </span>
+        </div>
+      </div>`).join('');
+  }
+
+  if (!html) {
+    html = `<p style="font-size:var(--text-sm);color:var(--color-text-muted);padding:var(--space-3) 0">
+              Nessun costo fisso configurato nel tariffario associato.
+            </p>`;
+  }
+
+  container.innerHTML = html;
+  document.getElementById('prevTotaleFisso').textContent = eur(_prevFissi);
+  aggiornaStimaTotale();
 }
 
-document.getElementById('btnPrevAggiorna')?.addEventListener('click', _loadPrevisionale);
+function toggleStimaPratiche() {
+  const panel = document.getElementById('stimaPratichePanel');
+  const btn   = document.getElementById('btnStimaPratiche');
+  const aperto = panel.style.display !== 'none';
+  panel.style.display = aperto ? 'none' : 'block';
+  btn.textContent = aperto ? 'Stima Pratiche' : '− Chiudi Stima';
+  if (!aperto) ricalcolaStima();
+  else aggiornaStimaTotale();
+}
+
+function ricalcolaStima() {
+  const mesi  = parseInt(document.getElementById('prevMesi').value) || 12;
+  const n     = parseFloat(document.getElementById('stimaNumPratiche').value) || 0;
+  const p     = parseFloat(document.getElementById('stimaPrezzoPratica').value) || 0;
+  const tot   = n * p * mesi;
+  document.getElementById('stimaRiepilogo').innerHTML = n && p
+    ? `<strong>${n}</strong> prat./mese × <strong>${eur(p)}</strong> × 
+       <strong>${mesi}</strong> mesi = 
+       <strong style="color:var(--color-orange)">${eur(tot)}</strong>`
+    : `<span style="color:var(--color-text-muted)">Inserisci numero pratiche e prezzo medio.</span>`;
+  aggiornaStimaTotale();
+}
+
+function aggiornaStimaTotale() {
+  const panelAperto = document.getElementById('stimaPratichePanel').style.display !== 'none';
+  let totVar = 0;
+  if (panelAperto) {
+    const mesi = parseInt(document.getElementById('prevMesi').value) || 12;
+    const n    = parseFloat(document.getElementById('stimaNumPratiche').value) || 0;
+    const p    = parseFloat(document.getElementById('stimaPrezzoPratica').value) || 0;
+    totVar = n * p * mesi;
+  }
+  document.getElementById('prevTotaleFinale').textContent = eur(_prevFissi + totVar);
+}
+
+document.getElementById('btnPrevAggiorna')?.addEventListener('click', calcolaPrevisione);
 
 /* ── 5.6 Sollecito ───────────────────────────────────────────────────────── */
 function _openSollecito() {
@@ -4596,6 +4934,12 @@ window.switchTab = function (tabName) {
   if (tabName === 'rendiconto') Rendiconto.init();
 };
 
+
+function eur(v) {
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency', currency: 'EUR', minimumFractionDigits: 2
+  }).format(v || 0);
+}
 /* ─────────────────────────────────────────────────────────────────
    RENDICONTO
 ───────────────────────────────────────────────────────────────── */
