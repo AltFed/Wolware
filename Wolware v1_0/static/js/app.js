@@ -3541,7 +3541,7 @@ const PrimaNota = (() => {
       row.innerHTML = '';
       saldi.forEach(s => {
         const card = document.createElement('div');
-        card.className = 'pn-saldo-card' + (s.saldo < 0 ? ' pn-saldo-negativo' : '');
+        card.className = 'pn-saldo-card' + (s.saldo < 0 ? ' pn-saldo-negativo' : s.saldo > 0 ? ' pn-saldo-positivo' : '');
         if (s.id && s.id.startsWith('banca_')) {
           card.dataset.bancaId = s.id.split('_')[1];
           card.dataset.bancaNome = s.nome;
@@ -4654,7 +4654,7 @@ const Rendiconto = (() => {
 
       // Card "Totale Disponibilità" in evidenza
       const totCard = document.createElement('div');
-      totCard.className = 'pn-saldo-card' + (tot < 0 ? ' pn-saldo-negativo' : '');
+      totCard.className = 'pn-saldo-card' + (tot < 0 ? ' pn-saldo-negativo' : tot > 0 ? ' pn-saldo-positivo' : '');
       totCard.style.cssText = 'background:var(--color-surface-raised);border-color:var(--color-primary);min-width:160px';
       totCard.innerHTML = `<span class="pn-saldo-label">Totale Disponibilità</span>
         <span class="pn-saldo-value" style="color:${tot >= 0 ? 'var(--color-success)' : 'var(--color-error)'}">${_fmt(tot)}</span>`;
@@ -4662,7 +4662,7 @@ const Rendiconto = (() => {
 
       saldi.forEach(s => {
         const card = document.createElement('div');
-        card.className = 'pn-saldo-card' + (s.saldo < 0 ? ' pn-saldo-negativo' : '');
+        card.className = 'pn-saldo-card' + (s.saldo < 0 ? ' pn-saldo-negativo' : s.saldo > 0 ? ' pn-saldo-positivo' : '');
         card.innerHTML = `<span class="pn-saldo-label">${s.nome}</span>
           <span class="pn-saldo-value">${_fmt(s.saldo)}</span>`;
         row.appendChild(card);
