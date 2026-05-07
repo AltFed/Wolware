@@ -142,7 +142,7 @@ table{border-collapse:collapse;width:100%}
 .kpi-green{background:var(--color-success-light);color:var(--color-success)}
 .kpi-info{display:flex;flex-direction:column;gap:2px}
 .kpi-label{font-size:var(--text-xs);color:var(--color-text-muted);font-weight:500}
-.kpi-value{font-size:var(--text-xl);font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi-value{font-size:var(--text-xl);font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2;letter-spacing:-0.02em}
 .section-block{background:var(--color-surface);border:1px solid var(--color-border);
   border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm);margin-bottom:var(--space-4)}
 .section-header{display:flex;align-items:center;justify-content:space-between;
