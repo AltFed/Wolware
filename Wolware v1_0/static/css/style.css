@@ -221,9 +221,12 @@ table{border-collapse:collapse;width:100%}
 .modal-footer{display:flex;justify-content:flex-end;gap:var(--space-3);
   padding:var(--space-4) var(--space-6);border-top:1px solid var(--color-divider);flex-shrink:0}
 .form-section{margin-bottom:var(--space-5)}
-.form-section-title{font-size:var(--text-xs);font-weight:700;color:var(--color-text-faint);
-  text-transform:uppercase;letter-spacing:0.08em;margin-bottom:var(--space-3);
-  padding-bottom:var(--space-2);border-bottom:1px solid var(--color-divider)}
+.form-section-title{font-size:var(--text-xs);font-weight:700;color:var(--color-text-muted);
+  text-transform:uppercase;letter-spacing:0.08em;
+  margin-top:var(--space-4);margin-bottom:var(--space-2);
+  padding-bottom:var(--space-2);border-bottom:1px solid var(--color-divider);
+  grid-column:1/-1}
+.form-section:first-child .form-section-title,.form-grid>.form-section-title:first-child{margin-top:0}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4) var(--space-5)}
 .form-field{display:flex;flex-direction:column;gap:var(--space-1)}
 .form-field label{font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);
