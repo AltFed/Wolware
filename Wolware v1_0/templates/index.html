@@ -1077,9 +1077,7 @@
               <div class="form-field">
                 <label>Residuo Iniziale (€)</label>
                 <input type="number" id="residuo_iniziale" value="0" step="0.01" placeholder="0.00" />
-                <div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-1)">
-                  Positivo = debito · Negativo = credito
-                </div>
+                <div class="field-hint">Positivo = debito · Negativo = credito</div>
               </div>
               <div class="form-field">
                 <label>Annotazioni</label>
@@ -1253,17 +1251,15 @@
 
       </div><!-- chiude modal-body-tabs -->
       <div class="modal-footer">
-        <button class="btn btn-danger" id="btnDeleteDittaModal"
-          style="display:none;margin-right:auto;color:var(--color-error);
-                 background:transparent;border:1px solid var(--color-error)">
+        <button class="btn btn-ghost-danger" id="btnDeleteDittaModal"
+          style="display:none;margin-right:auto">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           </svg>
           Elimina Ditta
         </button>
-        <button class="btn" id="btnArchiviaDittaModal"
-          style="display:none;color:var(--color-warning);
-                 background:transparent;border:1px solid var(--color-warning)">
+        <button class="btn btn-ghost-warning" id="btnArchiviaDittaModal"
+          style="display:none">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
             <line x1="10" y1="12" x2="14" y2="12"/>
