@@ -387,22 +387,22 @@ table{border-collapse:collapse;width:100%}
 }
 
 /* ── TABELLA CLIENTI (Blocco 1) ──────────────────────────────────────────── */
-.clienti-table-wrap{overflow-x:auto;border:1px solid var(--color-border);border-radius:var(--radius-lg);
+.clienti-table-wrap{overflow:hidden;border:1px solid var(--color-border);border-radius:var(--radius-lg);
   background:var(--color-surface);box-shadow:var(--shadow-sm)}
 .clienti-table{width:100%;table-layout:fixed;border-collapse:collapse}
-.clienti-table thead th{padding:var(--space-2) var(--space-3);font-size:var(--text-xs);font-weight:700;
+.clienti-table thead th{padding:var(--space-3) var(--space-4);font-size:var(--text-xs);font-weight:600;
   color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.06em;
   background:var(--color-surface-2);border-bottom:1px solid var(--color-border);
   white-space:nowrap;text-align:left}
 .clienti-table tbody tr.cliente-row{cursor:pointer;transition:background var(--transition)}
-.clienti-table tbody tr.cliente-row:hover{background:var(--color-surface-offset)}
+.clienti-table tbody tr.cliente-row:hover td{background:var(--color-surface-2)}
 .clienti-table tbody tr.cliente-row:not(:last-child) td{border-bottom:1px solid var(--color-divider)}
-.clienti-table td{padding:var(--space-2) var(--space-3);vertical-align:middle;font-size:var(--text-sm)}
+.clienti-table td{padding:var(--space-3) var(--space-4);vertical-align:middle;font-size:var(--text-sm)}
 
 /* colonne larghezze */
 .col-denom  {width:220px;min-width:160px}
 .col-mesi   {width:260px;min-width:220px}
-.col-money  {width:90px;text-align:right;font-variant-numeric:tabular-nums}
+.col-money  {width:90px;text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
 .col-cadenza{width:80px;text-align:center}
 .col-data   {width:80px;text-align:center;font-size:var(--text-xs);color:var(--color-text-muted)}
 .mono       {font-family:var(--font-mono);font-size:var(--text-xs)}
