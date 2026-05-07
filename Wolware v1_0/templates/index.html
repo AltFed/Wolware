@@ -399,7 +399,10 @@
                 </thead>
                 <tbody id="praticheTableBody">
                   <tr>
-                    <td colspan="9" class="empty-row"><span class="empty-icon">📋</span><br>Nessuna pratica trovata.
+                    <td colspan="9" class="empty-row">
+                      <span class="empty-glyph">📋</span>
+                      <span class="empty-title">Nessuna pratica trovata</span>
+                      <span class="empty-sub">Prova a modificare i filtri di ricerca</span>
                     </td>
                   </tr>
                 </tbody>
@@ -852,9 +855,7 @@
               <span style="font-weight:600;font-size:var(--text-sm)">Dettaglio Entrate</span>
             </div>
             <div class="rd-table-wrap" id="rdEntrateWrap">
-              <div style="padding:var(--space-6);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)" id="rdEntrateEmpty">
-                Nessuna entrata nel periodo selezionato
-              </div>
+              <div class="rd-empty-msg" id="rdEntrateEmpty">Nessuna entrata nel periodo selezionato</div>
             </div>
           </div>
 
@@ -865,9 +866,7 @@
               <span style="font-weight:600;font-size:var(--text-sm)">Dettaglio Uscite</span>
             </div>
             <div class="rd-table-wrap" id="rdUsciteWrap">
-              <div style="padding:var(--space-6);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)">
-                Nessuna uscita nel periodo selezionato
-              </div>
+              <div class="rd-empty-msg">Nessuna uscita nel periodo selezionato</div>
             </div>
           </div>
 
@@ -878,9 +877,7 @@
               <span style="font-weight:600;font-size:var(--text-sm)">Giroconti</span>
             </div>
             <div id="rdGirocontiWrap" style="padding:0">
-              <div style="padding:var(--space-6);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)">
-                Nessun giroconto nel periodo selezionato
-              </div>
+              <div class="rd-empty-msg">Nessun giroconto nel periodo selezionato</div>
             </div>
           </div>
 
