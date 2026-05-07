@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css"><style>
+body{margin:0;background:#fff;font-family:var(--font-body);color:var(--color-text);padding:18px}
+.row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f9fafb;border:1px solid #e2e5e9;border-radius:8px;margin-bottom:8px}
+.t{font-size:14px;font-weight:500}
+.sw{position:relative;display:inline-block;width:44px;height:24px}
+.sw input{opacity:0;width:0;height:0}
+.sl{position:absolute;cursor:pointer;inset:0;background:#e2e5e9;border-radius:9999px;transition:.16s}
+.sl:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.16s}
+.sw input:checked + .sl{background:#1a6f5c}
+.sw input:checked + .sl:before{transform:translateX(20px)}
+</style></head><body>
+<div class="row"><span class="t">Applica IVA al tariffario</span><label class="sw"><input type="checkbox" checked><span class="sl"></span></label></div>
+<div class="row"><span class="t">Esente IVA</span><label class="sw"><input type="checkbox"><span class="sl"></span></label></div>
+<div class="row"><span class="t">Mostra archiviati</span><label class="sw"><input type="checkbox" checked><span class="sl"></span></label></div>
+</body></html>
