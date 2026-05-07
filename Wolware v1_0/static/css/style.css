@@ -515,20 +515,17 @@ td.empty-state-row p{font-size:var(--text-sm);line-height:1.7}
 .dettaglio-anno-sel{font-size:var(--text-sm);padding:var(--space-1) var(--space-2);
   border:1px solid var(--color-border);border-radius:var(--radius-md);
   background:var(--color-surface)}
-.dettaglio-btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
+.dettaglio-btn-grid{display:flex;flex-wrap:wrap;gap:var(--space-2)}
 
 .dettaglio-riepilogo-row{display:flex;gap:var(--space-3);flex-wrap:wrap;
   margin:var(--space-5) 0;padding:var(--space-4);
   background:var(--color-surface-2);border:1px solid var(--color-border);
   border-radius:var(--radius-lg)}
 .dettaglio-stat-card{flex:1;min-width:100px;text-align:center}
-.dettaglio-stat-card+.dettaglio-stat-card{border-left:1px solid var(--color-divider);padding-left:var(--space-3)}
 .dettaglio-stat-label{font-size:var(--text-xs);color:var(--color-text-muted);
   text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .dettaglio-stat-val{font-size:var(--text-lg);font-weight:700;
   font-variant-numeric:tabular-nums;margin-top:2px}
-
-.dettaglio-body-inner{padding:0 var(--space-6) var(--space-6)}
 .dettaglio-section{margin-top:var(--space-5)}
 .dettaglio-section-hdr{font-size:var(--text-sm);font-weight:700;
   color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.07em;
@@ -684,8 +681,9 @@ td.empty-state-row p{font-size:var(--text-sm);line-height:1.7}
 .pn-saldo-value{font-size:var(--text-lg);font-weight:700;color:var(--color-text);font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
 .pn-saldo-negativo .pn-saldo-value{color:var(--color-error)}
 .pn-saldo-skeleton .pn-saldo-value{color:var(--color-text-muted)}
-/* Banca con colore configurato: indicatore a sinistra */
-.pn-saldo-banca{border-left:3px solid var(--pn-bank-color,var(--color-primary))}
+/* Banca con colore configurato: border-left identifica la banca
+   (doppia classe per battere la specificità di .pn-saldo-card.pn-saldo-positivo/negativo) */
+.pn-saldo-card.pn-saldo-banca{border-left:3px solid var(--pn-bank-color,var(--color-primary))}
 .pn-solleciti-block{border-left:3px solid var(--color-warning)}
 .pn-solleciti-header{padding:var(--space-3) var(--space-4);user-select:none}
 .pn-solleciti-title{font-weight:600;font-size:var(--text-sm)}
