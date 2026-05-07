@@ -365,3 +365,51 @@ def update_date_gestione(id):
         return jsonify(dict(d))
     finally:
         conn.close()
+
+
+@ditte_bp.route('/api/ditte/<int:id>/cadenze', methods=['GET'])
+@login_required
+def get_cadenze(id):
+    """Restituisce lo stato mese per mese delle pratiche ricorrenti di una ditta.
+    Raggruppate per macrogruppo_nome, con stato: 'done' | 'cur' | 'empty'."""
+    from datetime import date
+    anno = request.args.get('anno', str(date.today().year))
+    mese_corrente = date.today().month
+
+    db = get_db()
+    try:
+        rows = db.execute(
+            '''SELECT macrogruppo_nome, mese,
+                      MAX(CASE WHEN data_esecuzione IS NOT NULL THEN 1 ELSE 0 END) AS eseguita
+               FROM pratiche
+               WHERE ditta_id=? AND anno=? AND macrogruppo_nome IS NOT NULL
+               GROUP BY macrogruppo_nome, mese
+               ORDER BY macrogruppo_nome, mese''',
+            (id, anno)
+        ).fetchall()
+
+        # Aggrega per macrogruppo
+        macro_map = {}
+        for r in rows:
+            mg = r['macrogruppo_nome']
+            if mg not in macro_map:
+                macro_map[mg] = {}
+            macro_map[mg][r['mese']] = r['eseguita']
+
+        result = []
+        for mg_nome, mesi_data in macro_map.items():
+            stati = []
+            for m in range(1, 13):
+                if m not in mesi_data:
+                    stati.append('empty')
+                elif mesi_data[m]:
+                    stati.append('done')
+                elif m == int(mese_corrente):
+                    stati.append('cur')
+                else:
+                    stati.append('open')
+            result.append({'macrogruppo': mg_nome, 'stati': stati})
+
+        return jsonify({'anno': anno, 'cadenze': result})
+    finally:
+        db.close()

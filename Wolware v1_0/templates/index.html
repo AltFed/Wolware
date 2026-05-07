@@ -942,6 +942,7 @@
           <button class="modal-tab" data-mtab="inps">INPS</button>
           <button class="modal-tab" data-mtab="contatti">Contatti</button>
           <button class="modal-tab" data-mtab="tariffario">Tariffario</button>
+          <button class="modal-tab" data-mtab="cadenze">Cadenze</button>
         </div>
 
         <input type="hidden" id="dittaId" />
@@ -1230,6 +1231,27 @@
           </div>
 
         </div><!-- /mtab-tariffario -->
+
+        <!-- TAB CADENZE -->
+        <div class="modal-tab-panel" id="mtab-cadenze">
+          <div class="form-section">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4)">
+              <div>
+                <div class="form-section-title" style="margin:0 0 2px">Cadenze pratiche ricorrenti</div>
+                <p style="margin:0;font-size:var(--text-xs);color:var(--color-text-muted)">Stato mensile per macrogruppo — <span style="color:var(--color-success)">■</span> elaborato &nbsp;<span style="color:var(--color-success);opacity:.5">■</span> in lavorazione &nbsp;<span style="color:var(--color-text-faint)">■</span> da fare</p>
+              </div>
+              <select id="cadenzeAnnoSel" class="select" style="width:90px"></select>
+            </div>
+            <div id="cadenzeWrap">
+              <div class="empty-state" style="min-height:160px">
+                <span class="empty-glyph">📅</span>
+                <span class="empty-title">Seleziona un cliente</span>
+                <span class="empty-sub">Le cadenze si caricano aprendo la scheda di una ditta esistente</span>
+              </div>
+            </div>
+          </div>
+        </div><!-- /mtab-cadenze -->
+
       </div><!-- chiude modal-body-tabs -->
       <div class="modal-footer">
         <button class="btn btn-danger" id="btnDeleteDittaModal"
