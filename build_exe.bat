@@ -8,12 +8,12 @@ echo  ================================================================
 echo   WOLWARE  ^|  Build eseguibile distribuibile
 echo  ================================================================
 echo.
-echo  Crea Wolware.exe pronto per girare su qualsiasi PC Windows
-echo  senza installare Python o altre dipendenze.
+echo  Questo script crea Wolware.exe pronto per girare su qualsiasi
+echo  PC Windows senza installare Python o altre dipendenze.
 echo.
-echo  Requisiti SOLO per questo PC (non per il PC target):
-echo    - Python 3.10 o superiore  (python.org/downloads)
-echo    - Connessione internet
+echo  Requisiti per questo PC (solo per il BUILD, non per i PC target):
+echo    - Python 3.10 o superiore
+echo    - Connessione internet (per scaricare PyInstaller)
 echo.
 
 REM ═══════════════════════════════════════════════════════════════
@@ -23,7 +23,7 @@ python --version >nul 2>&1
 if errorlevel 1 (
     echo  [ERRORE] Python non trovato.
     echo  Installa Python da: https://www.python.org/downloads/
-    echo  Ricordati di spuntare "Add Python to PATH".
+    echo  Assicurati di spuntare "Add Python to PATH".
     echo.
     pause
     exit /b 1
@@ -33,13 +33,16 @@ echo  [OK] Python %PYVER% trovato.
 echo.
 
 REM ═══════════════════════════════════════════════════════════════
-REM  2. AMBIENTE VIRTUALE DI BUILD
+REM  2. AMBIENTE VIRTUALE DI BUILD (isolato, non tocca il progetto)
 REM ═══════════════════════════════════════════════════════════════
 echo  [INFO] Creo ambiente virtuale di build...
-if exist ".venv_build" rmdir /s /q ".venv_build"
+if exist ".venv_build" (
+    echo  [INFO] Rimuovo ambiente di build precedente...
+    rmdir /s /q ".venv_build"
+)
 python -m venv .venv_build
 if errorlevel 1 (
-    echo  [ERRORE] Impossibile creare il virtualenv.
+    echo  [ERRORE] Impossibile creare l'ambiente virtuale.
     pause
     exit /b 1
 )
@@ -47,15 +50,15 @@ echo  [OK] Ambiente virtuale creato.
 echo.
 
 REM ═══════════════════════════════════════════════════════════════
-REM  3. DIPENDENZE + PYINSTALLER
+REM  3. INSTALLA DIPENDENZE + PYINSTALLER
 REM ═══════════════════════════════════════════════════════════════
 echo  [INFO] Aggiorno pip...
 .venv_build\Scripts\python -m pip install --upgrade pip --quiet
 
-echo  [INFO] Installo dipendenze app...
-.venv_build\Scripts\pip install -r requirements.txt --quiet
+echo  [INFO] Installo dipendenze dell'app...
+.venv_build\Scripts\pip install -r "Wolware v1_0\requirements.txt" --quiet
 if errorlevel 1 (
-    echo  [ERRORE] Installazione requirements.txt fallita.
+    echo  [ERRORE] Installazione dipendenze fallita.
     pause
     exit /b 1
 )
@@ -67,11 +70,11 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-echo  [OK] Dipendenze installate.
+echo  [OK] Tutte le dipendenze installate.
 echo.
 
 REM ═══════════════════════════════════════════════════════════════
-REM  4. PULIZIA BUILD PRECEDENTE
+REM  4. PULIZIA CARTELLE BUILD PRECEDENTI
 REM ═══════════════════════════════════════════════════════════════
 echo  [INFO] Pulisco build precedente...
 if exist "dist\Wolware" rmdir /s /q "dist\Wolware"
@@ -79,14 +82,19 @@ if exist "build"        rmdir /s /q "build"
 if exist "Wolware.spec" del /q "Wolware.spec"
 
 REM ═══════════════════════════════════════════════════════════════
-REM  5. BUILD
-REM    --onedir   : cartella con exe + deps (avvio rapido, DB vicino exe)
-REM    --noconsole: nessun terminale nero per l'utente finale
+REM  5. BUILD CON PYINSTALLER
+REM    - Entriamo nella cartella sorgente: PyInstaller trova
+REM      automaticamente tutti i moduli locali (routes/, auth/, ecc.)
+REM    - --onedir: crea una cartella con l'exe + tutte le dipendenze
+REM      (startup rapido, DB nella stessa cartella dell'exe)
+REM    - --noconsole: nessun terminale nero all'avvio
 REM ═══════════════════════════════════════════════════════════════
-echo  [INFO] Build in corso — attendi 2-5 minuti...
+echo  [INFO] Build in corso — potrebbe richiedere 2-5 minuti...
 echo.
 
-.venv_build\Scripts\pyinstaller ^
+cd "Wolware v1_0"
+
+..\.venv_build\Scripts\pyinstaller ^
     --name "Wolware" ^
     --onedir ^
     --noconsole ^
@@ -122,23 +130,29 @@ echo.
     --hidden-import auth ^
     --hidden-import auth.routes ^
     --hidden-import auth.decorators ^
+    --distpath "..\dist" ^
+    --workpath "..\build" ^
     --noconfirm ^
     --clean ^
     main.py
 
 if errorlevel 1 (
+    cd ..
     echo.
-    echo  [ERRORE] Build fallita. Vedi il messaggio sopra.
+    echo  [ERRORE] Build PyInstaller fallita.
+    echo  Controlla il messaggio di errore sopra.
     echo.
     pause
     exit /b 1
 )
+
+cd ..
 echo.
-echo  [OK] Build completata.
+echo  [OK] Build completata con successo.
 echo.
 
 REM ═══════════════════════════════════════════════════════════════
-REM  6. LEGGIMI
+REM  6. CREA ISTRUZIONI NELLA CARTELLA DI DISTRIBUZIONE
 REM ═══════════════════════════════════════════════════════════════
 (
 echo Wolware — Gestionale per Studi di Consulenza del Lavoro
@@ -146,55 +160,72 @@ echo =========================================================
 echo.
 echo AVVIO
 echo -----
-echo Fai doppio clic su Wolware.exe
-echo Il browser si apre automaticamente su http://127.0.0.1:5000
+echo Fai doppio clic su Wolware.exe per avviare l'applicazione.
+echo Il browser si aprira' automaticamente su http://127.0.0.1:5000
 echo.
-echo PRIMO ACCESSO
-echo -------------
+echo PRIMO AVVIO
+echo -----------
+echo Credenziali predefinite:
 echo   Utente:   admin
 echo   Password: admin123
-echo   ^(cambia subito la password dopo il primo accesso^)
 echo.
-echo BACKUP
-echo ------
-echo Il database e' il file wolware.db in questa cartella.
-echo Fai backup regolari copiando wolware.db altrove.
+echo Cambia la password dopo il primo accesso.
 echo.
-echo Build: %DATE% %TIME%
+echo DATI
+echo ----
+echo Il database (wolware.db) si trova in questa cartella.
+echo Esegui backup regolari copiando wolware.db in un posto sicuro.
+echo.
+echo CHIUDI L'APP
+echo ------------
+echo Chiudi il processo Wolware.exe dal Task Manager o
+echo premi Ctrl+C nel terminale se avviato da riga di comando.
+echo.
+echo Versione costruita il: %DATE% %TIME%
 ) > "dist\Wolware\LEGGIMI.txt"
 
 REM ═══════════════════════════════════════════════════════════════
-REM  7. ZIP DISTRIBUIBILE
+REM  7. CREA ZIP DISTRIBUIBILE
 REM ═══════════════════════════════════════════════════════════════
-echo  [INFO] Creo ZIP distribuibile...
+echo  [INFO] Creo archivio ZIP distribuibile...
 if exist "dist\Wolware_distribuzione.zip" del /q "dist\Wolware_distribuzione.zip"
-powershell -NoProfile -Command "Compress-Archive -Path 'dist\Wolware' -DestinationPath 'dist\Wolware_distribuzione.zip' -Force"
+
+powershell -NoProfile -Command ^
+    "Compress-Archive -Path 'dist\Wolware' -DestinationPath 'dist\Wolware_distribuzione.zip' -Force"
+
 if errorlevel 1 (
-    echo  [AVVISO] ZIP non creato (PowerShell non disponibile^).
+    echo  [AVVISO] Impossibile creare lo ZIP (PowerShell non disponibile).
     echo           La cartella dist\Wolware\ e' comunque pronta.
 ) else (
-    echo  [OK] dist\Wolware_distribuzione.zip pronto.
+    echo  [OK] ZIP creato: dist\Wolware_distribuzione.zip
 )
 
 REM ═══════════════════════════════════════════════════════════════
 REM  8. PULIZIA FINALE
 REM ═══════════════════════════════════════════════════════════════
-echo  [INFO] Rimuovo file temporanei...
-if exist "build"        rmdir /s /q "build"
-if exist "Wolware.spec" del /q "Wolware.spec"
-if exist ".venv_build"  rmdir /s /q ".venv_build"
+echo  [INFO] Pulisco file temporanei di build...
+if exist "build"               rmdir /s /q "build"
+if exist "Wolware.spec"        del /q "Wolware.spec"
+if exist "Wolware v1_0\build"  rmdir /s /q "Wolware v1_0\build"
+if exist "Wolware v1_0\dist"   rmdir /s /q "Wolware v1_0\dist"
+if exist "Wolware v1_0\Wolware.spec" del /q "Wolware v1_0\Wolware.spec"
+if exist ".venv_build"         rmdir /s /q ".venv_build"
 
+REM ═══════════════════════════════════════════════════════════════
+REM  RIEPILOGO
 REM ═══════════════════════════════════════════════════════════════
 echo.
 echo  ================================================================
-echo   COMPLETATO
+echo   BUILD COMPLETATO
 echo  ================================================================
 echo.
-echo   Eseguibile:  dist\Wolware\Wolware.exe
-echo   ZIP pronto:  dist\Wolware_distribuzione.zip
+echo   Cartella:  dist\Wolware\
+echo   Avvia con: dist\Wolware\Wolware.exe
 echo.
-echo   Sul PC target: estrai lo ZIP, fai doppio clic su Wolware.exe.
-echo   Non serve installare nulla.
+echo   Per distribuire su altri PC:
+echo     ZIP pronto: dist\Wolware_distribuzione.zip
+echo     Estrarre lo ZIP sul PC target e avviare Wolware.exe.
+echo     Non serve installare Python o altro.
 echo.
 echo  ================================================================
 echo.
