@@ -2702,15 +2702,15 @@
       <button class="modal-close" data-close="modalEstrattoPdf">&#x2715;</button>
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4)">
-      <div class="form-field">
-        <label>Formato</label>
+      <div class="est-group">
+        <span class="est-group-label">Formato</span>
         <div class="radio-group">
           <label><input type="radio" name="est_formato" value="completo" checked> Completo</label>
           <label><input type="radio" name="est_formato" value="sintetico"> Sintetico</label>
         </div>
       </div>
-      <div class="form-field">
-        <label>Periodo</label>
+      <div class="est-group">
+        <span class="est-group-label">Periodo</span>
         <div class="radio-group">
           <label><input type="radio" name="est_periodo" value="anno" checked> Anno</label>
           <label><input type="radio" name="est_periodo" value="mese"> Mese</label>
@@ -2775,11 +2775,9 @@
           </div>
         </div>
       </div>
-      <div class="form-field">
-        <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:400;font-size:var(--text-sm)">
-          <input type="checkbox" id="est_includi_tariffario"> Includi tariffario applicato
-        </label>
-      </div>
+      <label class="est-check-label">
+        <input type="checkbox" id="est_includi_tariffario"> Includi tariffario applicato
+      </label>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-close="modalEstrattoPdf">Annulla</button>
