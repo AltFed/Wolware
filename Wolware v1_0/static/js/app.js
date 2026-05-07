@@ -2512,7 +2512,9 @@ function _renderDetHeader(d) {
   `;
 
   const btnArch = document.getElementById('btnDetArchivia');
-  btnArch.textContent = d.archiviato ? '↩ Ripristina' : '📦 Archivia';
+  btnArch.innerHTML = d.archiviato
+    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.75"/></svg> Ripristina`
+    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg> Archivia`;
   btnArch.dataset.archiviato = d.archiviato ? '1' : '0';
 
   const annotEl = document.getElementById('dettaglioAnnotazioni');
@@ -4723,7 +4725,7 @@ const Rendiconto = (() => {
       // Card "Totale Disponibilità" in evidenza
       const totCard = document.createElement('div');
       totCard.className = 'pn-saldo-card' + (tot < 0 ? ' pn-saldo-negativo' : tot > 0 ? ' pn-saldo-positivo' : '');
-      totCard.style.cssText = 'background:var(--color-surface-raised);border-color:var(--color-primary);min-width:160px';
+      totCard.style.cssText = 'background:var(--color-surface-2);border-color:var(--color-primary);border-left:3px solid var(--color-primary);min-width:160px';
       totCard.innerHTML = `<span class="pn-saldo-label">Totale Disponibilità</span>
         <span class="pn-saldo-value" style="color:${tot >= 0 ? 'var(--color-success)' : 'var(--color-error)'}">${_fmt(tot)}</span>`;
       row.appendChild(totCard);
@@ -4731,6 +4733,10 @@ const Rendiconto = (() => {
       saldi.forEach(s => {
         const card = document.createElement('div');
         card.className = 'pn-saldo-card' + (s.saldo < 0 ? ' pn-saldo-negativo' : s.saldo > 0 ? ' pn-saldo-positivo' : '');
+        if (s.id && s.id.startsWith('banca_') && s.colore) {
+          card.classList.add('pn-saldo-banca');
+          card.style.setProperty('--pn-bank-color', s.colore);
+        }
         card.innerHTML = `<span class="pn-saldo-label">${s.nome}</span>
           <span class="pn-saldo-value">${_fmt(s.saldo)}</span>`;
         row.appendChild(card);
