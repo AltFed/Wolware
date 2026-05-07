@@ -3566,7 +3566,7 @@ const PrimaNota = (() => {
         <td><strong>${_esc(c.ragione_sociale)}</strong></td>
         <td class="col-money" style="color:var(--color-error);font-weight:600">${_eur(c.residuo)}</td>
         <td>${c.ultimo_pagamento ? _data(c.ultimo_pagamento) : '—'}</td>
-        <td><button class="btn btn-secondary btn-sm" onclick="PrimaNota.apriSollecito(${c.id})">📬</button></td>
+        <td><button class="btn btn-secondary btn-sm" onclick="PrimaNota.apriSollecito(${c.id})"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></button></td>
       </tr>`).join('');
     } catch (e) { console.error('PrimaNota: errore solleciti', e); }
   }
@@ -3639,7 +3639,7 @@ const PrimaNota = (() => {
     if (m.tipo !== 'entrata') return '<span class="pn-flag-empty"></span>';
     if (m.flag === 'fatturato')
       return `<button class="pn-flag pn-flag-v" title="Fatturato — clicca per rimuovere"
-        onclick="PrimaNota.rimuoviFatturato(${m.id})">✓</button>`;
+        onclick="PrimaNota.rimuoviFatturato(${m.id})"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></button>`;
     if (m.flag === 'urgente') {
       const giorni = m.data ? Math.floor((Date.now() - new Date(m.data)) / 86400000) : 0;
       return `<span class="pn-flag pn-flag-urgente" title="DA FATTURARE URGENTE! ${giorni} giorni fa">!</span>`;
@@ -3753,8 +3753,8 @@ const PrimaNota = (() => {
         <span class="pn-color-dot" style="background:${_esc(b.colore||'#6366f1')}"></span>
         <span class="pn-anagrafica-nome">${_esc(b.nome)}</span>
         <span class="pn-anagrafica-sub">Saldo iniziale: ${_eur(b.saldo_iniziale)}</span>
-        <button class="btn btn-secondary btn-sm" onclick="PrimaNota.modificaBanca(${b.id})">✏</button>
-        <button class="btn btn-secondary btn-sm pn-btn-elimina" onclick="PrimaNota.eliminaBanca(${b.id})">✕</button>
+        <button class="btn btn-secondary btn-sm" onclick="PrimaNota.modificaBanca(${b.id})" title="Modifica"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn btn-secondary btn-sm pn-btn-elimina" onclick="PrimaNota.eliminaBanca(${b.id})" title="Elimina"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
       </div>`).join('');
   }
 
@@ -3772,7 +3772,7 @@ const PrimaNota = (() => {
         id="pn-banca-edit-colore-${id}"
         style="height:32px;width:44px;border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;padding:2px">
       <button class="btn btn-primary btn-sm" onclick="PrimaNota.salvaBanca(${id})">Salva</button>
-      <button class="btn btn-secondary btn-sm" onclick="PrimaNota.cancelBancaEdit()">✕</button>`;
+      <button class="btn btn-secondary btn-sm" onclick="PrimaNota.cancelBancaEdit()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
     $(`pn-banca-edit-nome-${id}`).focus();
   }
 
@@ -3780,9 +3780,11 @@ const PrimaNota = (() => {
 
   async function salvaBanca(id) {
     const nome = $(`pn-banca-edit-nome-${id}`)?.value.trim();
-    const saldo_iniziale = parseFloat($(`pn-banca-edit-saldo-${id}`)?.value) || 0;
+    const saldoRaw = ($(`pn-banca-edit-saldo-${id}`)?.value ?? '').trim();
+    const saldo_iniziale = saldoRaw === '' ? 0 : parseFloat(saldoRaw);
     const colore = $(`pn-banca-edit-colore-${id}`)?.value || '#6366f1';
     if (!nome) { toast('Il nome è obbligatorio', 'error'); return; }
+    if (isNaN(saldo_iniziale)) { toast('Il saldo iniziale deve essere un numero valido (es: -500 o 1200.50)', 'error'); return; }
     try {
       const res = await fetch(`/api/prima-nota/banche/${id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -3807,9 +3809,11 @@ const PrimaNota = (() => {
 
   async function _aggiungiNuovaBanca() {
     const nome = $('pnNuovaBancaNome').value.trim();
-    const saldo_iniziale = parseFloat($('pnNuovaBancaSaldo').value) || 0;
+    const saldoRaw = ($('pnNuovaBancaSaldo').value ?? '').trim();
+    const saldo_iniziale = saldoRaw === '' ? 0 : parseFloat(saldoRaw);
     const colore = $('pnNuovaBancaColore').value || '#6366f1';
     if (!nome) { toast('Inserisci il nome della banca', 'error'); return; }
+    if (isNaN(saldo_iniziale)) { toast('Il saldo iniziale deve essere un numero valido (es: -500 o 1200.50)', 'error'); return; }
     try {
       const res = await fetch('/api/prima-nota/banche', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -3875,16 +3879,16 @@ const PrimaNota = (() => {
         <div id="pn-sv-row-${s.id}" class="pn-anagrafica-row pn-anagrafica-row-sv">
           <span class="pn-sv-indent">↳</span>
           <span class="pn-anagrafica-nome">${_esc(s.nome)}</span>
-          <button class="btn btn-secondary btn-sm" onclick="PrimaNota.modificaSv('${_macroTipo}',${m.id},${s.id})">✏</button>
-          <button class="btn btn-secondary btn-sm pn-btn-elimina" onclick="PrimaNota.eliminaSv('${_macroTipo}',${m.id},${s.id})">✕</button>
+          <button class="btn btn-secondary btn-sm" onclick="PrimaNota.modificaSv('${_macroTipo}',${m.id},${s.id})" title="Modifica"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="btn btn-secondary btn-sm pn-btn-elimina" onclick="PrimaNota.eliminaSv('${_macroTipo}',${m.id},${s.id})" title="Elimina"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
         </div>`).join('');
       html += `
         <div class="pn-macro-group">
           <div id="pn-macro-row-${m.id}" class="pn-anagrafica-row pn-anagrafica-row-macro">
             <span class="pn-anagrafica-nome">${_esc(m.nome)}</span>
             <span class="pn-anagrafica-sub">${m.sottovoci.length} sottovoci</span>
-            <button class="btn btn-secondary btn-sm" onclick="PrimaNota.modificaMacro('${_macroTipo}',${m.id})">✏</button>
-            <button class="btn btn-secondary btn-sm pn-btn-elimina" onclick="PrimaNota.eliminaMacro('${_macroTipo}',${m.id})">✕</button>
+            <button class="btn btn-secondary btn-sm" onclick="PrimaNota.modificaMacro('${_macroTipo}',${m.id})" title="Modifica"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="btn btn-secondary btn-sm pn-btn-elimina" onclick="PrimaNota.eliminaMacro('${_macroTipo}',${m.id})" title="Elimina"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
           </div>
           ${svRows}
           <div class="pn-anagrafica-row pn-anagrafica-row-sv">
@@ -3909,7 +3913,7 @@ const PrimaNota = (() => {
         style="flex:1;height:32px;padding:0 var(--space-2)"
         onkeydown="if(event.key==='Enter')PrimaNota.salvaMacro('${tipo}',${id})">
       <button class="btn btn-primary btn-sm" onclick="PrimaNota.salvaMacro('${tipo}',${id})">Salva</button>
-      <button class="btn btn-secondary btn-sm" onclick="PrimaNota.cancelMacroEdit()">✕</button>`;
+      <button class="btn btn-secondary btn-sm" onclick="PrimaNota.cancelMacroEdit()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
     $(`pn-macro-edit-${id}`).focus();
   }
 
@@ -3951,7 +3955,7 @@ const PrimaNota = (() => {
         style="flex:1;height:28px;padding:0 var(--space-2);font-size:var(--text-xs)"
         onkeydown="if(event.key==='Enter')PrimaNota.salvaSv('${tipo}',${macroId},${svId})">
       <button class="btn btn-primary btn-sm" onclick="PrimaNota.salvaSv('${tipo}',${macroId},${svId})">Salva</button>
-      <button class="btn btn-secondary btn-sm" onclick="PrimaNota.cancelMacroEdit()">✕</button>`;
+      <button class="btn btn-secondary btn-sm" onclick="PrimaNota.cancelMacroEdit()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
     $(`pn-sv-edit-${svId}`).focus();
   }
 
@@ -4474,7 +4478,7 @@ const PrimaNota = (() => {
       </td>
       <td class="col-actions">
         <button class="btn btn-primary btn-sm" onclick="PrimaNota.salvaMovimento(${id})">Salva</button>
-        <button class="btn btn-ghost btn-sm" onclick="PrimaNota.cancelMovimentoEdit()">✕</button>
+        <button class="btn btn-ghost btn-sm" onclick="PrimaNota.cancelMovimentoEdit()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </td>`;
     document.getElementById(`pnEditData${id}`).focus();
   }
@@ -4483,12 +4487,14 @@ const PrimaNota = (() => {
     const nuovaData    = (document.getElementById(`pnEditData${id}`)    || {}).value;
     const nuovaDescr   = (document.getElementById(`pnEditDescr${id}`)   || {}).value;
     const nuovoImporto = (document.getElementById(`pnEditImporto${id}`) || {}).value;
-    if (!nuovaData || !nuovoImporto) { toast('Data e importo obbligatori', 'error'); return; }
+    const importoNum = parseFloat(nuovoImporto);
+    if (!nuovaData) { toast('La data è obbligatoria', 'error'); return; }
+    if (!nuovoImporto || isNaN(importoNum) || importoNum <= 0) { toast("L'importo deve essere un numero maggiore di zero", 'error'); return; }
     try {
       const res = await fetch(`/api/prima-nota/movimenti/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: nuovaData, importo: parseFloat(nuovoImporto), descrizione: nuovaDescr })
+        body: JSON.stringify({ data: nuovaData, importo: importoNum, descrizione: nuovaDescr })
       });
       const data = await res.json();
       if (data.ok) { await _caricaMovimenti(); toast('Movimento aggiornato', 'success'); }

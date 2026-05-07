@@ -604,30 +604,47 @@
                   <rect x="2" y="5" width="20" height="14" rx="2"/>
                   <line x1="2" y1="10" x2="22" y2="10"/>
                 </svg>
-                🏦 Banche
+                Banche
               </button>
               <button class="btn btn-secondary btn-sm" id="pnBtnUscite">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                 </svg>
-                📁 Uscite
+                Uscite
               </button>
               <button class="btn btn-secondary btn-sm" id="pnBtnEntrate">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                 </svg>
-                📁 Entrate
+                Entrate
               </button>
               <button class="btn btn-sm" id="pnBtnFatturazione"
                 style="background:var(--color-success);color:#fff;border:none">
-                🧾 Fatturazione
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                Fatturazione
               </button>
               <button class="btn btn-sm" id="pnBtnGiroconto"
                 style="background:#7c3aed;color:#fff;border:none">
-                🔄 Giroconto
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="17 1 21 5 17 9"/>
+                  <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                  <polyline points="7 23 3 19 7 15"/>
+                  <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                </svg>
+                Giroconto
               </button>
               <button class="btn btn-secondary btn-sm" id="pnBtnEsporta">
-                📥 Esporta
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Esporta
               </button>
               <button class="btn btn-primary" id="pnBtnMovimento">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -660,7 +677,11 @@
               <div style="display:flex;align-items:center;gap:var(--space-2)">
                 <button class="btn btn-secondary btn-sm" id="pnBtnSollecitoMassivo"
                   onclick="event.stopPropagation()">
-                  📬 Sollecito massivo
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                  Sollecito massivo
                 </button>
                 <svg id="pnSollecitiChevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2" style="transition:transform .2s">
@@ -2931,7 +2952,13 @@
       <button class="btn btn-ghost" data-close="modalGiroconto">Annulla</button>
       <button class="btn btn-primary" id="pnBtnSalvaGiroconto"
         style="background:#7c3aed;border-color:#7c3aed">
-        🔄 Esegui Giroconto
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="17 1 21 5 17 9"/>
+          <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <polyline points="7 23 3 19 7 15"/>
+          <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+        Esegui Giroconto
       </button>
     </div>
   </div>
@@ -2986,7 +3013,13 @@
       <button class="btn btn-ghost" data-close="modalFatturazione">Annulla</button>
       <button class="btn btn-primary" id="pnBtnGeneraFatturazione"
         style="background:var(--color-success);border-color:var(--color-success)">
-        🧾 Genera Documento
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        Genera Documento
       </button>
     </div>
   </div>
@@ -3027,7 +3060,10 @@
               style="height:38px;width:48px;border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;padding:2px;background:var(--color-surface-2)">
           </div>
           <button class="btn btn-primary btn-sm" id="pnBtnAggiungiBanca" style="height:38px;margin-bottom:0">
-            + Aggiungi
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Aggiungi
           </button>
         </div>
       </div>
@@ -3065,7 +3101,10 @@
             <input type="text" class="form-input" id="pnNuovoMacroNome" placeholder="Nome macrogruppo…">
           </div>
           <button class="btn btn-primary btn-sm" id="pnBtnAggiungiMacro" style="height:38px">
-            + Aggiungi
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Aggiungi
           </button>
         </div>
       </div>
@@ -3080,9 +3119,9 @@
 
 <!-- MODAL Esporta PDF Riepilogo -->
 <div class="modal-overlay" id="modalEsporta">
-  <div class="modal-box" style="max-width:520px">
+  <div class="modal" style="max-width:520px">
     <div class="modal-header">
-      <h3 class="modal-title">📥 Esporta Riepilogo PDF</h3>
+      <h3 class="modal-title">Esporta Riepilogo PDF</h3>
       <button class="modal-close" data-close="modalEsporta">&#x2715;</button>
     </div>
     <div class="modal-body">

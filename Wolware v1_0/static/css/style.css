@@ -733,7 +733,8 @@ th.rd-mese-sel{background:rgba(99,102,241,.22)!important}
 .pn-btn-modifica:hover{color:var(--color-primary);background:var(--color-surface-raised)}
 .pn-edit-input{height:28px;padding:0 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm);background:var(--color-surface);color:var(--color-text);box-sizing:border-box}
 .pn-edit-input:focus{outline:none;border-color:var(--color-primary);box-shadow:0 0 0 2px rgba(99,102,241,.18)}
-.pn-edit-importo{font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
+.pn-edit-importo{font-variant-numeric:tabular-nums;font-family:var(--font-mono);-moz-appearance:textfield}
+.pn-edit-importo::-webkit-inner-spin-button,.pn-edit-importo::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 /* Esporta modal */
 .pn-esporta-row{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-2);border-radius:var(--radius-sm);cursor:pointer;transition:background .1s}
 .pn-esporta-row:hover{background:var(--color-surface-raised)}

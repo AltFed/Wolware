@@ -1025,7 +1025,7 @@ def aggiorna_movimento(mov_id):
     # Sincronizza pagamento collegato (entrata cliente)
     if mov['tipo'] == 'entrata' and mov['macrogruppo_id'] == 'clienti':
         db.execute(
-            'UPDATE pagamenti SET importo=?, data_pagamento=? WHERE movimenti_studio_id=?',
+            'UPDATE pagamenti SET importo=?, data=? WHERE movimenti_studio_id=?',
             (nuovo_importo, nuova_data, mov_id)
         )
     db.commit()
