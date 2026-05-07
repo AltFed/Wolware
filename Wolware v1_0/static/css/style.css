@@ -762,3 +762,9 @@ th.rd-mese-sel{background:rgba(99,102,241,.22)!important}
 /* dark-mode */
 [data-theme=dark] .mese-cell{background:rgba(255,255,255,.06);color:var(--color-text-faint)}
 [data-theme=dark] .mese-cell.done{background:rgba(22,163,74,.18);color:var(--color-success)}
+
+/* ─── HOME TAB — section & table scoped overrides ───────────────────────── */
+.home-section-block{margin-bottom:var(--space-6)}
+.home-sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)}
+.home-sec-title{font-size:var(--text-base);font-weight:600;margin:0}
+.home-table-wrapper{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm)}
