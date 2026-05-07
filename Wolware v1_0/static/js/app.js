@@ -3609,6 +3609,10 @@ const PrimaNota = (() => {
         if (s.id && s.id.startsWith('banca_')) {
           card.dataset.bancaId = s.id.split('_')[1];
           card.dataset.bancaNome = s.nome;
+          if (s.colore) {
+            card.classList.add('pn-saldo-banca');
+            card.style.setProperty('--pn-bank-color', s.colore);
+          }
         }
         card.innerHTML = `<span class="pn-saldo-label">${_esc(s.nome)}</span>
           <span class="pn-saldo-value">${_eur(s.saldo)}</span>`;
