@@ -770,6 +770,11 @@ th.rd-mese-sel{background:rgba(99,102,241,.22)!important}
 .btn-purple{background:var(--color-purple);color:#fff;border:none}
 .btn-purple:hover{background:color-mix(in oklab,var(--color-purple) 85%,#000);color:#fff}
 
+/* ─── CLIENTI TAB — filter bar card + input overrides ───────────────────── */
+#tab-ditte .filter-bar{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-3);box-shadow:var(--shadow-sm)}
+#tab-ditte .filter-input,#tab-ditte .filter-select{background:var(--color-surface-2);height:34px}
+#tab-ditte .filter-input:focus,#tab-ditte .filter-select:focus{background:var(--color-surface)}
+
 /* ─── HOME TAB — section & table scoped overrides ───────────────────────── */
 .home-section-block{margin-bottom:var(--space-6)}
 .home-sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)}
