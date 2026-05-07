@@ -462,8 +462,10 @@
               </thead>
               <tbody id="ditteBody">
                 <tr><td colspan="8" class="empty-state-row">
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                  <p>Nessun cliente attivo.<br><button class="btn btn-primary btn-sm" style="margin-top:var(--space-3)" id="btnEmptyAddCliente">+ Aggiungi cliente</button></p>
+                  <span class="empty-glyph">🏢</span>
+                  <span class="empty-title">Nessun cliente attivo</span>
+                  <span class="empty-sub">Aggiungi il tuo primo cliente per iniziare</span>
+                  <button class="btn btn-primary btn-sm" id="btnEmptyAddCliente">+ Aggiungi cliente</button>
                 </td></tr>
               </tbody>
             </table>
@@ -503,17 +505,10 @@
                 I tuoi tariffari
               </div>
               <div id="tariffariList" style="flex:1;overflow-y:auto;padding:var(--space-2)">
-                <div class="empty-state" style="padding:var(--space-10) var(--space-4)">
-                  <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-                    opacity="0.25">
-                    <line x1="8" y1="6" x2="21" y2="6" />
-                    <line x1="8" y1="12" x2="21" y2="12" />
-                    <line x1="8" y1="18" x2="21" y2="18" />
-                    <line x1="3" y1="6" x2="3.01" y2="6" />
-                    <line x1="3" y1="12" x2="3.01" y2="12" />
-                    <line x1="3" y1="18" x2="3.01" y2="18" />
-                  </svg>
-                  <p>Nessun tariffario.<br>Clicca <strong>Nuovo Tariffario</strong>.</p>
+                <div class="empty-state">
+                  <span class="empty-glyph">📋</span>
+                  <span class="empty-title">Nessun tariffario</span>
+                  <span class="empty-sub">Clicca <strong>Nuovo Tariffario</strong> per iniziare</span>
                 </div>
               </div>
             </div>
@@ -523,16 +518,9 @@
 
               <!-- Placeholder quando niente è selezionato -->
               <div id="tariffarioPlaceholder" class="empty-state" style="min-height:480px">
-                <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
-                  opacity="0.18">
-                  <line x1="8" y1="6" x2="21" y2="6" />
-                  <line x1="8" y1="12" x2="21" y2="12" />
-                  <line x1="8" y1="18" x2="21" y2="18" />
-                  <line x1="3" y1="6" x2="3.01" y2="6" />
-                  <line x1="3" y1="12" x2="3.01" y2="12" />
-                  <line x1="3" y1="18" x2="3.01" y2="18" />
-                </svg>
-                <p>Seleziona un tariffario dalla lista oppure creane uno nuovo.</p>
+                <span class="empty-glyph">📋</span>
+                <span class="empty-title">Nessun tariffario selezionato</span>
+                <span class="empty-sub">Seleziona un tariffario dalla lista oppure creane uno nuovo</span>
               </div>
 
               <!-- Editor visibile quando un tariffario è selezionato -->
