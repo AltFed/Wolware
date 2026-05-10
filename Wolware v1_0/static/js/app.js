@@ -5591,7 +5591,7 @@ const HRPratiche = (() => {
     // mostra pulsante nuovo dipendente
     document.getElementById('hrBtnNuovoDip')?.style && (document.getElementById('hrBtnNuovoDip').style.display = '');
     try {
-      const res  = await fetch(`/api/employees?ditta_id=${dittaId}`);
+      const res  = await fetch(`/api/assunzioni/employees?ditta_id=${dittaId}`);
       const list = await res.json();
       list.forEach(e => {
         const o = document.createElement('option');
@@ -5684,7 +5684,7 @@ const HRPratiche = (() => {
     };
     if (!body.nome || !body.cognome) return alert('Nome e Cognome obbligatori.');
     try {
-      const res  = await fetch('/api/employees', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const res  = await fetch('/api/assunzioni/employees', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Errore');
       const sel = document.getElementById('hr_employee_id');
