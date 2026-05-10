@@ -253,6 +253,16 @@ async function loadPratiche() {
   try { allPratiche = await api('/api/gestione-pratiche'); renderPratiche(allPratiche); }
   catch (e) { toast('Errore nel caricamento pratiche', 'error'); }
 }
+
+async function loadDitteSelect(selectId, selectedId = null) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  try {
+    const list = await api('/api/ditte');
+    sel.innerHTML = '<option value="">-- Seleziona ditta --</option>' +
+      list.map(d => `<option value="${d.id}"${String(d.id) === String(selectedId) ? ' selected' : ''}>${d.ragione_sociale}</option>`).join('');
+  } catch(e) { console.error('loadDitteSelect', e); }
+}
 function renderPratiche(list) {
   const tbody = document.getElementById('praticheTableBody');
   if (!list.length) {
@@ -290,10 +300,10 @@ function filterPratiche() {
 async function editPratica(id) {
   const p = allPratiche.find(x => x.id === id);
   if (!p) return;
-  document.getElementById('praticaId').value  = id;
-  document.getElementById('tipo_pratica').value = p.tipo_pratica;
+  document.getElementById('praticaId').value        = id;
+  document.getElementById('tipo_pratica').value     = p.tipo_pratica;
   document.getElementById('modalPraticaTitle').textContent = 'Modifica Pratica — ' + p.tipo_pratica;
-  document.getElementById('pratica_ditta_id').value  = p.ditta_id || '';
+  document.getElementById('pratica_ditta_id').value = p.ditta_id || '';
   document.getElementById('descrizione_pratica').value = p.descrizione || '';
   document.getElementById('stato_pratica').value    = p.stato || 'Aperta';
   document.getElementById('priorita_pratica').value = p.priorita || 'Normale';
@@ -302,6 +312,9 @@ async function editPratica(id) {
   document.getElementById('note_pratica').value     = p.note || '';
   const wipEl = document.getElementById('praticaWipNotice');
   if (wipEl) wipEl.style.display = 'none';
+  // mostra Stato solo in modifica
+  const statoWrap = document.getElementById('stato_pratica_wrap');
+  if (statoWrap) statoWrap.style.display = '';
   loadDitteSelect('pratica_ditta_id', p.ditta_id);
   openModal('modalPratica');
 }
@@ -317,17 +330,21 @@ async function deletePratica(id) {
 
 document.getElementById('btnSavePratica')?.addEventListener('click', async () => {
   const id   = document.getElementById('praticaId').value;
+  const tipo = document.getElementById('tipo_pratica').value;
+  if (!tipo) return toast('Tipo pratica obbligatorio', 'error');
+
+  if (!confirm('Vuoi salvare la pratica?')) return;
+
   const body = {
-    tipo_pratica: document.getElementById('tipo_pratica').value,
-    ditta_id:     document.getElementById('pratica_ditta_id').value || null,
-    descrizione:  document.getElementById('descrizione_pratica').value,
-    stato:        document.getElementById('stato_pratica').value,
-    priorita:     document.getElementById('priorita_pratica').value,
+    tipo_pratica:  tipo,
+    ditta_id:      document.getElementById('pratica_ditta_id').value || null,
+    descrizione:   document.getElementById('descrizione_pratica').value,
+    stato:         id ? document.getElementById('stato_pratica').value : 'Aperta',
+    priorita:      document.getElementById('priorita_pratica').value,
     data_apertura: document.getElementById('data_apertura').value || null,
     data_scadenza: document.getElementById('data_scadenza').value || null,
-    note:         document.getElementById('note_pratica').value,
+    note:          document.getElementById('note_pratica').value,
   };
-  if (!body.tipo_pratica) return toast('Tipo pratica obbligatorio', 'error');
   try {
     if (id) {
       await api(`/api/gestione-pratiche/${id}`, 'PUT', body);
@@ -335,7 +352,7 @@ document.getElementById('btnSavePratica')?.addEventListener('click', async () =>
       await api('/api/gestione-pratiche', 'POST', body);
     }
     closeModal('modalPratica');
-    toast(id ? 'Pratica aggiornata' : 'Pratica creata', 'success');
+    toast(id ? 'Pratica aggiornata' : 'Pratica creata — stato: Aperta', 'success');
     loadPratiche();
   } catch(e) { toast('Errore salvataggio pratica', 'error'); }
 });
@@ -963,10 +980,10 @@ document.getElementById('cadenzaBtnGroup')?.addEventListener('click', e => {
 });
 function openPraticaModal(tipo) {
   if (tipo === 'Assunzione') { openAssunzioneModal(); return; }
-  document.getElementById('praticaId').value       = '';
-  document.getElementById('tipo_pratica').value    = tipo;
+  document.getElementById('praticaId').value        = '';
+  document.getElementById('tipo_pratica').value     = tipo;
   document.getElementById('modalPraticaTitle').textContent = 'Nuova Pratica — ' + tipo;
-  document.getElementById('pratica_ditta_id').value  = '';
+  document.getElementById('pratica_ditta_id').value = '';
   document.getElementById('descrizione_pratica').value = '';
   document.getElementById('stato_pratica').value    = 'Aperta';
   document.getElementById('priorita_pratica').value = 'Normale';
@@ -975,6 +992,9 @@ function openPraticaModal(tipo) {
   document.getElementById('note_pratica').value     = '';
   const wipEl = document.getElementById('praticaWipNotice');
   if (wipEl) wipEl.style.display = 'none';
+  // nasconde Stato per nuove pratiche (sempre 'Aperta')
+  const statoWrap = document.getElementById('stato_pratica_wrap');
+  if (statoWrap) statoWrap.style.display = 'none';
   loadDitteSelect('pratica_ditta_id');
   openModal('modalPratica');
 }
