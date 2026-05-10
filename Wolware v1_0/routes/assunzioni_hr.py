@@ -513,6 +513,11 @@ def create_assunzione():
     if data['tipo_pratica'] not in MATRICE_ASSUNZIONI:
         return jsonify({'error': f"tipo_pratica '{data['tipo_pratica']}' non riconosciuto"}), 400
 
+    # data_fine obbligatoria per tutti i tipi a termine
+    cfg = MATRICE_ASSUNZIONI[data['tipo_pratica']]
+    if cfg.get('alert_tipo') == 'scadenza' and not data.get('data_fine'):
+        return jsonify({'error': 'Data Fine obbligatoria per questo tipo di contratto'}), 400
+
     etichetta = _etichetta_utilities(data)
     conn = get_db()
     try:
@@ -605,6 +610,11 @@ def update_assunzione(ass_id):
             return jsonify({'error': 'Pratica non trovata'}), 404
         if row['stato'] == 'completata':
             return jsonify({'error': 'Non è possibile modificare una pratica già completata'}), 409
+
+        tipo = data.get('tipo_pratica', row['stato'])
+        cfg  = MATRICE_ASSUNZIONI.get(tipo, {})
+        if cfg.get('alert_tipo') == 'scadenza' and not data.get('data_fine'):
+            return jsonify({'error': 'Data Fine obbligatoria per questo tipo di contratto'}), 400
 
         conn.execute(
             """UPDATE assunzioni_hr SET

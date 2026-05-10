@@ -5602,13 +5602,15 @@ const HRPratiche = (() => {
   }
 
   function _onTipoChange() {
-    const v      = document.getElementById('hr_tipo_pratica').value;
-    const tipoT  = ['2.1','2.2','3.1','4.1','5.1'];
-    const tipoC  = ['2.2','3.1','4.1','5.1'];
-    const wFine  = document.getElementById('hr_data_fine_wrap');
-    const wCaus  = document.getElementById('hr_causale_wrap');
-    if (wFine)  wFine.style.display  = tipoT.includes(v) ? 'block' : 'none';
-    if (wCaus)  wCaus.style.display  = tipoC.includes(v) ? 'block' : 'none';
+    const v     = document.getElementById('hr_tipo_pratica').value;
+    // tipi con data_fine: tutti quelli con alert_tipo='scadenza' nella MATRICE_ASSUNZIONI
+    const tipoT = ['1.2','1.3','2.1','2.2','3.2','4.1','4.2','5.1'];
+    // causale apposizione termine: solo contratti a tempo determinato (legge italiana)
+    const tipoC = ['1.2','1.3'];
+    const wFine = document.getElementById('hr_data_fine_wrap');
+    const wCaus = document.getElementById('hr_causale_wrap');
+    if (wFine) wFine.style.display = tipoT.includes(v) ? 'block' : 'none';
+    if (wCaus) wCaus.style.display = tipoC.includes(v) ? 'block' : 'none';
   }
 
   function _aggiornaRiepilogo() {
