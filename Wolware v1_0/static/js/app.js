@@ -979,7 +979,7 @@ document.getElementById('cadenzaBtnGroup')?.addEventListener('click', e => {
   if (hidden) hidden.value = btn.dataset.val;
 });
 function openPraticaModal(tipo) {
-  if (tipo === 'Assunzione') { openAssunzioneModal(); return; }
+  if (tipo === 'Assunzione') { HRPratiche.openModal(); return; }
   document.getElementById('praticaId').value        = '';
   document.getElementById('tipo_pratica').value     = tipo;
   document.getElementById('modalPraticaTitle').textContent = 'Nuova Pratica — ' + tipo;
@@ -5574,9 +5574,11 @@ const HRPratiche = (() => {
     ['hr_mansione','hr_livello','hr_retrib_importo'].forEach(id =>
       document.getElementById(id)?.addEventListener('input', _aggiornaRiepilogo));
 
-    // footer buttons
-    document.getElementById('hrBtnSalvaBozza')?.addEventListener('click', () => salva('bozza'));
-    document.getElementById('hrBtnCompleta')?.addEventListener('click',   () => salva('completa'));
+    // footer button — unico pulsante "Salva Pratica", fa sempre completa
+    document.getElementById('hrBtnCompleta')?.addEventListener('click', () => {
+      if (!confirm('Vuoi salvare la pratica?')) return;
+      salva();
+    });
   }
 
   async function _onDittaChange() {
@@ -5697,8 +5699,8 @@ const HRPratiche = (() => {
     } catch(e) { alert('Errore salvataggio dipendente: ' + e.message); }
   }
 
-  /* ── salva bozza / completa ── */
-  async function salva(azione) {
+  /* ── salva pratica (crea bozza + completa in un colpo) ── */
+  async function salva() {
     const dittaId    = parseInt(document.getElementById('hr_ditta_id')?.value);
     const employeeId = parseInt(document.getElementById('hr_employee_id')?.value);
     const tipoPratica = document.getElementById('hr_tipo_pratica')?.value;
@@ -5735,20 +5737,16 @@ const HRPratiche = (() => {
       if (!res.ok) throw new Error(data.error || 'Errore salvataggio');
       if (!_assunzioneId) _assunzioneId = data.id;
 
-      if (azione === 'completa') {
-        const cRes  = await fetch(`/api/assunzioni/${_assunzioneId}/completa`, { method:'POST' });
-        const cData = await cRes.json();
-        if (!cRes.ok) throw new Error(cData.error || 'Errore completamento');
-        alert('Pratica completata con successo.');
-      } else {
-        alert('Bozza salvata.');
-      }
+      const cRes  = await fetch(`/api/assunzioni/${_assunzioneId}/completa`, { method:'POST' });
+      const cData = await cRes.json();
+      if (!cRes.ok) throw new Error(cData.error || 'Errore completamento');
+      toast('Pratica salvata e collegata allo Scadenziario.', 'success');
       closeModal();
       Scadenziario.refresh();
     } catch(e) { alert('Errore: ' + e.message); }
   }
 
-  return { openModal, closeModal, salvaEmployee, salva };
+  return { openModal, closeModal, salvaEmployee };
 })();
 
 
