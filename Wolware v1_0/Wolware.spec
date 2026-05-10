@@ -1,12 +1,27 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
+
+datas = [('templates', 'templates'), ('static', 'static')]
+binaries = []
+hiddenimports = ['sqlite3', 'dotenv', 'email.mime.text', 'email.mime.multipart', 'routes', 'routes.stats', 'routes.events', 'routes.ditte', 'routes.pratiche', 'routes.users', 'routes.tariffari', 'routes.ditta_tariffario', 'routes.pagamenti', 'routes.arrotondamenti', 'routes.strumenti', 'routes.pratiche_richiesta', 'routes.fatture', 'routes.estratto', 'routes.previsionale', 'routes.solleciti', 'routes.prima_nota', 'routes.rendiconto', 'auth', 'auth.routes', 'auth.decorators']
+tmp_ret = collect_all('openpyxl')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('reportlab')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('flask')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('werkzeug')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('jinja2')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
-    datas=[('templates', 'templates'), ('static', 'static')],
-    hiddenimports=['flask', 'sqlite3'],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -26,7 +41,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

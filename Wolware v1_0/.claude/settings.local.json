@@ -6,7 +6,10 @@
       "Bash(git merge *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Read(//c/Users/feder/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/85275dde-6c00-4fdd-8941-4529a7d482a4/0e8b88b0-ca61-4abb-abeb-d9a01a192809/skills/docx/**)",
+      "Bash(pandoc \"C:\\\\Users\\\\feder\\\\Downloads\\\\MASTER FILE.docx\" -o \"C:\\\\Users\\\\feder\\\\Downloads\\\\MASTER FILE.md\" --wrap=none)",
+      "PowerShell(python \"C:\\\\Users\\\\feder\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\85275dde-6c00-4fdd-8941-4529a7d482a4\\\\0e8b88b0-ca61-4abb-abeb-d9a01a192809\\\\skills\\\\docx\\\\scripts\\\\office\\\\unpack.py\" \"C:\\\\Users\\\\feder\\\\Downloads\\\\MASTER FILE.docx\" \"C:\\\\Users\\\\feder\\\\Downloads\\\\master_unpacked\" 2>&1)"
     ]
   }
 }
