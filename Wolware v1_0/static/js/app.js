@@ -5503,13 +5503,13 @@ const HRPratiche = (() => {
 
     document.getElementById('modalHRPraticaTitle').textContent =
       assunzioneId ? 'Modifica Pratica HR' : 'Nuova Pratica HR';
-    modal.classList.add('active');
+    modal.classList.add('open');
     document.body.style.overflow = 'hidden';
   }
 
   function closeModal() {
     const modal = document.getElementById('modalHRPratica');
-    if (modal) modal.classList.remove('active');
+    if (modal) modal.classList.remove('open');
     document.body.style.overflow = '';
   }
 
