@@ -1183,9 +1183,32 @@ document.getElementById('modalAssunzione').addEventListener('input', () => {
   document.getElementById('btnAssumiBtn').style.display = ok ? 'inline-flex' : 'none';
 });
 
-document.getElementById('btnSalvaBozzaAssunzione').addEventListener('click', () => {
-  UnsavedGuard.markSaved();
-  toast('Bozza salvata', 'success');
+document.getElementById('btnSalvaBozzaAssunzione').addEventListener('click', async () => {
+  const dittaId  = document.getElementById('ass_ditta_id')?.value || null;
+  const nome     = (document.getElementById('ass_nome')?.value || '').trim();
+  const cognome  = (document.getElementById('ass_cognome')?.value || '').trim();
+  const dataInizio = document.getElementById('ass_data_inizio')?.value || '';
+
+  if (!dittaId) return toast('Seleziona un\'azienda prima di salvare.', 'error');
+  if (!confirm('Vuoi salvare la pratica?')) return;
+
+  const descr = [cognome, nome].filter(Boolean).join(' ') || 'Nuova assunzione';
+  try {
+    await api('/api/gestione-pratiche', 'POST', {
+      ditta_id:     dittaId,
+      tipo_pratica: 'Assunzione',
+      descrizione:  descr,
+      stato:        'Aperta',
+      priorita:     'Normale',
+      data_apertura: dataInizio || new Date().toISOString().slice(0, 10),
+    });
+    UnsavedGuard.markSaved();
+    closeModal('modalAssunzione');
+    toast('Pratica salvata — stato: Aperta', 'success');
+    if (typeof loadPratiche === 'function') loadPratiche();
+  } catch(e) {
+    toast('Errore salvataggio: ' + e.message, 'error');
+  }
 });
 document.getElementById('btnDuplicaAssunzione').addEventListener('click', () => {
   toast('Duplica — work in progress', 'info');
