@@ -570,6 +570,27 @@ def create_assunzione():
         conn.close()
 
 
+@bp.route('/api/assunzioni/<int:ass_id>', methods=['GET'])
+@login_required
+def get_assunzione(ass_id):
+    conn = get_db()
+    try:
+        row = conn.execute(
+            '''SELECT a.*, e.nome as emp_nome, e.cognome as emp_cognome,
+                      d.ragione_sociale as ditta_nome
+               FROM assunzioni_hr a
+               JOIN employees e ON e.id = a.employee_id
+               JOIN ditte d ON d.id = a.ditta_id
+               WHERE a.id=?''',
+            (ass_id,)
+        ).fetchone()
+        if not row:
+            return jsonify({'error': 'Pratica non trovata'}), 404
+        return jsonify(dict(row))
+    finally:
+        conn.close()
+
+
 @bp.route('/api/assunzioni/<int:ass_id>', methods=['PUT'])
 @login_required
 def update_assunzione(ass_id):

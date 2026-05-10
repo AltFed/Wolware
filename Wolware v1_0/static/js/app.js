@@ -5753,18 +5753,44 @@ const Scadenziario = (() => {
   }
 
   /* ── load ── */
+  let _bozze = [];
+
   async function refresh() {
     const body = document.getElementById('scBody');
     if (!body) return;
     body.innerHTML = '<div class="sc-empty"><div class="sc-empty-icon">⏳</div>Caricamento…</div>';
     try {
-      const res = await fetch('/api/scadenziario');
-      _rows = await res.json();
+      const [resSc, resBz] = await Promise.all([
+        fetch('/api/scadenziario'),
+        fetch('/api/assunzioni?stato=bozza'),
+      ]);
+      _rows  = await resSc.json();
+      _bozze = await resBz.json();
       _render();
     } catch(e) {
       body.innerHTML = '<div class="sc-empty"><div class="sc-empty-icon">⚠️</div>Errore caricamento.</div>';
       console.error('SC: load', e);
     }
+  }
+
+  /* ── render bozze section ── */
+  function _renderBozzeSection() {
+    if (!_bozze.length) return '';
+    const rows = _bozze.map(b => `
+      <div class="sc-row sc-row-bozza">
+        <span class="sc-bozza-badge">Bozza</span>
+        <strong style="margin-right:var(--space-2)">${_esc(b.ditta_nome)}</strong>
+        <span class="sc-bozza-tipo">${_esc(b.tipo_pratica)}</span>
+        <span style="flex:1"></span>
+        <span class="sc-bozza-emp">${_esc(b.emp_cognome)} ${_esc(b.emp_nome)}</span>
+        <button class="btn btn-sm" style="background:var(--color-success);color:#fff;margin-left:var(--space-3)"
+                onclick="HRPratiche.openModal(${b.id})">Apri e Completa</button>
+      </div>`).join('');
+    return `
+      <div class="sc-bozze-section">
+        <div class="sc-bozze-title">Pratiche in bozza — da completare</div>
+        ${rows}
+      </div>`;
   }
 
   /* ── render ── */
@@ -5782,12 +5808,14 @@ const Scadenziario = (() => {
     if (filtStato === 'aperte')    rows = rows.filter(r => !r.completata);
     if (filtStato === 'completate') rows = rows.filter(r =>  r.completata);
 
-    if (!rows.length) {
+    const bozzeHtml = _renderBozzeSection();
+
+    if (!rows.length && !bozzeHtml) {
       body.innerHTML = '<div class="sc-empty"><div class="sc-empty-icon">📅</div>Nessun elemento trovato.</div>';
       return;
     }
 
-    body.innerHTML = rows.map(r => r.tipo === 'workflow' ? _renderWorkflow(r) : _renderScadenza(r)).join('');
+    body.innerHTML = bozzeHtml + rows.map(r => r.tipo === 'workflow' ? _renderWorkflow(r) : _renderScadenza(r)).join('');
 
     // bind checkboxes
     body.querySelectorAll('.sc-azione-checkbox').forEach(cb => {

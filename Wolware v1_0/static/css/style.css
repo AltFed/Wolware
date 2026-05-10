@@ -939,3 +939,11 @@ textarea.form-input{height:auto;padding:8px 10px;resize:vertical}
 /* Scadenziario — empty state */
 .sc-empty{text-align:center;padding:var(--space-10) var(--space-4);color:var(--color-text-muted)}
 .sc-empty-icon{font-size:2.5rem;margin-bottom:var(--space-2);opacity:.4}
+
+/* Scadenziario — bozze section */
+.sc-bozze-section{border:1.5px solid #f59e0b;border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-4)}
+.sc-bozze-title{background:rgba(245,158,11,.1);color:#b45309;font-size:var(--text-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:var(--space-2) var(--space-4)}
+.sc-row-bozza{display:flex;align-items:center;padding:var(--space-3) var(--space-4);border-top:1px solid var(--color-border);background:var(--color-surface)}
+.sc-bozza-badge{font-size:var(--text-xs);font-weight:700;background:rgba(245,158,11,.15);color:#b45309;padding:2px 8px;border-radius:9999px;margin-right:var(--space-2)}
+.sc-bozza-tipo{font-size:var(--text-xs);color:var(--color-text-muted);margin-left:var(--space-2)}
+.sc-bozza-emp{font-size:var(--text-xs);color:var(--color-text-muted)}
