@@ -430,6 +430,26 @@ def init_db():
         created_at      TEXT DEFAULT (datetime('now','localtime'))
     )''')
 
+    # ═══════════════════════════════════════════════════════════════════
+    # TABELLA: gestione_pratiche (Task/pratiche CDL trasversali ai clienti)
+    # Diversa dalla tabella 'pratiche' (voci di costo mensili per fatturazione).
+    # Tiene traccia di pratiche come 770, CU, INAIL, UNILAV, ecc.
+    # ═══════════════════════════════════════════════════════════════════
+    c.execute('''CREATE TABLE IF NOT EXISTS gestione_pratiche (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        ditta_id      INTEGER REFERENCES ditte(id),
+        tipo_pratica  TEXT NOT NULL,
+        descrizione   TEXT,
+        stato         TEXT NOT NULL DEFAULT 'Aperta'
+                          CHECK(stato IN ('Aperta','In Lavorazione','Chiusa')),
+        priorita      TEXT NOT NULL DEFAULT 'Normale'
+                          CHECK(priorita IN ('Bassa','Normale','Alta','Urgente')),
+        data_apertura TEXT,
+        data_scadenza TEXT,
+        note          TEXT,
+        created_at    TEXT DEFAULT (datetime('now','localtime'))
+    )''')
+
     # --- Migrazioni tabelle HR (per DB già esistenti) ---
     existing_emp = [row[1] for row in c.execute("PRAGMA table_info(employees)").fetchall()]
     for col, typedef in [
