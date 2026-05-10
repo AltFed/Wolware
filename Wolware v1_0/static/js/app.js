@@ -5000,8 +5000,9 @@ const PrimaNota = (() => {
 const _origSwitchTabPN = switchTab;
 window.switchTab = function (tabName) {
   _origSwitchTabPN(tabName);
-  if (tabName === 'prima-nota') PrimaNota.init();
-  if (tabName === 'rendiconto') Rendiconto.init();
+  if (tabName === 'prima-nota')    PrimaNota.init();
+  if (tabName === 'rendiconto')    Rendiconto.init();
+  if (tabName === 'scadenziario')  Scadenziario.init();
 };
 
 
@@ -5348,6 +5349,544 @@ const Rendiconto = (() => {
 
   return { init };
 })();
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HR PRATICHE — gestione assunzioni (Blocco 3)
+   ═══════════════════════════════════════════════════════════════════════════ */
+const HRPratiche = (() => {
+  let _assunzioneId = null;
+  let _tipi         = [];
+  let _initialized  = false;
+
+  const _esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const _fmt  = (v,d=2) => v == null ? '—' : Number(v).toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+  /* ── open ── */
+  async function openModal(assunzioneId = null) {
+    _assunzioneId = assunzioneId;
+    const modal   = document.getElementById('modalHRPratica');
+    if (!modal) return;
+
+    _switchTab('cliente');
+    _resetForm();
+
+    // popola ditte
+    const selDitta = document.getElementById('hr_ditta_id');
+    if (selDitta && selDitta.options.length <= 1) {
+      try {
+        const res  = await fetch('/api/ditte');
+        const list = await res.json();
+        list.forEach(d => {
+          const o = document.createElement('option');
+          o.value = d.id; o.textContent = d.ragione_sociale;
+          selDitta.appendChild(o);
+        });
+      } catch(e) { console.error('HR: ditte', e); }
+    }
+
+    // popola tipi pratica
+    const selTipo = document.getElementById('hr_tipo_pratica');
+    if (selTipo && !_tipi.length) {
+      try {
+        const res = await fetch('/api/assunzioni/tipi');
+        _tipi = await res.json();
+        _tipi.forEach(t => {
+          const o = document.createElement('option');
+          o.value = t.codice; o.textContent = `${t.codice} — ${t.label}`;
+          selTipo.appendChild(o);
+        });
+      } catch(e) { console.error('HR: tipi', e); }
+    }
+
+    if (!_initialized) _bindModal();
+    if (assunzioneId) await _caricaAssunzione(assunzioneId);
+
+    document.getElementById('modalHRPraticaTitle').textContent =
+      assunzioneId ? 'Modifica Pratica HR' : 'Nuova Pratica HR';
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    const modal = document.getElementById('modalHRPratica');
+    if (modal) modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  /* ── tabs — data-hrtab values match panel ids like "hrtab-cliente" ── */
+  function _switchTab(tab) {
+    document.querySelectorAll('#modalHRPratica .modal-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.hrtab === tab);
+    });
+    document.querySelectorAll('#modalHRPratica .modal-tab-panel').forEach(p => {
+      p.classList.toggle('active', p.id === `hrtab-${tab}`);
+    });
+  }
+
+  /* ── reset ── */
+  function _resetForm() {
+    ['hr_ditta_id','hr_employee_id','hr_tipo_pratica','hr_data_inizio',
+     'hr_data_fine','hr_causale_termine','hr_ccnl_codice','hr_ccnl_nome',
+     'hr_livello','hr_qualifica_istat','hr_mansione','hr_ore_sett',
+     'hr_giorni_lavoro','hr_retrib_importo','hr_prova_mesi','hr_iban','hr_note']
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('hr_data_fine_wrap')?.style && (document.getElementById('hr_data_fine_wrap').style.display = 'none');
+    document.getElementById('hr_causale_wrap')?.style && (document.getElementById('hr_causale_wrap').style.display = 'none');
+    document.getElementById('hr_nuovo_dip_form')?.style && (document.getElementById('hr_nuovo_dip_form').style.display = 'none');
+    _clearRiepilogo();
+  }
+
+  /* ── bind (once) ── */
+  function _bindModal() {
+    _initialized = true;
+
+    // tab buttons
+    document.querySelectorAll('#modalHRPratica .modal-tab').forEach(btn => {
+      btn.addEventListener('click', () => _switchTab(btn.dataset.hrtab));
+    });
+
+    // close (× button uses data-close handled globally; also overlay click)
+    document.getElementById('modalHRPratica')?.addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    // ditta → carica dipendenti
+    document.getElementById('hr_ditta_id')?.addEventListener('change', _onDittaChange);
+
+    // toggle nuovo dipendente
+    document.getElementById('hrBtnNuovoDip')?.addEventListener('click', () => {
+      const f = document.getElementById('hr_nuovo_dip_form');
+      if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    });
+    document.getElementById('hrBtnAnnullaDip')?.addEventListener('click', () => {
+      const f = document.getElementById('hr_nuovo_dip_form'); if (f) f.style.display = 'none';
+    });
+    document.getElementById('hrBtnSalvaDip')?.addEventListener('click', salvaEmployee);
+
+    // tipo pratica → condizionali
+    document.getElementById('hr_tipo_pratica')?.addEventListener('change', _onTipoChange);
+
+    // tipo orario → aggiorna riepilogo
+    document.querySelectorAll('input[name="hr_tipo_orario"]').forEach(r =>
+      r.addEventListener('change', _aggiornaRiepilogo));
+
+    // campi riepilogo live
+    ['hr_mansione','hr_livello','hr_retrib_importo'].forEach(id =>
+      document.getElementById(id)?.addEventListener('input', _aggiornaRiepilogo));
+
+    // footer buttons
+    document.getElementById('hrBtnSalvaBozza')?.addEventListener('click', () => salva('bozza'));
+    document.getElementById('hrBtnCompleta')?.addEventListener('click',   () => salva('completa'));
+  }
+
+  async function _onDittaChange() {
+    const dittaId = document.getElementById('hr_ditta_id').value;
+    const sel     = document.getElementById('hr_employee_id');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— seleziona dipendente —</option>';
+    sel.disabled  = !dittaId;
+    if (!dittaId) return;
+    // mostra pulsante nuovo dipendente
+    document.getElementById('hrBtnNuovoDip')?.style && (document.getElementById('hrBtnNuovoDip').style.display = '');
+    try {
+      const res  = await fetch(`/api/employees?ditta_id=${dittaId}`);
+      const list = await res.json();
+      list.forEach(e => {
+        const o = document.createElement('option');
+        o.value = e.id; o.textContent = `${e.cognome} ${e.nome}`;
+        sel.appendChild(o);
+      });
+    } catch(err) { console.error('HR: employees', err); }
+  }
+
+  function _onTipoChange() {
+    const v      = document.getElementById('hr_tipo_pratica').value;
+    const tipoT  = ['2.1','2.2','3.1','4.1','5.1'];
+    const tipoC  = ['2.2','3.1','4.1','5.1'];
+    const wFine  = document.getElementById('hr_data_fine_wrap');
+    const wCaus  = document.getElementById('hr_causale_wrap');
+    if (wFine)  wFine.style.display  = tipoT.includes(v) ? 'block' : 'none';
+    if (wCaus)  wCaus.style.display  = tipoC.includes(v) ? 'block' : 'none';
+  }
+
+  function _aggiornaRiepilogo() {
+    const mansione    = document.getElementById('hr_mansione')?.value    || '—';
+    const livello     = document.getElementById('hr_livello')?.value     || '—';
+    const orario      = document.querySelector('input[name="hr_tipo_orario"]:checked')?.value || 'full_time';
+    const retrib      = document.getElementById('hr_retrib_importo')?.value;
+    const orarioLabel = orario === 'full_time' ? 'Full-Time' : 'Part-Time';
+    const box         = document.getElementById('hr_riepilogo_testo');
+    if (!box) return;
+    box.innerHTML = `
+      <div class="hr-riepilogo-row"><span class="hr-riepilogo-label">Etichetta utilities</span>
+        <span class="hr-riepilogo-val">${_esc(mansione)} ${_esc(livello)} Liv. ${_esc(orarioLabel)}</span></div>
+      <div class="hr-riepilogo-row"><span class="hr-riepilogo-label">Retribuzione</span>
+        <span class="hr-riepilogo-val">${retrib ? '€ ' + _fmt(retrib) + ' / mese' : '—'}</span></div>`;
+  }
+
+  function _clearRiepilogo() {
+    const box = document.getElementById('hr_riepilogo_testo');
+    if (box) box.innerHTML = '<span style="color:var(--color-text-muted);font-size:var(--text-xs)">Compila i campi per vedere il riepilogo.</span>';
+  }
+
+  /* ── carica assunzione esistente ── */
+  async function _caricaAssunzione(id) {
+    try {
+      const res  = await fetch(`/api/assunzioni/${id}`);
+      const data = await res.json();
+      const set  = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val ?? ''; };
+      set('hr_ditta_id',    data.ditta_id);
+      await _onDittaChange();
+      set('hr_employee_id', data.employee_id);
+      set('hr_tipo_pratica', data.tipo_pratica);
+      set('hr_data_inizio',  data.data_inizio);
+      set('hr_data_fine',    data.data_fine);
+      set('hr_causale_termine', data.causale_termine);
+      set('hr_ccnl_codice',  data.ccnl_codice);
+      set('hr_ccnl_nome',    data.ccnl_nome);
+      set('hr_livello',      data.livello_inquadramento);
+      set('hr_qualifica_istat', data.qualifica_istat);
+      set('hr_mansione',     data.mansione);
+      set('hr_retrib_importo', data.retribuzione_importo);
+      set('hr_ore_sett',     data.ore_settimanali);
+      set('hr_prova_mesi',   data.periodo_prova_mesi);
+      if (data.tipo_orario) {
+        const r = document.querySelector(`input[name="hr_tipo_orario"][value="${data.tipo_orario}"]`);
+        if (r) r.checked = true;
+      }
+      if (data.scelta_tfr) {
+        const r = document.querySelector(`input[name="hr_scelta_tfr"][value="${data.scelta_tfr}"]`);
+        if (r) r.checked = true;
+      }
+      _onTipoChange();
+      _aggiornaRiepilogo();
+    } catch(e) { console.error('HR: carica assunzione', e); }
+  }
+
+  /* ── salva employee inline ── */
+  async function salvaEmployee() {
+    const dittaId = document.getElementById('hr_ditta_id').value;
+    if (!dittaId) return alert('Seleziona prima la ditta.');
+    const body = {
+      ditta_id:      parseInt(dittaId),
+      nome:          document.getElementById('hr_dip_nome')?.value?.trim(),
+      cognome:       document.getElementById('hr_dip_cognome')?.value?.trim(),
+      codice_fiscale: document.getElementById('hr_dip_cf')?.value?.trim().toUpperCase(),
+      data_nascita:  document.getElementById('hr_dip_nascita')?.value || null,
+      luogo_nascita: document.getElementById('hr_dip_luogo_nascita')?.value?.trim() || null,
+      residenza_via: document.getElementById('hr_dip_via')?.value?.trim() || null,
+      residenza_citta: document.getElementById('hr_dip_citta')?.value?.trim() || null,
+      residenza_cap: document.getElementById('hr_dip_cap')?.value?.trim() || null,
+      residenza_provincia: document.getElementById('hr_dip_prov')?.value?.trim() || null,
+      iban:          document.getElementById('hr_dip_iban')?.value?.trim() || null,
+    };
+    if (!body.nome || !body.cognome) return alert('Nome e Cognome obbligatori.');
+    try {
+      const res  = await fetch('/api/employees', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Errore');
+      const sel = document.getElementById('hr_employee_id');
+      const o   = document.createElement('option');
+      o.value = data.id; o.textContent = `${data.cognome} ${data.nome}`; o.selected = true;
+      sel?.appendChild(o);
+      document.getElementById('hr_nuovo_dip_form').style.display = 'none';
+      ['hr_dip_nome','hr_dip_cognome','hr_dip_cf','hr_dip_nascita','hr_dip_luogo_nascita',
+       'hr_dip_via','hr_dip_citta','hr_dip_cap','hr_dip_prov','hr_dip_iban'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+    } catch(e) { alert('Errore salvataggio dipendente: ' + e.message); }
+  }
+
+  /* ── salva bozza / completa ── */
+  async function salva(azione) {
+    const dittaId    = parseInt(document.getElementById('hr_ditta_id')?.value);
+    const employeeId = parseInt(document.getElementById('hr_employee_id')?.value);
+    const tipoPratica = document.getElementById('hr_tipo_pratica')?.value;
+    const dataInizio  = document.getElementById('hr_data_inizio')?.value;
+    if (!dittaId || !employeeId || !tipoPratica || !dataInizio)
+      return alert('Compila i campi obbligatori: Ditta, Dipendente, Tipo Pratica, Data Inizio.');
+
+    const body = {
+      ditta_id:    dittaId, employee_id: employeeId,
+      tipo_pratica: tipoPratica, data_inizio: dataInizio,
+      data_fine:         document.getElementById('hr_data_fine')?.value         || null,
+      causale_termine:   document.getElementById('hr_causale_termine')?.value   || null,
+      ccnl_codice:       document.getElementById('hr_ccnl_codice')?.value       || null,
+      ccnl_nome:         document.getElementById('hr_ccnl_nome')?.value         || null,
+      livello_inquadramento: document.getElementById('hr_livello')?.value       || null,
+      qualifica_istat:   document.getElementById('hr_qualifica_istat')?.value   || null,
+      mansione:          document.getElementById('hr_mansione')?.value          || null,
+      tipo_orario: document.querySelector('input[name="hr_tipo_orario"]:checked')?.value || 'full_time',
+      ore_settimanali: parseFloat(document.getElementById('hr_ore_sett')?.value)        || null,
+      retribuzione_tipo:    'tabellare',
+      retribuzione_importo: parseFloat(document.getElementById('hr_retrib_importo')?.value) || null,
+      periodo_prova_mesi:   parseInt(document.getElementById('hr_prova_mesi')?.value)       || null,
+      scelta_tfr: document.querySelector('input[name="hr_scelta_tfr"]:checked')?.value      || 'azienda',
+    };
+
+    try {
+      let res, data;
+      if (_assunzioneId) {
+        res  = await fetch(`/api/assunzioni/${_assunzioneId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      } else {
+        res  = await fetch('/api/assunzioni', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      }
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Errore salvataggio');
+      if (!_assunzioneId) _assunzioneId = data.id;
+
+      if (azione === 'completa') {
+        const cRes  = await fetch(`/api/assunzioni/${_assunzioneId}/completa`, { method:'POST' });
+        const cData = await cRes.json();
+        if (!cRes.ok) throw new Error(cData.error || 'Errore completamento');
+        alert('Pratica completata con successo.');
+      } else {
+        alert('Bozza salvata.');
+      }
+      closeModal();
+      Scadenziario.refresh();
+    } catch(e) { alert('Errore: ' + e.message); }
+  }
+
+  return { openModal, closeModal, salvaEmployee, salva };
+})();
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCADENZIARIO — tab (Blocco 4)
+   ═══════════════════════════════════════════════════════════════════════════ */
+const Scadenziario = (() => {
+  let _rows = [];
+
+  const _esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  function _fmtDate(d) {
+    if (!d) return '—';
+    const [y,m,dd] = d.split('-');
+    return `${dd}/${m}/${y}`;
+  }
+
+  /* ── init ── */
+  let _inited = false;
+  function init() {
+    if (!_inited) {
+      _inited = true;
+      document.getElementById('scBtnRefresh')?.addEventListener('click', refresh);
+      document.getElementById('scFiltroDitta')?.addEventListener('change', _render);
+      document.getElementById('scFiltroTipo')?.addEventListener('change', _render);
+      document.getElementById('scFiltroStato')?.addEventListener('change', _render);
+      document.getElementById('scBtnNuovaPratica')?.addEventListener('click', () => HRPratiche.openModal());
+      _loadDitteFiltro();
+    }
+    if (!_rows.length) refresh();
+  }
+
+  async function _loadDitteFiltro() {
+    const sel = document.getElementById('scFiltroDitta');
+    if (!sel || sel.options.length > 1) return;
+    try {
+      const res  = await fetch('/api/ditte');
+      const list = await res.json();
+      list.forEach(d => {
+        const o = document.createElement('option');
+        o.value = d.id; o.textContent = d.ragione_sociale;
+        sel.appendChild(o);
+      });
+    } catch(e) { console.error('SC: ditte', e); }
+  }
+
+  /* ── load ── */
+  async function refresh() {
+    const body = document.getElementById('scBody');
+    if (!body) return;
+    body.innerHTML = '<div class="sc-empty"><div class="sc-empty-icon">⏳</div>Caricamento…</div>';
+    try {
+      const res = await fetch('/api/scadenziario');
+      _rows = await res.json();
+      _render();
+    } catch(e) {
+      body.innerHTML = '<div class="sc-empty"><div class="sc-empty-icon">⚠️</div>Errore caricamento.</div>';
+      console.error('SC: load', e);
+    }
+  }
+
+  /* ── render ── */
+  function _render() {
+    const body  = document.getElementById('scBody');
+    if (!body) return;
+
+    const filtDitta = document.getElementById('scFiltroDitta')?.value  || '';
+    const filtTipo  = document.getElementById('scFiltroTipo')?.value   || '';
+    const filtStato = document.getElementById('scFiltroStato')?.value  || '';
+
+    let rows = _rows;
+    if (filtDitta) rows = rows.filter(r => String(r.ditta_id) === filtDitta);
+    if (filtTipo)  rows = rows.filter(r => r.tipo === filtTipo);
+    if (filtStato === 'aperte')    rows = rows.filter(r => !r.completata);
+    if (filtStato === 'completate') rows = rows.filter(r =>  r.completata);
+
+    if (!rows.length) {
+      body.innerHTML = '<div class="sc-empty"><div class="sc-empty-icon">📅</div>Nessun elemento trovato.</div>';
+      return;
+    }
+
+    body.innerHTML = rows.map(r => r.tipo === 'workflow' ? _renderWorkflow(r) : _renderScadenza(r)).join('');
+
+    // bind checkboxes
+    body.querySelectorAll('.sc-azione-checkbox').forEach(cb => {
+      cb.addEventListener('change', () => _toggleAzione(cb));
+    });
+
+    // bind quick-action go
+    body.querySelectorAll('.sc-btn-go').forEach(btn => {
+      btn.addEventListener('click', () => _quickAction(btn));
+    });
+  }
+
+  /* ── Variante A: workflow ── */
+  function _renderWorkflow(r) {
+    const azioni  = JSON.parse(r.azioni_json || '[]');
+    const classi  = ['sc-row','sc-row-workflow', r.completata ? 'sc-row-completata' : ''].filter(Boolean).join(' ');
+    const dateHtml = `<span class="sc-data-verde">${_fmtDate(r.data_evento)}</span>`;
+
+    const completataHtml = r.completata
+      ? '<span class="sc-completata-badge">✓ Completata</span>'
+      : '';
+
+    const azioniHtml = azioni.map((a, i) => {
+      const checked = a.fatto ? 'checked' : '';
+      const rowCls  = a.fatto ? 'sc-azione-row checked' : 'sc-azione-row';
+      return `<label class="${rowCls}">
+        <input type="checkbox" class="sc-azione-checkbox" ${checked}
+          data-sc-id="${r.id}" data-idx="${i}" data-fatto="${a.fatto ? 1 : 0}">
+        <span class="sc-azione-label">${_esc(a.label)}</span>
+      </label>`;
+    }).join('');
+
+    return `<div class="${classi}" data-sc-id="${r.id}">
+      <div class="sc-row-header">
+        ${dateHtml}
+        <div style="flex:1;min-width:0">
+          <div class="sc-row-title">${_esc(r.riepilogo_r1 || '')}</div>
+          <div class="sc-row-sub">${_esc(r.riepilogo_r2 || '')}</div>
+        </div>
+        ${completataHtml}
+      </div>
+      <div class="sc-row-tags">
+        <span class="sc-tag">Workflow</span>
+        ${r.portale ? `<span class="sc-tag">${_esc(r.portale)}</span>` : ''}
+      </div>
+      ${azioniHtml ? `<div class="sc-azioni-list">${azioniHtml}</div>` : ''}
+    </div>`;
+  }
+
+  /* ── Variante B: scadenza ── */
+  function _renderScadenza(r) {
+    const classi   = ['sc-row','sc-row-scadenza', r.completata ? 'sc-row-completata' : ''].filter(Boolean).join(' ');
+    const dateHtml = `<span class="sc-data-rossa">${_fmtDate(r.data_evento)}</span>`;
+
+    const riepilogoHtml = (r.riepilogo_r1 || r.riepilogo_r2 || r.riepilogo_r3)
+      ? `<div class="sc-riepilogo-giallo">
+          ${r.riepilogo_r1 ? `<strong>${_esc(r.riepilogo_r1)}</strong><br>` : ''}
+          ${r.riepilogo_r2 ? `${_esc(r.riepilogo_r2)}<br>` : ''}
+          ${r.riepilogo_r3 ? `${_esc(r.riepilogo_r3)}` : ''}
+        </div>` : '';
+
+    const completataHtml = r.completata
+      ? '<span class="sc-completata-badge">✓ Completata</span>'
+      : '';
+
+    const quickBarHtml = !r.completata ? `
+      <div class="sc-quick-bar">
+        <select class="sc-quick-select" data-sc-id="${r.id}" data-assunzione-id="${r.assunzione_id || ''}">
+          <option value="">— azione rapida —</option>
+          <option value="apri_pratica">Apri Pratica HR</option>
+          <option value="segna_completata">Segna completata</option>
+          <option value="elimina">Elimina</option>
+        </select>
+        <button class="btn btn-sm btn-primary sc-btn-go" data-sc-id="${r.id}" data-assunzione-id="${r.assunzione_id || ''}">Vai</button>
+      </div>` : '';
+
+    return `<div class="${classi}" data-sc-id="${r.id}">
+      <div class="sc-row-header">
+        ${dateHtml}
+        <div style="flex:1;min-width:0">
+          <div class="sc-row-title">${_esc(r.riepilogo_r1 || '')}</div>
+          <div class="sc-row-sub">${_esc(r.riepilogo_r2 || '')}</div>
+        </div>
+        ${completataHtml}
+      </div>
+      <div class="sc-row-tags">
+        <span class="sc-tag">Scadenza</span>
+        ${r.portale ? `<span class="sc-tag">${_esc(r.portale)}</span>` : ''}
+      </div>
+      ${riepilogoHtml}
+      ${quickBarHtml}
+    </div>`;
+  }
+
+  /* ── toggle azione workflow ── */
+  async function _toggleAzione(cb) {
+    const scId = cb.dataset.scId;
+    const idx   = parseInt(cb.dataset.idx);
+    const fatto = cb.checked ? 1 : 0;
+    const row   = cb.closest('.sc-azione-row');
+    if (row) row.classList.toggle('checked', !!fatto);
+
+    try {
+      await fetch(`/api/scadenziario/${scId}/azione`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idx, fatto }),
+      });
+      // aggiorna cache locale
+      const r = _rows.find(x => x.id === parseInt(scId));
+      if (r) {
+        const azioni = JSON.parse(r.azioni_json || '[]');
+        if (azioni[idx]) azioni[idx].fatto = !!fatto;
+        r.azioni_json = JSON.stringify(azioni);
+        // se tutte completate, segna completata
+        if (azioni.every(a => a.fatto)) {
+          r.completata = 1;
+          await refresh();
+        }
+      }
+    } catch(e) { console.error('SC: toggle azione', e); }
+  }
+
+  /* ── quick action ── */
+  async function _quickAction(btn) {
+    const scId       = btn.dataset.scId;
+    const assunzioneId = btn.dataset.assunzioneId;
+    const sel        = btn.closest('.sc-quick-bar')?.querySelector('.sc-quick-select');
+    const azione     = sel?.value;
+
+    if (!azione) return;
+    sel.value = '';
+
+    if (azione === 'apri_pratica' && assunzioneId) {
+      HRPratiche.openModal(parseInt(assunzioneId));
+    } else if (azione === 'segna_completata') {
+      try {
+        await fetch(`/api/scadenziario/${scId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ completata: 1 }),
+        });
+        await refresh();
+      } catch(e) { alert('Errore: ' + e.message); }
+    } else if (azione === 'elimina') {
+      if (!confirm('Eliminare questa voce scadenziario?')) return;
+      try {
+        await fetch(`/api/scadenziario/${scId}`, { method: 'DELETE' });
+        await refresh();
+      } catch(e) { alert('Errore: ' + e.message); }
+    }
+  }
+
+  return { init, refresh };
+})();
+
 
 /* INIT */
 checkAuth();

@@ -67,6 +67,17 @@
           </svg>
           Rendiconto
         </a>
+        <a href="#" class="nav-item" data-tab="scadenziario">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <line x1="8" y1="14" x2="10" y2="14"/>
+            <polyline points="12 14 14 16 18 12"/>
+          </svg>
+          Scadenziario
+        </a>
         <a href="#" class="nav-item" data-tab="ditte">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="2" y="7" width="20" height="14" rx="2" />
@@ -150,6 +161,16 @@
               <line x1="8" y1="21" x2="16" y2="21"/>
             </svg>
             Rendiconto
+          </button>
+          <button class="tab-btn" data-tab="scadenziario">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <polyline points="12 14 14 16 18 12"/>
+            </svg>
+            Scadenziario
           </button>
           <button class="tab-btn" data-tab="ditte">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -883,6 +904,59 @@
 
         </section>
         <!-- /RENDICONTO -->
+
+        <!-- SCADENZIARIO HR -->
+        <section class="tab-panel" id="tab-scadenziario">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Scadenziario HR</h1>
+              <p class="page-subtitle">Workflow pratiche e alert scadenze contrattuali</p>
+            </div>
+            <button class="btn btn-primary" id="scBtnNuovaPratica">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Nuova Pratica HR
+            </button>
+          </div>
+
+          <!-- Filtri -->
+          <div class="filter-bar" style="flex-wrap:wrap;gap:var(--space-2)">
+            <select class="filter-select" id="scFiltroDitta" style="min-width:200px">
+              <option value="">Tutte le aziende</option>
+            </select>
+            <select class="filter-select" id="scFiltroTipo" style="width:160px">
+              <option value="">Tutti i tipi</option>
+              <option value="workflow">Workflow (checklist)</option>
+              <option value="scadenza">Scadenze future</option>
+            </select>
+            <select class="filter-select" id="scFiltroStato" style="width:160px">
+              <option value="">Tutti gli stati</option>
+              <option value="0">Da completare</option>
+              <option value="1">Completati</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" id="scBtnRefresh" style="margin-left:auto">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+              Aggiorna
+            </button>
+          </div>
+
+          <!-- Corpo scadenziario -->
+          <div id="scBody" style="display:flex;flex-direction:column;gap:var(--space-3);margin-top:var(--space-4)">
+            <div class="empty-state" style="padding:var(--space-10) 0;text-align:center;color:var(--color-text-muted)">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3" style="margin-bottom:var(--space-3)">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <p>Seleziona un'azienda o clicca Aggiorna</p>
+            </div>
+          </div>
+        </section>
+        <!-- /SCADENZIARIO HR -->
 
         <!-- ADMIN -->
         <section class="tab-panel" id="tab-admin">
@@ -1734,6 +1808,263 @@
       </div>
     </div>
   </div>
+
+  <!-- MODALE HR PRATICA (Blocco 3) -->
+  <div class="modal-overlay" id="modalHRPratica">
+    <div class="modal modal-xl">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalHRPraticaTitle">Nuova Pratica HR</h2>
+        <button class="modal-close" data-close="modalHRPratica">&#x2715;</button>
+      </div>
+      <div class="modal-body modal-body-tabs">
+        <div class="modal-tabs">
+          <button class="modal-tab active" data-hrtab="cliente">1 · Cliente / Dipendente</button>
+          <button class="modal-tab" data-hrtab="contratto">2 · Contratto</button>
+          <button class="modal-tab" data-hrtab="orario">3 · Orario / Retribuzione</button>
+          <button class="modal-tab" data-hrtab="accessori">4 · Accessori</button>
+        </div>
+        <div id="formHRError" class="form-error" style="display:none;margin:var(--space-3) var(--space-6) 0"></div>
+
+        <!-- TAB 1: CLIENTE / DIPENDENTE -->
+        <div class="modal-tab-panel active" id="hrtab-cliente">
+          <div class="form-section">
+            <div class="form-grid">
+              <div class="form-field col-span-2">
+                <label class="form-label">Azienda <span class="required">*</span></label>
+                <select id="hr_ditta_id" class="form-select">
+                  <option value="">-- Seleziona azienda --</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
+              <span class="form-section-title">Dipendente</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="hrBtnNuovoDip" style="display:none">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Nuovo Dipendente
+              </button>
+            </div>
+            <div class="form-grid">
+              <div class="form-field col-span-2">
+                <label class="form-label">Seleziona Dipendente <span class="required">*</span></label>
+                <select id="hr_employee_id" class="form-select" disabled>
+                  <option value="">-- Seleziona prima l'azienda --</option>
+                </select>
+              </div>
+            </div>
+            <!-- Form nuovo dipendente (inline, nascosto di default) -->
+            <div id="hr_nuovo_dip_form" style="display:none;margin-top:var(--space-4);padding:var(--space-4);background:var(--color-surface-2);border-radius:var(--radius-md);border:1px solid var(--color-border)">
+              <div style="font-size:var(--text-sm);font-weight:600;margin-bottom:var(--space-3);color:var(--color-text-muted)">Nuovo Dipendente</div>
+              <div class="form-grid">
+                <div class="form-field">
+                  <label class="form-label">Nome <span class="required">*</span></label>
+                  <input type="text" id="hr_dip_nome" class="form-input" placeholder="Mario"/>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Cognome <span class="required">*</span></label>
+                  <input type="text" id="hr_dip_cognome" class="form-input" placeholder="Rossi"/>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Codice Fiscale</label>
+                  <input type="text" id="hr_dip_cf" class="form-input" placeholder="RSSMRA80A01H703X" maxlength="16" style="text-transform:uppercase"/>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Data di Nascita</label>
+                  <input type="date" id="hr_dip_nascita" class="form-input"/>
+                </div>
+                <div class="form-field col-span-2">
+                  <label class="form-label">Luogo di Nascita</label>
+                  <input type="text" id="hr_dip_luogo_nascita" class="form-input" placeholder="es. Napoli"/>
+                </div>
+                <div class="form-field col-span-2">
+                  <label class="form-label">Residenza (Via)</label>
+                  <input type="text" id="hr_dip_via" class="form-input" placeholder="Via Roma, 1"/>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Città</label>
+                  <input type="text" id="hr_dip_citta" class="form-input"/>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">CAP</label>
+                  <input type="text" id="hr_dip_cap" class="form-input" maxlength="5"/>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Provincia</label>
+                  <input type="text" id="hr_dip_prov" class="form-input" maxlength="2"/>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">IBAN</label>
+                  <input type="text" id="hr_dip_iban" class="form-input" placeholder="IT60 X054 2811 1010 0000 0123 456"/>
+                </div>
+              </div>
+              <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3)">
+                <button type="button" class="btn btn-sm" id="hrBtnSalvaDip" style="background:var(--color-success);color:#fff">Salva Dipendente</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="hrBtnAnnullaDip">Annulla</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: CONTRATTO -->
+        <div class="modal-tab-panel" id="hrtab-contratto">
+          <div class="form-section">
+            <div class="form-grid">
+              <div class="form-field col-span-2">
+                <label class="form-label">Tipo Pratica <span class="required">*</span></label>
+                <select id="hr_tipo_pratica" class="form-select">
+                  <option value="">-- Seleziona tipo --</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Data Inizio <span class="required">*</span></label>
+                <input type="date" id="hr_data_inizio" class="form-input"/>
+              </div>
+              <div class="form-field" id="hr_data_fine_wrap" style="display:none">
+                <label class="form-label">Data Fine</label>
+                <input type="date" id="hr_data_fine" class="form-input"/>
+              </div>
+              <div class="form-field" id="hr_causale_wrap" style="display:none">
+                <label class="form-label">Causale Apposizione Termine</label>
+                <input type="text" id="hr_causale_termine" class="form-input" placeholder="es. Esigenza produttiva stagionale"/>
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Inquadramento</div>
+            <div class="form-grid">
+              <div class="form-field col-span-2">
+                <label class="form-label">CCNL Applicato</label>
+                <input type="text" id="hr_ccnl_nome" class="form-input" placeholder="es. Commercio - CCNL Confcommercio"/>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Codice CCNL</label>
+                <input type="text" id="hr_ccnl_codice" class="form-input" placeholder="es. 013"/>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Livello Inquadramento</label>
+                <input type="text" id="hr_livello" class="form-input" placeholder="es. 4°"/>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Qualifica ISTAT</label>
+                <input type="text" id="hr_qualifica_istat" class="form-input" placeholder="es. Addetto vendite"/>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Mansione Specifica</label>
+                <input type="text" id="hr_mansione" class="form-input" placeholder="es. Impiegato commerciale"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: ORARIO / RETRIBUZIONE -->
+        <div class="modal-tab-panel" id="hrtab-orario">
+          <div class="form-section">
+            <div class="form-section-title">Orario di Lavoro</div>
+            <div class="form-grid">
+              <div class="form-field col-span-2">
+                <label class="form-label">Tipo Orario <span class="required">*</span></label>
+                <div style="display:flex;gap:var(--space-3);margin-top:var(--space-1)">
+                  <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;font-size:var(--text-sm)">
+                    <input type="radio" name="hr_tipo_orario" value="full_time" checked> Full-Time
+                  </label>
+                  <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;font-size:var(--text-sm)">
+                    <input type="radio" name="hr_tipo_orario" value="part_time"> Part-Time
+                  </label>
+                </div>
+              </div>
+              <div class="form-field" id="hr_ore_wrap">
+                <label class="form-label">Ore Settimanali</label>
+                <input type="number" id="hr_ore_sett" class="form-input" placeholder="40" min="1" max="60"/>
+              </div>
+              <div class="form-field col-span-2">
+                <label class="form-label">Giorni / Distribuzione Orario</label>
+                <input type="text" id="hr_giorni_lavoro" class="form-input" placeholder="es. Lun-Ven 9:00-13:00 / 14:00-18:00"/>
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Retribuzione</div>
+            <div class="form-grid">
+              <div class="form-field col-span-2">
+                <label class="form-label">Tipo Retribuzione</label>
+                <div style="display:flex;gap:var(--space-3);margin-top:var(--space-1)">
+                  <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;font-size:var(--text-sm)">
+                    <input type="radio" name="hr_retrib_tipo" value="tabellare" checked> Minimo Tabellare
+                  </label>
+                  <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;font-size:var(--text-sm)">
+                    <input type="radio" name="hr_retrib_tipo" value="superminimo"> Superminimo
+                  </label>
+                </div>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Importo Lordo (€)</label>
+                <input type="number" id="hr_retrib_importo" class="form-input" step="0.01" placeholder="0.00"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: ACCESSORI -->
+        <div class="modal-tab-panel" id="hrtab-accessori">
+          <div class="form-section">
+            <div class="form-grid">
+              <div class="form-field">
+                <label class="form-label">Mesi Periodo di Prova</label>
+                <input type="number" id="hr_prova_mesi" class="form-input" placeholder="es. 2" min="0" max="12"/>
+              </div>
+              <div class="form-field col-span-2">
+                <label class="form-label">Destinazione TFR <span class="required">*</span></label>
+                <div style="display:flex;gap:var(--space-3);margin-top:var(--space-1)">
+                  <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;font-size:var(--text-sm)">
+                    <input type="radio" name="hr_tfr" value="azienda" checked> Azienda
+                  </label>
+                  <label style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;font-size:var(--text-sm)">
+                    <input type="radio" name="hr_tfr" value="fondo"> Fondo Pensione
+                  </label>
+                </div>
+              </div>
+              <div class="form-field col-span-2">
+                <label class="form-label">IBAN Dipendente</label>
+                <input type="text" id="hr_iban" class="form-input" placeholder="Auto-compilato da anagrafica"/>
+              </div>
+              <div class="form-field col-span-2">
+                <label class="form-label">Note</label>
+                <textarea id="hr_note" class="form-input" rows="3" style="height:auto;resize:vertical" placeholder="Note aggiuntive..."></textarea>
+              </div>
+            </div>
+          </div>
+          <!-- Riepilogo etichetta generata -->
+          <div class="form-section" id="hr_riepilogo_section" style="display:none">
+            <div style="padding:var(--space-3) var(--space-4);background:var(--color-surface-2);border-radius:var(--radius-md);border:1px solid var(--color-border)">
+              <div style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);margin-bottom:var(--space-1)">RIEPILOGO PRATICA</div>
+              <div id="hr_riepilogo_testo" style="font-size:var(--text-sm);font-weight:500"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="modalHRPratica">Annulla</button>
+        <button class="btn btn-secondary" id="hrBtnSalvaBozza">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+          </svg>
+          Salva Bozza
+        </button>
+        <button class="btn" id="hrBtnCompleta" style="background:var(--color-success);color:#fff">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Completa Pratica
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- /MODALE HR PRATICA -->
 
   <!-- MODALE PRATICA -->
   <div class="modal-overlay" id="modalPratica">
