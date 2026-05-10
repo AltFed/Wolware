@@ -250,8 +250,27 @@ async function loadHomePratiche() {
 /* PRATICHE TAB */
 let allPratiche = [];
 async function loadPratiche() {
-  try { allPratiche = await api('/api/gestione-pratiche'); renderPratiche(allPratiche); }
-  catch (e) { toast('Errore nel caricamento pratiche', 'error'); }
+  try {
+    const [pratiche, assunzioni] = await Promise.all([
+      api('/api/gestione-pratiche'),
+      api('/api/assunzioni').catch(() => [])
+    ]);
+    const hrRows = assunzioni.map(a => ({
+      _source: 'hr',
+      _hrId:   a.id,
+      id:      `hr-${a.id}`,
+      ditta_id:     a.ditta_id,
+      ditta_nome:   a.ditta_nome,
+      tipo_pratica: a.label || a.tipo_pratica,
+      descrizione:  `${a.emp_cognome || ''} ${a.emp_nome || ''}`.trim() || '—',
+      stato:        a.stato === 'completata' ? 'Chiusa' : 'Aperta',
+      priorita:     'Normale',
+      data_apertura: a.data_inizio,
+      data_scadenza: a.data_fine || null,
+    }));
+    allPratiche = [...hrRows, ...pratiche];
+    renderPratiche(allPratiche);
+  } catch (e) { toast('Errore nel caricamento pratiche', 'error'); }
 }
 
 async function loadDitteSelect(selectId, selectedId = null) {
@@ -268,23 +287,47 @@ function renderPratiche(list) {
   if (!list.length) {
     tbody.innerHTML = `<tr><td colspan="9" class="empty-row"><span class="empty-icon">📋</span><br>Nessuna pratica trovata.</td></tr>`; return;
   }
-  tbody.innerHTML = list.map(p => `<tr>
-    <td style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-faint)">#${p.id}</td>
+  tbody.innerHTML = list.map(p => {
+    const isHr = p._source === 'hr';
+    const tipoCell = isHr
+      ? `<span class="badge badge-indigo" style="font-size:var(--text-xs);margin-right:4px">HR</span>${p.tipo_pratica}`
+      : p.tipo_pratica;
+    const idCell = isHr
+      ? `<span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-faint)">HR-${p._hrId}</span>`
+      : `<span style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-faint)">#${p.id}</span>`;
+    const editAction = isHr
+      ? `HRPratiche.openModal(${p._hrId})`
+      : `editPratica(${p.id})`;
+    const deleteAction = isHr
+      ? `deleteAssunzione(${p._hrId})`
+      : `deletePratica(${p.id})`;
+    return `<tr>
+    <td>${idCell}</td>
     <td style="font-weight:500">${p.ditta_nome || '—'}</td>
-    <td>${p.tipo_pratica}</td>
+    <td>${tipoCell}</td>
     <td style="color:var(--color-text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.descrizione || '—'}</td>
     <td>${statoBadge(p.stato)}</td><td>${prioritaBadge(p.priorita)}</td>
     <td style="color:var(--color-text-muted)">${formatDate(p.data_apertura)}</td>
     <td style="color:var(--color-text-muted)">${formatDate(p.data_scadenza)}</td>
     <td><div class="row-actions">
-      <button class="btn btn-icon btn-ghost" title="Modifica" onclick="editPratica(${p.id})">
+      <button class="btn btn-icon btn-ghost" title="Modifica" onclick="${editAction}">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
-      <button class="btn btn-icon btn-ghost" title="Elimina" onclick="deletePratica(${p.id})" style="color:var(--color-error)">
+      <button class="btn btn-icon btn-ghost" title="Elimina" onclick="${deleteAction}" style="color:var(--color-error)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
       </button>
     </div></td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
+}
+async function deleteAssunzione(id) {
+  if (!confirm('Eliminare questa pratica di assunzione?')) return;
+  try {
+    await api(`/api/assunzioni/${id}`, 'DELETE');
+    toast('Pratica eliminata', 'success');
+    loadPratiche();
+    Scadenziario.refresh();
+  } catch(e) { toast('Errore eliminazione: ' + e.message, 'error'); }
 }
 document.getElementById('filterPratiche').addEventListener('input', filterPratiche);
 document.getElementById('filterStato').addEventListener('change', filterPratiche);
@@ -5745,6 +5788,7 @@ const HRPratiche = (() => {
       toast('Pratica salvata e collegata allo Scadenziario.', 'success');
       closeModal();
       Scadenziario.refresh();
+      if (typeof loadPratiche === 'function') loadPratiche();
     } catch(e) { alert('Errore: ' + e.message); }
   }
 

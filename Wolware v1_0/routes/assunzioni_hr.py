@@ -497,7 +497,12 @@ def get_assunzioni():
     conn = get_db()
     try:
         rows = conn.execute(query, params).fetchall()
-        return jsonify([dict(r) for r in rows])
+        result = []
+        for r in rows:
+            d = dict(r)
+            d['label'] = MATRICE_ASSUNZIONI.get(d['tipo_pratica'], {}).get('label', d['tipo_pratica'])
+            result.append(d)
+        return jsonify(result)
     finally:
         conn.close()
 
