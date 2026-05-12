@@ -6306,7 +6306,7 @@ const ScadenzarioModule = (() => {
 /* ══════════════════════════════════════════════════════════════════════════
    DATABASE DIPENDENTI MODULE
    ══════════════════════════════════════════════════════════════════════════ */
-const DatabaseModule = (() => {
+const AnagraficaModule = (() => {
   'use strict';
 
   let _dati = [];
@@ -6486,12 +6486,12 @@ const DatabaseModule = (() => {
 
   async function _carica() {
     try {
-      const res = await fetch('/api/database-dipendenti');
+      const res = await fetch('/api/anagrafica-dipendenti');
       if (!res.ok) throw new Error();
       _dati = await res.json();
       _render(_dati);
     } catch (e) {
-      console.error('DatabaseModule:', e);
+      console.error('AnagraficaModule:', e);
       const c = document.getElementById('databaseContainer');
       if (c) c.innerHTML = `<div class="empty-state" style="color:var(--color-error)">Errore caricamento dati</div>`;
     }
@@ -6515,12 +6515,12 @@ const DatabaseModule = (() => {
   return { init, cerca };
 })();
 
-/* ── Aggancia switchTab per Scadenzario e Database ── */
+/* ── Aggancia switchTab per Scadenzario e Anagrafica ── */
 const _origSwitchTabScad = switchTab;
 window.switchTab = function (tabName) {
   _origSwitchTabScad(tabName);
   if (tabName === 'scadenzario') ScadenzarioModule.init();
-  if (tabName === 'database-dipendenti') DatabaseModule.init();
+  if (tabName === 'anagrafica-dipendenti') AnagraficaModule.init();
 };
 
 /* INIT */

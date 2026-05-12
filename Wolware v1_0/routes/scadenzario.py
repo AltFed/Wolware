@@ -3,7 +3,7 @@
 #
 # GET  /api/scadenzario                    → tutte le assunzioni (con dati ditta)
 # GET  /api/scadenzario/archivio           → pratiche archiviate (?mese=&anno=)
-# GET  /api/database-dipendenti            → vista database (non annullate, con ditta)
+# GET  /api/anagrafica-dipendenti           → vista anagrafica (non annullate, con ditta)
 # POST /api/assunzioni                     → crea nuova assunzione
 # GET  /api/assunzioni/<id>                → dettaglio singola assunzione
 # PUT  /api/assunzioni/<id>                → aggiorna assunzione (tutti i campi)
@@ -120,8 +120,8 @@ def get_archivio():
         conn.close()
 
 
-# ── GET /api/database-dipendenti ──────────────────────────────────────────────
-@bp.route('/api/database-dipendenti', methods=['GET'])
+# ── GET /api/anagrafica-dipendenti ────────────────────────────────────────────
+@bp.route('/api/anagrafica-dipendenti', methods=['GET'])
 @login_required
 def get_database():
     """Vista database: tutte le assunzioni non annullate, con dati ditta,
