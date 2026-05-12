@@ -3318,7 +3318,7 @@ function _renderIvTabella() {
     let totaleCliente = 0;
     const celle = colonne.map(c => {
       const cella = r.celle[c.voce_id];
-      if (!cella || !cella.applicabile)
+      if (!cella || !cella.attiva)
         return `<td><span class="variabili-cell-na">×</span></td>`;
       const qta = cella.qta ?? 0;
       const importo = qta * (cella.prezzo || 0);
