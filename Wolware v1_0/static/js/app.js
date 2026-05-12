@@ -772,6 +772,9 @@ function resetDittaForm() {
   });
   const annotEl = document.getElementById('annotazioni');
   if (annotEl) annotEl.value = '';
+  // In creazione il tariffario è selezionabile liberamente
+  const selTariffReset = document.getElementById('dittaTariffarioSelect');
+  if (selTariffReset) selTariffReset.disabled = false;
   resetModalTabs();
 }
 function openDittaModal() {
@@ -818,6 +821,9 @@ async function editDitta(id) {
     renderSedi(); renderInail(); renderInps(); renderCC(); renderTariff();
     currentDittaIdForTariff = d.id;
     await loadDittaVoci(d.id);
+    // In modifica il tariffario si cambia solo dal Dettaglio → "Cambia Tariffario"
+    const selTariffEdit = document.getElementById('dittaTariffarioSelect');
+    if (selTariffEdit) selTariffEdit.disabled = true;
     const btnDelModal = document.getElementById('btnDeleteDittaModal');
     if (btnDelModal) btnDelModal.style.display = 'flex';
     const btnArchModal = document.getElementById('btnArchiviaDittaModal');
@@ -2739,27 +2745,36 @@ function _dateRange(inizio, fine) {
 }
 
 function _renderDetRiepilogo(s) {
-  const imponibile = s.dovuto - (s.dovuto * 0); // usa dovuto direttamente
   const saldo = s.residuo;
   const saldoColor = saldo > 0 ? 'var(--color-error)' : saldo < 0 ? 'var(--color-success)' : 'var(--color-text)';
   const saldoLabel = saldo > 0 ? 'DEBITO' : saldo < 0 ? 'CREDITO' : 'IN PARI';
+  const arrot = (s.abbuoni || 0) - (s.addebiti || 0);
   document.getElementById('dettaglioRiepilogo').innerHTML = `
     <div class="dettaglio-stat-card">
-      <div class="dettaglio-stat-label">Resid. prec.</div>
+      <div class="dettaglio-stat-label">Resid. anni prec.</div>
       <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.residuo_iniziale)}</div>
     </div>
     <div class="dettaglio-stat-card">
-      <div class="dettaglio-stat-label">Dovuto</div>
+      <div class="dettaglio-stat-label">Imponibile</div>
+      <div class="dettaglio-stat-val">${formatEur(s.imponibile ?? s.dovuto)}</div>
+    </div>
+    ${(s.esente > 0) ? `
+    <div class="dettaglio-stat-card">
+      <div class="dettaglio-stat-label">Esente IVA</div>
+      <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.esente)}</div>
+    </div>` : ''}
+    <div class="dettaglio-stat-card">
+      <div class="dettaglio-stat-label">Totale + IVA</div>
       <div class="dettaglio-stat-val">${formatEur(s.dovuto)}</div>
     </div>
     <div class="dettaglio-stat-card">
-      <div class="dettaglio-stat-label">Pagato</div>
+      <div class="dettaglio-stat-label">Pagamenti</div>
       <div class="dettaglio-stat-val" style="color:var(--color-success)">${formatEur(s.pagato)}</div>
     </div>
-    ${s.abbuoni || s.addebiti ? `
+    ${(s.abbuoni || s.addebiti) ? `
     <div class="dettaglio-stat-card">
       <div class="dettaglio-stat-label">Arrotondamenti</div>
-      <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.abbuoni - s.addebiti)}</div>
+      <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(arrot)}</div>
     </div>` : ''}
     <div class="dettaglio-stat-card" style="border-left:2px solid var(--color-border);padding-left:var(--space-3)">
       <div class="dettaglio-stat-label">Saldo</div>

@@ -28,20 +28,22 @@ def _riepilogo_ditta(conn, ditta_id: int, anno: int) -> dict:
     """
 
     # Dovuto: somma importi pratiche dell'anno + IVA 22% per le non esenti
-    row_imp = conn.execute(
-        'SELECT COALESCE(SUM(importo), 0.0) FROM pratiche WHERE ditta_id=? AND anno=?',
-        (ditta_id, anno)
-    ).fetchone()
-    tot_imp = round(float(row_imp[0]), 2)
-
-    row_iva = conn.execute(
-        '''SELECT COALESCE(SUM(importo * 0.22), 0.0) FROM pratiche
+    row_imponibile = conn.execute(
+        '''SELECT COALESCE(SUM(importo), 0.0) FROM pratiche
            WHERE ditta_id=? AND anno=? AND (esente_iva IS NULL OR esente_iva=0)''',
         (ditta_id, anno)
     ).fetchone()
-    iva = round(float(row_iva[0]), 2)
+    imponibile = round(float(row_imponibile[0]), 2)
 
-    dovuto = round(tot_imp + iva, 2)
+    row_esente = conn.execute(
+        '''SELECT COALESCE(SUM(importo), 0.0) FROM pratiche
+           WHERE ditta_id=? AND anno=? AND esente_iva=1''',
+        (ditta_id, anno)
+    ).fetchone()
+    esente = round(float(row_esente[0]), 2)
+
+    iva = round(imponibile * 0.22, 2)
+    dovuto = round(imponibile + esente + iva, 2)
 
     # Pagato: somma pagamenti dell'anno
     row = conn.execute(
@@ -72,6 +74,9 @@ def _riepilogo_ditta(conn, ditta_id: int, anno: int) -> dict:
 
     return {
         'anno':             anno,
+        'imponibile':       imponibile,
+        'esente':           esente,
+        'iva':              iva,
         'dovuto':           dovuto,
         'pagato':           pagato,
         'abbuoni':          abbuoni,
