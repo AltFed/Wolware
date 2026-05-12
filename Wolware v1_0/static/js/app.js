@@ -1541,12 +1541,14 @@ async function selectTariffario(id) {
   renderTariffariList();
   const t = tariffariGlobali.find(x => x.id === id);
   document.getElementById('tariffarioNomeHeader').textContent = t.nome;
-  document.getElementById('tariffarioNoteHeader').textContent = t.note || '';
   document.getElementById('tariffarioRenameInline').style.display = 'none';
   document.getElementById('tariffarioNomeHeader').style.display = '';
+  document.getElementById('tariffarioNoteInline').style.display = 'none';
+  document.getElementById('btnEditNotaTariffario').style.display = '';
   document.getElementById('tariffarioPlaceholder').style.display = 'none';
   const content = document.getElementById('tariffarioContent');
   content.style.display = 'flex';
+  _aggiornaVisibilitaNotaHeader();
   await renderMacrogruppi(id);
 }
 
@@ -2195,6 +2197,57 @@ async function salvaRinominaTariffario() {
 function annullaRinominaTariffario() {
   document.getElementById('tariffarioRenameInline').style.display = 'none';
   document.getElementById('tariffarioNomeHeader').style.display = '';
+}
+
+// ── Edit note tariffario inline ───────────────────────────────
+function _aggiornaVisibilitaNotaHeader() {
+  const t = tariffariGlobali.find(x => x.id === activeTariffarioId);
+  const nota = (t && t.note) ? t.note.trim() : '';
+  document.getElementById('tariffarioNoteHeader').textContent = nota;
+  document.getElementById('tariffarioNoteHeader').style.display = nota ? '' : 'none';
+  document.getElementById('tariffarioNotePlaceholder').style.display = nota ? 'none' : '';
+}
+
+function avviaEditNotaTariffario() {
+  const t = tariffariGlobali.find(x => x.id === activeTariffarioId);
+  if (!t) return;
+  document.getElementById('tariffarioNoteHeader').style.display = 'none';
+  document.getElementById('tariffarioNotePlaceholder').style.display = 'none';
+  document.getElementById('btnEditNotaTariffario').style.display = 'none';
+  const ta = document.getElementById('tariffarioNoteInline');
+  ta.value = t.note || '';
+  ta.style.display = '';
+  ta.focus();
+}
+
+let _notaSaving = false;
+async function salvaNotaTariffario() {
+  if (_notaSaving) return;
+  const ta = document.getElementById('tariffarioNoteInline');
+  const nota = ta.value.trim();
+  const t = tariffariGlobali.find(x => x.id === activeTariffarioId);
+  if (!t) return;
+  ta.style.display = 'none';
+  document.getElementById('btnEditNotaTariffario').style.display = '';
+  if (nota === (t.note || '').trim()) { _aggiornaVisibilitaNotaHeader(); return; }
+  _notaSaving = true;
+  try {
+    await api(`/api/tariffari/${activeTariffarioId}`, 'PUT', { nome: t.nome, note: nota });
+    await loadTariffari();
+    _aggiornaVisibilitaNotaHeader();
+    toast('Nota salvata', 'success');
+  } catch(e) {
+    toast('Errore salvataggio nota', 'error');
+    _aggiornaVisibilitaNotaHeader();
+  } finally {
+    _notaSaving = false;
+  }
+}
+
+function annullaEditNotaTariffario() {
+  document.getElementById('tariffarioNoteInline').style.display = 'none';
+  document.getElementById('btnEditNotaTariffario').style.display = '';
+  _aggiornaVisibilitaNotaHeader();
 }
 // ═══════════════════════════════════════════════════════
 // TARIFFARIO DITTA (tab tariffario nella modale ditta)
