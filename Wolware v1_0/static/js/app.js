@@ -1729,11 +1729,17 @@ async function renderMacrogruppi(tariffarioId) {
       }
 
       // ── ROW SOLA LETTURA ──────────────────────────────────
+      const mesiPillsHtml = v.mesi && v.mesi.length
+        ? (v.mesi.includes(0)
+            ? '<span style="font-size:10px;padding:2px 6px;border-radius:var(--radius-full);background:var(--color-surface-offset);color:var(--color-text-muted);font-weight:600">Tutti</span>'
+            : v.mesi.map(m => `<span style="font-size:10px;padding:2px 5px;border-radius:var(--radius-full);background:var(--color-surface-offset);color:var(--color-text-muted);font-weight:600">${MESI_LABELS[m-1]}</span>`).join('')
+          )
+        : '';
       const flagsHtml = [
         v.esente_iva ? '<span style="font-size:10px;padding:2px 6px;border-radius:var(--radius-full);background:var(--color-gold-highlight);color:var(--color-gold);font-weight:600">Esente IVA</span>' : '',
         v.richiede_anno_precedente ? '<span style="font-size:10px;padding:2px 6px;border-radius:var(--radius-full);background:var(--color-blue-highlight);color:var(--color-blue);font-weight:600">Anno Prec.</span>' : '',
-        meseLabels ? `<span style="font-size:10px;padding:2px 6px;border-radius:var(--radius-full);background:var(--color-surface-offset);color:var(--color-text-muted);font-weight:600">${meseLabels}</span>` : '',
       ].filter(Boolean).join('');
+      const badgesHtml = [mesiPillsHtml, flagsHtml].filter(Boolean).join('');
 
       return `
         <div id="voce-row-${v.id}"
@@ -1742,18 +1748,18 @@ async function renderMacrogruppi(tariffarioId) {
                     background:var(--color-bg);margin-bottom:var(--space-1);
                     opacity:${frozen&&!isEditing?'0.4':'1'};
                     pointer-events:${frozen&&!isEditing?'none':'auto'}">
-          <span style="font-size:var(--text-sm);font-weight:700;font-variant-numeric:tabular-nums;
-                       color:var(--color-primary);flex-shrink:0;min-width:64px;text-align:right">
-            ${v.prezzo > 0 ? '€ '+Number(v.prezzo).toFixed(2) : '—'}
-          </span>
+          <div style="flex:1;min-width:0">
+            <span style="font-size:var(--text-sm);color:var(--color-text);font-weight:500">${v.nome}</span>
+            ${badgesHtml ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${badgesHtml}</div>` : ''}
+          </div>
           <span style="font-size:var(--text-xs);font-weight:600;padding:2px 7px;flex-shrink:0;
                        border-radius:var(--radius-full);background:${tipo.bg};color:${tipo.color}">
             ${tipo.label}
           </span>
-          <div style="flex:1;min-width:0">
-            <span style="font-size:var(--text-sm);color:var(--color-text)">${v.nome}</span>
-            ${flagsHtml ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${flagsHtml}</div>` : ''}
-          </div>
+          <span style="font-size:var(--text-sm);font-weight:700;font-variant-numeric:tabular-nums;
+                       color:var(--color-primary);flex-shrink:0;min-width:64px;text-align:right">
+            ${v.prezzo > 0 ? '€ '+Number(v.prezzo).toFixed(2) : '—'}
+          </span>
           <div style="display:flex;align-items:center;gap:var(--space-2);flex-shrink:0">
             <button onclick="avviaEditVoce(${g.id},${JSON.stringify(v).replace(/"/g,'&quot;')})"
                     class="btn btn-icon btn-ghost" title="Modifica voce"
