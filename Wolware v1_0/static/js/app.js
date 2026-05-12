@@ -53,7 +53,8 @@ const UnsavedGuard = (() => {
     'modalDitta','modalAssunzione','modalPratica','modalNuovoTariffario',
     'modalNuovoMacrogruppo','modalDateGestione','modalCambiaTariffario',
     'modalVoceCustom','modalInserimentoVariabili','modalCostiMassivi',
-    'modalArrotondamento','modalNuovoUtente','modalResetPassword'
+    'modalArrotondamento','modalNuovoUtente','modalResetPassword',
+    'modalNuovaProroga','modalNuovaCessazione','modalAnnullamento'
   ];
 
   // Mappa modalId → id del bottone Salva corrispondente
