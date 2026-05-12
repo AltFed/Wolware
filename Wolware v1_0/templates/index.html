@@ -32,15 +32,6 @@
           </svg>
           Home
         </a>
-        <a href="#" class="nav-item" data-tab="pratiche">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg>
-          Pratiche
-        </a>
         <a href="#" class="nav-item" data-tab="tariffari">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="8" y1="6" x2="21" y2="6" />
@@ -136,13 +127,6 @@
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             </svg>
             Home
-          </button>
-          <button class="tab-btn" data-tab="pratiche">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
-            Pratiche
           </button>
           <button class="tab-btn" data-tab="tariffari">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -322,103 +306,6 @@
                       <span class="empty-glyph">📋</span>
                       <span class="empty-title">Nessuna pratica</span>
                       <span class="empty-sub">Crea la tua prima pratica!</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- PRATICHE -->
-        <section class="tab-panel" id="tab-pratiche">
-          <div class="page-header">
-            <div>
-              <h1 class="page-title">Pratiche</h1>
-              <p class="page-subtitle">Gestisci tutte le pratiche dei tuoi clienti</p>
-            </div>
-            <div class="header-actions">
-              <div class="dropdown-wrapper">
-                <button class="btn btn-primary dropdown-trigger" id="btnNuovaPratica2">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Nuova Pratica
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </button>
-                <div class="dropdown-menu" id="dropdownPratica2">
-                  <div class="dropdown-label">Pratiche Dipendenti</div>
-                  <button class="dropdown-item" data-tipo="Assunzione"><span
-                      class="tipo-dot dot-blue"></span>Assunzione</button>
-                  <button class="dropdown-item" data-tipo="Cessazione"><span
-                      class="tipo-dot dot-red"></span>Cessazione</button>
-                  <button class="dropdown-item" data-tipo="Trasformazione Contratto"><span
-                      class="tipo-dot dot-orange"></span>Trasformazione Contratto</button>
-                  <button class="dropdown-item" data-tipo="Proroga Contratto"><span
-                      class="tipo-dot dot-orange"></span>Proroga Contratto</button>
-                  <div class="dropdown-label">Paghe &amp; Contributi</div>
-                  <button class="dropdown-item" data-tipo="Elaborazione Buste Paga"><span
-                      class="tipo-dot dot-green"></span>Elaborazione Buste Paga</button>
-                  <button class="dropdown-item" data-tipo="Variazione Retributiva"><span
-                      class="tipo-dot dot-green"></span>Variazione Retributiva</button>
-                  <button class="dropdown-item" data-tipo="Conguaglio Fiscale"><span
-                      class="tipo-dot dot-green"></span>Conguaglio Fiscale</button>
-                  <div class="dropdown-label">Enti Previdenziali</div>
-                  <button class="dropdown-item" data-tipo="Comunicazione INPS"><span
-                      class="tipo-dot dot-purple"></span>Comunicazione INPS</button>
-                  <button class="dropdown-item" data-tipo="Comunicazione INAIL"><span
-                      class="tipo-dot dot-teal"></span>Comunicazione INAIL</button>
-                  <button class="dropdown-item" data-tipo="Gestione CIG"><span class="tipo-dot dot-gold"></span>Gestione
-                    CIG</button>
-                  <button class="dropdown-item" data-tipo="Variazione INAIL"><span
-                      class="tipo-dot dot-teal"></span>Variazione INAIL</button>
-                  <div class="dropdown-label">Adempimenti</div>
-                  <button class="dropdown-item" data-tipo="Modello 770"><span class="tipo-dot dot-purple"></span>Modello
-                    770</button>
-                  <button class="dropdown-item" data-tipo="CU - Certificazione Unica"><span
-                      class="tipo-dot dot-purple"></span>CU - Certificazione Unica</button>
-                  <button class="dropdown-item" data-tipo="Autoliquidazione INAIL"><span
-                      class="tipo-dot dot-teal"></span>Autoliquidazione INAIL</button>
-                  <button class="dropdown-item" data-tipo="Altra Pratica"><span class="tipo-dot dot-gray"></span>Altra
-                    Pratica</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="filter-bar">
-            <input type="text" class="filter-input" id="filterPratiche" placeholder="Cerca pratica o ditta…" />
-            <select class="filter-select" id="filterStato">
-              <option value="">Tutti gli stati</option>
-              <option>Aperta</option>
-              <option>In Lavorazione</option>
-              <option>Chiusa</option>
-            </select>
-          </div>
-          <div class="section-block">
-            <div class="table-wrapper">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Ditta</th>
-                    <th>Tipo</th>
-                    <th>Descrizione</th>
-                    <th>Stato</th>
-                    <th>Priorità</th>
-                    <th>Apertura</th>
-                    <th>Scadenza</th>
-                    <th class="col-actions">Azioni</th>
-                  </tr>
-                </thead>
-                <tbody id="praticheTableBody">
-                  <tr>
-                    <td colspan="9" class="empty-row">
-                      <span class="empty-glyph">📋</span>
-                      <span class="empty-title">Nessuna pratica trovata</span>
-                      <span class="empty-sub">Prova a modificare i filtri di ricerca</span>
                     </td>
                   </tr>
                 </tbody>
@@ -954,7 +841,7 @@
               </div>
               <!-- Dropdown Nuova Pratica -->
               <div class="dropdown-container" style="position:relative">
-                <button class="btn btn-primary" id="btnNuovaPratica"
+                <button class="btn btn-primary" id="btnScadNuovaPratica"
                   onclick="ScadenzarioModule.toggleNuovaPraticaMenu()">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -962,7 +849,7 @@
                   Nuova Pratica
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:2px"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
-                <div class="scad-dropdown-menu" id="menuNuovaPratica" style="display:none">
+                <div class="scad-dropdown-menu" id="menuScadNuovaPratica" style="display:none">
                   <button class="scad-dropdown-item" onclick="ScadenzarioModule.openNuovaAssunzione()">
                     <span class="scad-dot scad-dot-green"></span> Assunzione
                   </button>

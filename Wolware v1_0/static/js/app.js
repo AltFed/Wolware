@@ -36,7 +36,6 @@ function switchTab(tabName) {
   if (panel) panel.classList.add('active');
   document.querySelectorAll(`[data-tab="${tabName}"]`).forEach(b => b.classList.add('active'));
   if (tabName === 'home') { loadStats(); loadHomePratiche(); }
-  if (tabName === 'pratiche') loadPratiche();
   if (tabName === 'ditte') loadDitte();
 }
 document.querySelectorAll('[data-tab]').forEach(el => {
@@ -256,6 +255,7 @@ async function loadPratiche() {
 }
 function renderPratiche(list) {
   const tbody = document.getElementById('praticheTableBody');
+  if (!tbody) return;
   if (!list.length) {
     tbody.innerHTML = `<tr><td colspan="9" class="empty-row"><span class="empty-icon">📋</span><br>Nessuna pratica trovata.</td></tr>`; return;
   }
@@ -277,9 +277,10 @@ function renderPratiche(list) {
     </div></td>
   </tr>`).join('');
 }
-document.getElementById('filterPratiche').addEventListener('input', filterPratiche);
-document.getElementById('filterStato').addEventListener('change', filterPratiche);
+document.getElementById('filterPratiche')?.addEventListener('input', filterPratiche);
+document.getElementById('filterStato')?.addEventListener('change', filterPratiche);
 function filterPratiche() {
+  if (!document.getElementById('filterPratiche')) return;
   const q = document.getElementById('filterPratiche').value.toLowerCase();
   const stato = document.getElementById('filterStato').value;
   let f = allPratiche;
@@ -5936,16 +5937,15 @@ const ScadenzarioModule = (() => {
   }
 
   function toggleNuovaPraticaMenu() {
-    const menu = document.getElementById('menuNuovaPratica');
+    const menu = document.getElementById('menuScadNuovaPratica');
     if (!menu) return;
     menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
   }
 
   // ── Modali ───────────────────────────────────────────────────────────────
   function openNuovaAssunzione() {
-    document.getElementById('menuNuovaPratica').style.display = 'none';
-    resetAssunzioneForm();
-    openModal('modalAssunzione');
+    document.getElementById('menuScadNuovaPratica').style.display = 'none';
+    openAssunzioneModal();
   }
 
   function openModifica(aid) {
@@ -6004,7 +6004,7 @@ const ScadenzarioModule = (() => {
   }
 
   function openNuovaCessazione(aid) {
-    document.getElementById('menuNuovaPratica').style.display = 'none';
+    document.getElementById('menuScadNuovaPratica').style.display = 'none';
     document.getElementById('cessazioneAssunzioneId').value = aid || '';
     // Popola select ditte per cessazione standalone
     _popolaSelectDitteCessazione();
@@ -6012,7 +6012,7 @@ const ScadenzarioModule = (() => {
   }
 
   function openNuovoAnnullamento(aid) {
-    document.getElementById('menuNuovaPratica').style.display = 'none';
+    document.getElementById('menuScadNuovaPratica').style.display = 'none';
     document.getElementById('annullamentoAssunzioneId').value = aid || '';
     document.getElementById('annullamentoData').value = new Date().toISOString().split('T')[0];
     openModal('modalAnnullamento');
@@ -6242,8 +6242,8 @@ const ScadenzarioModule = (() => {
     _carica();
     // Chiudi dropdown al click esterno
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('#menuNuovaPratica') && !e.target.closest('#btnNuovaPratica')) {
-        const m = document.getElementById('menuNuovaPratica');
+      if (!e.target.closest('#menuScadNuovaPratica') && !e.target.closest('#btnScadNuovaPratica')) {
+        const m = document.getElementById('menuScadNuovaPratica');
         if (m) m.style.display = 'none';
       }
       if (!e.target.closest('.scad-actions')) {
