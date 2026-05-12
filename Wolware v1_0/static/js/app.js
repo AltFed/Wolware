@@ -51,7 +51,7 @@ const UnsavedGuard = (() => {
   const GUARDED = [
     'modalDitta','modalAssunzione','modalPratica','modalNuovoTariffario',
     'modalNuovoMacrogruppo','modalDateGestione','modalCambiaTariffario',
-    'modalVoceCustom','modalInserimentoVariabili','modalCostiMassivi',
+    'modalVoceCustom','modalVariabiliPaghe','modalCostiMassivi',
     'modalArrotondamento','modalNuovoUtente','modalResetPassword',
     'modalNuovaProroga','modalNuovaCessazione','modalAnnullamento'
   ];
@@ -65,7 +65,6 @@ const UnsavedGuard = (() => {
     'modalVoceCustom':           'btnSalvaVoceCustom',
     'modalDateGestione':         'btnSalvaDateGestione',
     'modalArrotondamento':       'btnSalvaArrotondamento',
-    'modalInserimentoVariabili': 'btnSalvaInserimentoVariabili',
     'modalCostiMassivi':         'btnContabilizzaEsegui',
     'modalAssunzione':           'btnSalvaBozzaAssunzione',
   };

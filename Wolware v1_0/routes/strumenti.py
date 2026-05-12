@@ -28,7 +28,8 @@ MESI_NOMI = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio',
 # ═══════════════════════════════════════════════════════════
 
 def _voce_attiva_nel_mese(voce, mese: int, tipo: str) -> bool:
-    if tipo in ('costi_fissi_mensili', 'costi_variabili_mensili'):
+    if tipo in ('costi_fissi_mensili', 'costi_variabili_mensili',
+                'fisso_mensile', 'variabile_mensile'):
         return True
     # annuali: controlla mesi_json
     mesi_json = voce.get('mesi_json') if isinstance(voce, dict) else voce['mesi_json']
@@ -260,15 +261,21 @@ def variabili_tabella():
 
     db = get_db()
     try:
-        # Raccoglie tutte le voci variabili distinte
+        _TIPI_VAR = ('costi_variabili_mensili', 'costi_variabili_annuali',
+                     'variabile_mensile', 'variabile_annuale')
+
+        # Raccoglie tutte le voci variabili distinte.
+        # LEFT JOIN su macrogruppi: se macrogruppo_id è NULL usa dv.tipo come fallback.
         tutte_voci = db.execute(
             '''SELECT DISTINCT dv.voce_costo_id, dv.nome, dv.prezzo,
-                      dv.macrogruppo_nome, mg.tipo as mg_tipo, dv.mesi_json
+                      dv.macrogruppo_nome, dv.mesi_json,
+                      COALESCE(mg.tipo, dv.tipo) as mg_tipo
                FROM ditta_voci dv
-               JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
+               LEFT JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
                JOIN ditte d ON d.id = dv.ditta_id
-               WHERE mg.tipo IN (?,?) AND d.archiviato=0''',
-            ('costi_variabili_mensili', 'costi_variabili_annuali')
+               WHERE COALESCE(mg.tipo, dv.tipo) IN (?,?,?,?)
+                 AND d.archiviato=0''',
+            _TIPI_VAR
         ).fetchall()
 
         # Filtra per mese: mensili sempre visibili, annuali solo nei mesi configurati
@@ -277,13 +284,19 @@ def variabili_tabella():
         for v in tutte_voci:
             if v['voce_costo_id'] in colonne_ids:
                 continue
-            attiva = _voce_attiva_nel_mese(dict(v), mese, v['mg_tipo'])
+            tipo_eff = v['mg_tipo']
+            # Normalizza vecchi tipi
+            if tipo_eff == 'variabile_mensile':
+                tipo_eff = 'costi_variabili_mensili'
+            elif tipo_eff == 'variabile_annuale':
+                tipo_eff = 'costi_variabili_annuali'
+            attiva = _voce_attiva_nel_mese(dict(v), mese, tipo_eff)
             if attiva:
                 colonne.append({
                     'voce_id':   v['voce_costo_id'],
                     'nome':      v['nome'],
                     'mg_nome':   v['macrogruppo_nome'],
-                    'tipo':      v['mg_tipo'],
+                    'tipo':      tipo_eff,
                 })
                 colonne_ids.add(v['voce_costo_id'])
 
@@ -296,25 +309,26 @@ def variabili_tabella():
         for ditta in ditte:
             celle = {}
             for col in colonne:
-                # Verifica che la ditta abbia questa voce
+                # Verifica che la ditta abbia questa voce (LEFT JOIN per macrogruppo_id NULL)
                 dv = db.execute(
-                    '''SELECT dv.id, dv.prezzo, dv.mesi_json
+                    '''SELECT dv.id, dv.prezzo, dv.mesi_json,
+                              COALESCE(mg.tipo, dv.tipo) as mg_tipo
                        FROM ditta_voci dv
-                       JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
+                       LEFT JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
                        WHERE dv.ditta_id=? AND dv.voce_costo_id=?
-                         AND mg.tipo IN (?,?)''',
-                    (ditta['id'], col['voce_id'],
-                     'costi_variabili_mensili', 'costi_variabili_annuali')
+                         AND COALESCE(mg.tipo, dv.tipo) IN (?,?,?,?)''',
+                    (ditta['id'], col['voce_id']) + _TIPI_VAR
                 ).fetchone()
 
                 if dv and _voce_attiva_nel_mese(dict(dv), mese, col['tipo']):
-                    # Cerca quantità già inserita per questo mese
+                    # Cerca quantità già inserita per questo mese (accetta entrambi i tipi)
                     esistente = db.execute(
                         '''SELECT quantita FROM pratiche
                            WHERE ditta_id=? AND voce_id=? AND anno=? AND mese=?
-                             AND tipo IN (?,?)''',
+                             AND tipo IN (?,?,?,?)''',
                         (ditta['id'], col['voce_id'], anno, mese,
-                         'costi_variabili_mensili', 'costi_variabili_annuali')
+                         'costi_variabili_mensili', 'costi_variabili_annuali',
+                         'variabile_mensile', 'variabile_annuale')
                     ).fetchone()
                     celle[col['voce_id']] = {
                         'attiva':  True,
@@ -358,12 +372,14 @@ def variabili_carica():
             voce_id  = int(item['voce_id'])
             qta      = int(item.get('qta', 0))
 
+            _TIPI_V = ('costi_variabili_mensili', 'costi_variabili_annuali',
+                       'variabile_mensile', 'variabile_annuale')
+
             esistente = db.execute(
                 '''SELECT id FROM pratiche
                    WHERE ditta_id=? AND voce_id=? AND anno=? AND mese=?
-                     AND tipo IN (?,?)''',
-                (ditta_id, voce_id, anno, mese,
-                 'costi_variabili_mensili', 'costi_variabili_annuali')
+                     AND tipo IN (?,?,?,?)''',
+                (ditta_id, voce_id, anno, mese) + _TIPI_V
             ).fetchone()
 
             if qta == 0:
@@ -372,12 +388,12 @@ def variabili_carica():
                     eliminati += 1
                 continue
 
-            # Recupera info voce
+            # Recupera info voce (LEFT JOIN per gestire macrogruppo_id NULL)
             voce_info = db.execute(
                 '''SELECT dv.nome, dv.prezzo, dv.macrogruppo_nome, dv.esente_iva,
-                          mg.tipo as mg_tipo
+                          COALESCE(mg.tipo, dv.tipo) as mg_tipo
                    FROM ditta_voci dv
-                   JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
+                   LEFT JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
                    WHERE dv.ditta_id=? AND dv.voce_costo_id=?''',
                 (ditta_id, voce_id)
             ).fetchone()
@@ -385,6 +401,12 @@ def variabili_carica():
                 continue
 
             importo = round(float(voce_info['prezzo'] or 0) * qta, 2)
+            # Normalizza tipo per pratiche
+            mg_tipo = voce_info['mg_tipo'] or 'costi_variabili_mensili'
+            if mg_tipo == 'variabile_mensile':
+                mg_tipo = 'costi_variabili_mensili'
+            elif mg_tipo == 'variabile_annuale':
+                mg_tipo = 'costi_variabili_annuali'
 
             if esistente:
                 db.execute(
@@ -401,7 +423,7 @@ def variabili_carica():
                     (ditta_id, voce_id, anno, mese,
                      voce_info['nome'], qta,
                      float(voce_info['prezzo'] or 0), importo,
-                     voce_info['mg_tipo'], voce_info['macrogruppo_nome'],
+                     mg_tipo, voce_info['macrogruppo_nome'],
                      int(voce_info['esente_iva'] or 0))
                 )
             salvati += 1
