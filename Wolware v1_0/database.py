@@ -83,6 +83,18 @@ def init_db():
         ('archiviato',               'INTEGER DEFAULT 0'),
         ('annotazioni',              'TEXT'),
         ('tariffario_nome',          'TEXT'),
+        # ── Campi HR (Scadenzario / Database Dipendenti) ──
+        ('codice_interno',                  'TEXT'),
+        ('matricola_inps_hr',               'TEXT'),
+        ('pat_inail_hr',                    'TEXT'),
+        ('ccnl',                            'TEXT'),
+        ('codice_ccnl',                     'TEXT'),
+        ('codice_cnel',                     'TEXT'),
+        ('sede_lav_indirizzo',              'TEXT'),
+        ('sede_lav_cap',                    'TEXT'),
+        ('sede_lav_comune',                 'TEXT'),
+        ('sede_lav_provincia',              'TEXT'),
+        ('sede_lav_cod_catastale',          'TEXT'),
     ]:
         if col not in existing_ditte:
             c.execute(f'ALTER TABLE ditte ADD COLUMN {col} {typedef}')
@@ -344,6 +356,192 @@ def init_db():
         chiave TEXT PRIMARY KEY,
         valore TEXT
     )''')
+
+    # ═══════════════════════════════════════════════════════════════════
+    # TABELLA: assunzioni (dipendenti — Scadenzario & Database)
+    # ═══════════════════════════════════════════════════════════════════
+    c.execute('''CREATE TABLE IF NOT EXISTS assunzioni (
+        id                           INTEGER PRIMARY KEY AUTOINCREMENT,
+        stato                        TEXT DEFAULT 'bozza',
+        tipo_pratica                 TEXT DEFAULT 'assunzione',
+        matricola                    TEXT,
+
+        -- Azienda (FK a ditte)
+        ditta_id                     INTEGER REFERENCES ditte(id) ON DELETE SET NULL,
+
+        -- Anagrafica dipendente
+        cognome                      TEXT NOT NULL,
+        nome                         TEXT NOT NULL,
+        codice_fiscale               TEXT,
+        sesso                        TEXT,
+        data_nascita                 TEXT,
+        comune_nascita               TEXT,
+        catastale_nascita            TEXT,
+        comune_residenza             TEXT,
+        catastale_residenza          TEXT,
+        cap_residenza                TEXT,
+        indirizzo_residenza          TEXT,
+        codice_istruzione            TEXT,
+        livello_istruzione           TEXT,
+        descrizione_istruzione       TEXT,
+
+        -- Lavoratore straniero
+        lavoratore_straniero         INTEGER DEFAULT 0,
+        numero_permesso              TEXT,
+        motivo_permesso              TEXT,
+        rilasciato_da                TEXT,
+        data_rilascio_permesso       TEXT,
+        data_scadenza_permesso       TEXT,
+        in_rinnovo                   INTEGER DEFAULT 0,
+
+        -- Contratto
+        data_assunzione              TEXT,
+        data_fine_contratto          TEXT,
+        tipo_contratto               TEXT,
+        intermittente_tipo           TEXT,
+        qualifica                    TEXT,
+        livello                      TEXT,
+        codice_istat                 TEXT,
+        qualifica_istat              TEXT,
+        mansione                     TEXT,
+        tipologia_orario             TEXT,
+        ore_settimanali              TEXT,
+        numero_mensilita             TEXT,
+        retribuzione_base            TEXT,
+        retribuzione_pt              TEXT,
+        netto_busta                  TEXT,
+        tredicesima                  INTEGER DEFAULT 0,
+        quattordicesima              INTEGER DEFAULT 0,
+        rateo_permessi               INTEGER DEFAULT 0,
+        periodo_prova                TEXT,
+        ferie                        TEXT,
+        permessi_contrattuali        TEXT,
+        preavviso                    TEXT,
+        distribuzione_orario         TEXT,
+
+        -- Caratteristiche contrattuali (flag)
+        socio_lavoratore             INTEGER DEFAULT 0,
+        lavoratore_mobilita          INTEGER DEFAULT 0,
+        lavoro_stagionale            INTEGER DEFAULT 0,
+        assunzione_obbligatoria      INTEGER DEFAULT 0,
+        tipo_assunzione_obbligatoria TEXT,
+        lavoro_agricoltura           INTEGER DEFAULT 0,
+        pubblica_amministrazione     INTEGER DEFAULT 0,
+
+        -- Stato pratica assunzione
+        presenze_fatto               INTEGER DEFAULT 0,
+        slp_fatto                    INTEGER DEFAULT 0,
+        unilav_fatto                 INTEGER DEFAULT 0,
+        data_unilav                  TEXT,
+        email_assunzione_inviata     INTEGER DEFAULT 0,
+
+        -- Sotto-oggetti JSON
+        proroghe_json                TEXT DEFAULT '[]',
+        trasformazione_json          TEXT,
+        cessazione_json              TEXT,
+
+        -- Stato pratica cessazione
+        unilav_cessazione_fatto      INTEGER DEFAULT 0,
+        data_unilav_cessazione       TEXT,
+        email_cessazione_inviata     INTEGER DEFAULT 0,
+        presenze_cessazione_fatto    INTEGER DEFAULT 0,
+        slp_cessazione_fatto         INTEGER DEFAULT 0,
+
+        -- Annullamento
+        annullata                    INTEGER DEFAULT 0,
+        data_annullamento            TEXT,
+        email_annullamento_inviata   INTEGER DEFAULT 0,
+
+        -- Scadenza (proroga/trasformazione follow-up)
+        email_scadenza_inviata       INTEGER DEFAULT 0,
+        unilav_scadenza_fatto        INTEGER DEFAULT 0,
+        data_unilav_scadenza         TEXT,
+
+        created_at                   TEXT DEFAULT (datetime('now', 'localtime')),
+        updated_at                   TEXT DEFAULT (datetime('now', 'localtime'))
+    )''')
+
+    # Migrazione assunzioni (per DB già esistenti)
+    existing_ass = [row[1] for row in c.execute("PRAGMA table_info(assunzioni)").fetchall()]
+    for col, typedef in [
+        ('stato',                        "TEXT DEFAULT 'bozza'"),
+        ('tipo_pratica',                 "TEXT DEFAULT 'assunzione'"),
+        ('matricola',                    'TEXT'),
+        ('ditta_id',                     'INTEGER REFERENCES ditte(id) ON DELETE SET NULL'),
+        ('cognome',                      'TEXT'),
+        ('nome',                         'TEXT'),
+        ('codice_fiscale',               'TEXT'),
+        ('sesso',                        'TEXT'),
+        ('data_nascita',                 'TEXT'),
+        ('comune_nascita',               'TEXT'),
+        ('catastale_nascita',            'TEXT'),
+        ('comune_residenza',             'TEXT'),
+        ('catastale_residenza',          'TEXT'),
+        ('cap_residenza',                'TEXT'),
+        ('indirizzo_residenza',          'TEXT'),
+        ('codice_istruzione',            'TEXT'),
+        ('livello_istruzione',           'TEXT'),
+        ('descrizione_istruzione',       'TEXT'),
+        ('lavoratore_straniero',         'INTEGER DEFAULT 0'),
+        ('numero_permesso',              'TEXT'),
+        ('motivo_permesso',              'TEXT'),
+        ('rilasciato_da',                'TEXT'),
+        ('data_rilascio_permesso',       'TEXT'),
+        ('data_scadenza_permesso',       'TEXT'),
+        ('in_rinnovo',                   'INTEGER DEFAULT 0'),
+        ('data_assunzione',              'TEXT'),
+        ('data_fine_contratto',          'TEXT'),
+        ('tipo_contratto',               'TEXT'),
+        ('intermittente_tipo',           'TEXT'),
+        ('qualifica',                    'TEXT'),
+        ('livello',                      'TEXT'),
+        ('codice_istat',                 'TEXT'),
+        ('qualifica_istat',              'TEXT'),
+        ('mansione',                     'TEXT'),
+        ('tipologia_orario',             'TEXT'),
+        ('ore_settimanali',              'TEXT'),
+        ('numero_mensilita',             'TEXT'),
+        ('retribuzione_base',            'TEXT'),
+        ('retribuzione_pt',              'TEXT'),
+        ('netto_busta',                  'TEXT'),
+        ('tredicesima',                  'INTEGER DEFAULT 0'),
+        ('quattordicesima',              'INTEGER DEFAULT 0'),
+        ('rateo_permessi',               'INTEGER DEFAULT 0'),
+        ('periodo_prova',                'TEXT'),
+        ('ferie',                        'TEXT'),
+        ('permessi_contrattuali',        'TEXT'),
+        ('preavviso',                    'TEXT'),
+        ('distribuzione_orario',         'TEXT'),
+        ('socio_lavoratore',             'INTEGER DEFAULT 0'),
+        ('lavoratore_mobilita',          'INTEGER DEFAULT 0'),
+        ('lavoro_stagionale',            'INTEGER DEFAULT 0'),
+        ('assunzione_obbligatoria',      'INTEGER DEFAULT 0'),
+        ('tipo_assunzione_obbligatoria', 'TEXT'),
+        ('lavoro_agricoltura',           'INTEGER DEFAULT 0'),
+        ('pubblica_amministrazione',     'INTEGER DEFAULT 0'),
+        ('presenze_fatto',               'INTEGER DEFAULT 0'),
+        ('slp_fatto',                    'INTEGER DEFAULT 0'),
+        ('unilav_fatto',                 'INTEGER DEFAULT 0'),
+        ('data_unilav',                  'TEXT'),
+        ('email_assunzione_inviata',     'INTEGER DEFAULT 0'),
+        ('proroghe_json',                "TEXT DEFAULT '[]'"),
+        ('trasformazione_json',          'TEXT'),
+        ('cessazione_json',              'TEXT'),
+        ('unilav_cessazione_fatto',      'INTEGER DEFAULT 0'),
+        ('data_unilav_cessazione',       'TEXT'),
+        ('email_cessazione_inviata',     'INTEGER DEFAULT 0'),
+        ('presenze_cessazione_fatto',    'INTEGER DEFAULT 0'),
+        ('slp_cessazione_fatto',         'INTEGER DEFAULT 0'),
+        ('annullata',                    'INTEGER DEFAULT 0'),
+        ('data_annullamento',            'TEXT'),
+        ('email_annullamento_inviata',   'INTEGER DEFAULT 0'),
+        ('email_scadenza_inviata',       'INTEGER DEFAULT 0'),
+        ('unilav_scadenza_fatto',        'INTEGER DEFAULT 0'),
+        ('data_unilav_scadenza',         'TEXT'),
+        ('updated_at',                   "TEXT DEFAULT (datetime('now', 'localtime'))"),
+    ]:
+        if col not in existing_ass:
+            c.execute(f'ALTER TABLE assunzioni ADD COLUMN {col} {typedef}')
 
     conn.commit()
     conn.close()
