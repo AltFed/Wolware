@@ -307,43 +307,61 @@ def delete_voce(vid):
 def previsione_cliente(id):
     mesi = int(request.args.get('mesi', 12))
     db = get_db()
+    try:
+        ditta = db.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()
+        if not ditta:
+            return jsonify({'fissi_mensili': [], 'fissi_annuali': [], 'totale': 0, 'mesi': mesi})
 
-    ditta = db.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()
-    if not ditta or not ditta['tariffario_id']:
-        return jsonify({'fissi': [], 'totale_fisso': 0, 'mesi': mesi})
+        # Legge dalla copia del cliente (ditta_voci), non dal tariffario originale
+        voci = db.execute(
+            '''SELECT dv.*
+               FROM ditta_voci dv
+               WHERE dv.ditta_id=? AND dv.tipo IN (
+                   'costi_fissi_mensili', 'fisso_mensile',
+                   'costi_fissi_annuali', 'fisso_annuale'
+               ) AND dv.prezzo > 0
+               ORDER BY dv.tipo, dv.macrogruppo_nome, dv.nome''',
+            (id,)
+        ).fetchall()
 
-    tid = ditta['tariffario_id']
+        fissi_mensili = []
+        fissi_annuali = []
+        totale = 0.0
 
-    # Prende tutti i macrogruppi FISSI con le loro voci
-    gruppi = db.execute(
-        '''SELECT g.id, g.nome, g.tipo, v.id as vid, v.nome as vnome, v.prezzo
-           FROM tariffario_macrogruppi g
-           JOIN tariffario_voci v ON v.macrogruppo_id = g.id
-           WHERE g.tariffario_id = ? AND g.tipo IN ('fisso_mensile','fisso_annuale')
-           AND v.prezzo IS NOT NULL AND v.prezzo > 0
-           ORDER BY g.tipo, g.nome, v.nome''',
-        (tid,)
-    ).fetchall()
+        for v in voci:
+            tipo   = v['tipo'] or ''
+            prezzo = float(v['prezzo'] or 0)
+            nome   = v['nome'] or ''
+            mg     = v['macrogruppo_nome'] or ''
 
-    voci_out = []
-    totale = 0.0
-    for r in gruppi:
-        moltiplicatore = mesi if r['tipo'] == 'fisso_mensile' else (mesi / 12)
-        importo = round(float(r['prezzo']) * moltiplicatore, 2)
-        totale += importo
-        voci_out.append({
-            'macrogruppo': r['nome'],
-            'tipo': r['tipo'],
-            'voce': r['vnome'],
-            'prezzo_unitario': float(r['prezzo']),
-            'moltiplicatore': moltiplicatore,
-            'importo': importo
+            if tipo in ('costi_fissi_mensili', 'fisso_mensile'):
+                tot = round(prezzo * mesi, 2)
+                totale += tot
+                fissi_mensili.append({
+                    'nome':            nome,
+                    'macrogruppo':     mg,
+                    'prezzo_unitario': prezzo,
+                    'mesi':            mesi,
+                    'totale':          tot,
+                })
+            elif tipo in ('costi_fissi_annuali', 'fisso_annuale'):
+                anni = round(mesi / 12, 4)
+                tot  = round(prezzo * anni, 2)
+                totale += tot
+                fissi_annuali.append({
+                    'nome':            nome,
+                    'macrogruppo':     mg,
+                    'prezzo_unitario': prezzo,
+                    'anni':            anni,
+                    'totale':          tot,
+                })
+
+        return jsonify({
+            'cliente':       ditta['ragione_sociale'],
+            'mesi':          mesi,
+            'fissi_mensili': fissi_mensili,
+            'fissi_annuali': fissi_annuali,
+            'totale':        round(totale, 2),
         })
-
-    return jsonify({
-        'cliente': ditta['ragione_sociale'],
-        'tariffario_id': tid,
-        'mesi': mesi,
-        'fissi': voci_out,
-        'totale_fisso': round(totale, 2)
-    })
+    finally:
+        db.close()

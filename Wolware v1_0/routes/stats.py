@@ -19,7 +19,7 @@ stats_bp = Blueprint('stats', __name__)
 def _riepilogo_ditta(conn, ditta_id: int, anno: int) -> dict:
     """
     Calcola per (ditta_id, anno):
-      - dovuto      = somma importi pratiche dell'anno
+      - dovuto      = somma importi pratiche dell'anno + IVA 22% su non-esenti
       - pagato      = somma pagamenti dell'anno
       - abbuoni     = somma arrotondamenti tipo 'abbuono'
       - addebiti    = somma arrotondamenti tipo 'addebito'
@@ -27,12 +27,21 @@ def _riepilogo_ditta(conn, ditta_id: int, anno: int) -> dict:
     Il residuo_iniziale è un campo manuale sulla ditta (saldo di partenza).
     """
 
-    # Dovuto: somma importi pratiche dell'anno
-    row = conn.execute(
+    # Dovuto: somma importi pratiche dell'anno + IVA 22% per le non esenti
+    row_imp = conn.execute(
         'SELECT COALESCE(SUM(importo), 0.0) FROM pratiche WHERE ditta_id=? AND anno=?',
         (ditta_id, anno)
     ).fetchone()
-    dovuto = round(float(row[0]), 2)
+    tot_imp = round(float(row_imp[0]), 2)
+
+    row_iva = conn.execute(
+        '''SELECT COALESCE(SUM(importo * 0.22), 0.0) FROM pratiche
+           WHERE ditta_id=? AND anno=? AND (esente_iva IS NULL OR esente_iva=0)''',
+        (ditta_id, anno)
+    ).fetchone()
+    iva = round(float(row_iva[0]), 2)
+
+    dovuto = round(tot_imp + iva, 2)
 
     # Pagato: somma pagamenti dell'anno
     row = conn.execute(
