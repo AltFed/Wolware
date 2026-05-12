@@ -1,4 +1,5 @@
 import io
+import json as _json
 import calendar
 from datetime import date
 from flask import Blueprint, request, jsonify, send_file
@@ -45,7 +46,6 @@ def _calcola_residuo(db, ditta_id, anno):
     ).fetchone()
     tot_pag = pag_rows[0] if pag_rows else 0
 
-    # ⚠️ RIMOSSO: non sottrarre arrotondamenti qui
     return round(tot_con_iva - tot_pag, 2)
 
 
@@ -319,60 +319,6 @@ def _genera_pdf_estratto(
 
     story = []
 
-    # COPERTINA
-    story.append(Paragraph("ESTRATTO CONTO", S_TITLE))
-    story.append(Paragraph(label_periodo, S_PERIOD))
-    story.append(Spacer(1, 0.1 * cm))
-    story.append(Paragraph(f"<b>{rs}</b>", S_SUB))
-    if info_cliente:
-        story.append(Paragraph(info_cliente, S_INFO))
-    story.append(Spacer(1, 0.4 * cm))
-    story.append(HRFlowable(width=CONTENT_W, thickness=1.5, color=C_BLU, spaceAfter=10))
-
-    col_l = CONTENT_W * 0.55
-    col_r = CONTENT_W * 0.45
-    riepilogo_rows = []
-
-    if residuo != 0:
-        riepilogo_rows.append([
-            Paragraph("Residuo anni precedenti", S_BODY),
-            Paragraph(f"<b>{_eur(residuo)}</b>", S_ROSSO if residuo > 0 else S_VERDE)
-        ])
-
-    riepilogo_rows += [
-        [
-            Paragraph(f"Competenze periodo ({label_periodo})", S_BODY),
-            Paragraph(f"<b>{_eur(dovuto)}</b>", S_BODY)
-        ],
-        [
-            Paragraph("Pagamenti ricevuti", S_BODY),
-            Paragraph(f"<b>- {_eur(tot_pag)}</b>", S_VERDE if tot_pag > 0 else S_BODY)
-        ]
-    ]
-
-    riepilogo_rows.append([
-        Paragraph("<b>SALDO ATTUALE</b>", sty('bld', fontName='Helvetica-Bold', fontSize=10)),
-        saldo_par(saldo)
-    ])
-
-    n_r = len(riepilogo_rows)
-    t_riepilogo = Table(riepilogo_rows, colWidths=[col_l, col_r])
-    t_riepilogo.setStyle(TableStyle([
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
-        ('LINEABOVE', (0, n_r - 1), (-1, n_r - 1), 1, C_BLU),
-        ('BACKGROUND', (0, n_r - 1), (-1, n_r - 1), C_LIGHT),
-        ('GRID', (0, 0), (-1, n_r - 2), 0.3, C_BORDER),
-    ]))
-    story.append(t_riepilogo)
-    story.append(Spacer(1, 0.3 * cm))
-    story.append(Paragraph(
-        f"Dettaglio: Imponibile {_eur(imponibile)} + IVA 22% {_eur(iva_tot)} + Esente {_eur(esente)}",
-        S_SMALL
-    ))
-
     pratiche_per_mese = {}
     for p in pratiche:
         pratiche_per_mese.setdefault(int(p['mese']), []).append(p)
@@ -399,6 +345,60 @@ def _genera_pdf_estratto(
         return g
 
     if formato == 'completo':
+        # COPERTINA
+        story.append(Paragraph("ESTRATTO CONTO", S_TITLE))
+        story.append(Paragraph(label_periodo, S_PERIOD))
+        story.append(Spacer(1, 0.1 * cm))
+        story.append(Paragraph(f"<b>{rs}</b>", S_SUB))
+        if info_cliente:
+            story.append(Paragraph(info_cliente, S_INFO))
+        story.append(Spacer(1, 0.4 * cm))
+        story.append(HRFlowable(width=CONTENT_W, thickness=1.5, color=C_BLU, spaceAfter=10))
+
+        col_l = CONTENT_W * 0.55
+        col_r = CONTENT_W * 0.45
+        riepilogo_rows = []
+
+        if residuo != 0:
+            riepilogo_rows.append([
+                Paragraph("Residuo anni precedenti", S_BODY),
+                Paragraph(f"<b>{_eur(residuo)}</b>", S_ROSSO if residuo > 0 else S_VERDE)
+            ])
+
+        riepilogo_rows += [
+            [
+                Paragraph(f"Competenze periodo ({label_periodo})", S_BODY),
+                Paragraph(f"<b>{_eur(dovuto)}</b>", S_BODY)
+            ],
+            [
+                Paragraph("Pagamenti ricevuti", S_BODY),
+                Paragraph(f"<b>- {_eur(tot_pag)}</b>", S_VERDE if tot_pag > 0 else S_BODY)
+            ]
+        ]
+
+        riepilogo_rows.append([
+            Paragraph("<b>SALDO ATTUALE</b>", sty('bld', fontName='Helvetica-Bold', fontSize=10)),
+            saldo_par(saldo)
+        ])
+
+        n_r = len(riepilogo_rows)
+        t_riepilogo = Table(riepilogo_rows, colWidths=[col_l, col_r])
+        t_riepilogo.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('LINEABOVE', (0, n_r - 1), (-1, n_r - 1), 1, C_BLU),
+            ('BACKGROUND', (0, n_r - 1), (-1, n_r - 1), C_LIGHT),
+            ('GRID', (0, 0), (-1, n_r - 2), 0.3, C_BORDER),
+        ]))
+        story.append(t_riepilogo)
+        story.append(Spacer(1, 0.3 * cm))
+        story.append(Paragraph(
+            f"Dettaglio: Imponibile {_eur(imponibile)} + IVA 22% {_eur(iva_tot)} + Esente {_eur(esente)}",
+            S_SMALL
+        ))
+
         story.append(PageBreak())
         story.append(Paragraph("RIEPILOGO MOVIMENTI", S_H2))
 
@@ -563,9 +563,64 @@ def _genera_pdf_estratto(
             ))
 
     else:
-        story.append(Spacer(1, 0.4 * cm))
-        story.append(HRFlowable(width=CONTENT_W, thickness=0.5, color=C_BORDER, spaceAfter=6))
+        # SINTETICO — 2-column header
+        left_text = (
+            f'<font size="16" color="#1a365d"><b>ESTRATTO CONTO</b></font><br/>'
+            f'<font size="10" color="#2c7a7b"><b>{label_periodo}</b></font>'
+        )
+        right_text = f'<font size="12" color="#1a365d"><b>{rs}</b></font>'
+        if info_cliente:
+            right_text += f'<br/><font size="8" color="#718096">{info_cliente}</font>'
 
+        t_head = Table(
+            [[Paragraph(left_text, sty('hl', leading=22)),
+              Paragraph(right_text, sty('hr', leading=20, alignment=2))]],
+            colWidths=[CONTENT_W * 0.55, CONTENT_W * 0.45]
+        )
+        t_head.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        story.append(t_head)
+        story.append(HRFlowable(width=CONTENT_W, thickness=1.5, color=C_BLU, spaceAfter=8))
+
+        # 4 stat cards
+        saldo_sin = round(residuo + dovuto - tot_pag + tot_arrot, 2)
+
+        def _card_par(label, value, vcolor):
+            return Paragraph(
+                f'<font size="7" color="#718096">{label}</font><br/>'
+                f'<font size="10" color="{vcolor}"><b>{_eur(value)}</b></font>',
+                sty(f'c_{label[:3]}', leading=18)
+            )
+
+        residuo_c = '#c53030' if residuo > 0 else ('#276749' if residuo < 0 else '#2d3748')
+        saldo_c = '#c53030' if saldo_sin > 0 else ('#276749' if saldo_sin < 0 else '#2d3748')
+
+        cards_row = [
+            _card_par("RESIDUO ANNI PREC.", residuo, residuo_c),
+            _card_par("DOVUTO PERIODO", dovuto, '#2d3748'),
+            _card_par("PAGAMENTI", tot_pag, '#276749' if tot_pag > 0 else '#2d3748'),
+            _card_par("SALDO ATTUALE", saldo_sin, saldo_c),
+        ]
+
+        t_cards = Table([cards_row], colWidths=[CONTENT_W / 4] * 4)
+        t_cards.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 0.5, C_BORDER),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, C_BORDER),
+            ('BACKGROUND', (0, 0), (2, 0), C_ALT),
+            ('BACKGROUND', (3, 0), (3, 0), C_LIGHT),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(t_cards)
+        story.append(Spacer(1, 0.3 * cm))
+
+        # Movement table — reverse chronological
         saldi_per_mese = {}
         sp2 = residuo
         for m in range(1, 13):
@@ -594,13 +649,16 @@ def _genera_pdf_estratto(
                 for nome, info in g.items():
                     qty = info['qty']
                     prz = info['prezzo']
-                    iva_v = 0 if info['esente'] else round(prz * 0.22 * qty, 2)
-                    tot_v = qty * prz + iva_v
-                    tot_sin += tot_v
+                    imponibile_v = round(qty * prz, 2)
+                    iva_v = 0 if info['esente'] else round(imponibile_v * 0.22, 2)
+                    tot_sin += imponibile_v + iva_v
 
-                    iva_s = '(esente IVA)' if info['esente'] else f'+ IVA {_eur(iva_v)}'
+                    if info['esente']:
+                        iva_s = '(esente IVA)'
+                    else:
+                        iva_s = f'+ IVA {_eur(iva_v)}'
                     qs = f' x{qty}' if qty > 1 else ''
-                    bullet_lines.append(f"• {nome}{qs}  {_eur(qty * prz)} {iva_s}")
+                    bullet_lines.append(f"• {nome}{qs}  {_eur(imponibile_v)} {iva_s}")
 
                 righe_sin.append([
                     Paragraph(f"<b>{NOMI_MESI[m - 1][:3]} {anno}</b>", S_BODY),
@@ -635,7 +693,7 @@ def _genera_pdf_estratto(
                 ])
 
         if residuo != 0:
-            righe_sin.insert(1, [
+            righe_sin.append([
                 Paragraph('<b>Residuo Anni Prec.</b>', S_BODY),
                 Paragraph('Saldo da anni precedenti', S_SMALL),
                 Paragraph(f'<b>{_eur(abs(residuo))}</b>', S_ROSSO if residuo > 0 else S_VERDE),
@@ -664,21 +722,62 @@ def _genera_pdf_estratto(
         story.append(Paragraph(f"<b>{rs}</b>", S_SUB))
         story.append(Spacer(1, 0.3 * cm))
 
-        gruppi = {}
-        for v in tariffario:
-            mg = v.get('macrogruppo_nome', 'Altro')
-            gruppi.setdefault(mg, []).append(v)
+        TIPO_LABELS = {
+            'costi_fissi_mensili': 'COSTI FISSI MENSILI',
+            'fisso_mensile': 'COSTI FISSI MENSILI',
+            'costi_variabili': 'COSTI VARIABILI',
+            'variabile': 'COSTI VARIABILI',
+            'costi_variabili_mensili': 'COSTI VARIABILI MENSILI PAGHE',
+            'costi_fissi_annuali': 'COSTI FISSI ANNUALI PAGHE',
+            'fisso_annuale': 'COSTI FISSI ANNUALI PAGHE',
+        }
+        TIPO_ORDER = [
+            'costi_fissi_mensili', 'fisso_mensile',
+            'costi_variabili', 'variabile', 'costi_variabili_mensili',
+            'costi_fissi_annuali', 'fisso_annuale',
+        ]
 
-        for mg, voci_mg in gruppi.items():
+        gruppi_tipo = {}
+        for v in tariffario:
+            t = v.get('tipo', 'altro')
+            gruppi_tipo.setdefault(t, []).append(v)
+
+        seen_labels = set()
+        for tipo in sorted(
+            gruppi_tipo.keys(),
+            key=lambda x: TIPO_ORDER.index(x) if x in TIPO_ORDER else 999
+        ):
+            label = TIPO_LABELS.get(tipo, tipo.upper().replace('_', ' '))
+            if label in seen_labels:
+                continue
+            seen_labels.add(label)
+
+            voci_label = []
+            for t2, vv in gruppi_tipo.items():
+                if TIPO_LABELS.get(t2, t2.upper().replace('_', ' ')) == label:
+                    voci_label.extend(vv)
+
             story.append(Paragraph(
-                mg,
-                sty('mg', fontName='Helvetica-Bold', fontSize=8, textColor=C_TEAL, spaceBefore=6, spaceAfter=2)
+                label,
+                sty('tipo_lbl', fontName='Helvetica-Bold', fontSize=8, textColor=C_TEAL, spaceBefore=8, spaceAfter=2)
             ))
 
             righe_tar = []
-            for v in voci_mg:
-                mese_rif = v.get('mese_riferimento', '')
-                mese_str = NOMI_MESI[int(mese_rif) - 1] if mese_rif else ''
+            for v in voci_label:
+                mesi_json_str = v.get('mesi_json') or ''
+                mese_str = ''
+                if mesi_json_str:
+                    try:
+                        mesi = _json.loads(mesi_json_str)
+                        if mesi:
+                            mese_str = ', '.join(
+                                NOMI_MESI[int(m2) - 1]
+                                for m2 in mesi
+                                if 1 <= int(m2) <= 12
+                            )
+                    except Exception:
+                        pass
+
                 righe_tar.append([
                     Paragraph(v.get('nome', ''), S_BODY),
                     Paragraph(mese_str, S_SMALL),

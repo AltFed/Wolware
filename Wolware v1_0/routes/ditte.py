@@ -81,13 +81,15 @@ def get_ditte():
 
             # ── Indicatori mesi CF e VR per l'anno richiesto ──
             mesi_cf = conn.execute(
-                "SELECT DISTINCT mese FROM pratiche WHERE ditta_id=? AND anno=? AND tipo='costo_fisso'",
+                """SELECT DISTINCT mese FROM pratiche WHERE ditta_id=? AND anno=?
+                   AND tipo IN ('costi_fissi_mensili','fisso_mensile',
+                                'costi_fissi_annuali','fisso_annuale')""",
                 (did, anno)
             ).fetchall()
             mesi_vr = conn.execute(
-                """SELECT DISTINCT mese FROM pratiche
-                   WHERE ditta_id=? AND anno=?
-                   AND tipo IN ('variabile','variabile_mensile','variabile_annuale')""",
+                """SELECT DISTINCT mese FROM pratiche WHERE ditta_id=? AND anno=?
+                   AND tipo IN ('costi_variabili_mensili','costi_variabili_annuali',
+                                'variabile','variabile_mensile','variabile_annuale')""",
                 (did, anno)
             ).fetchall()
 
@@ -143,14 +145,14 @@ def create_ditta():
                  settore_ateco, codice_ateco, indirizzo, citta, cap, provincia,
                  cod_catastale, amministratore, cf_amministratore,
                  tel_amministratore, email_amministratore, telefono, email,
-                 pec, referente, cedolino_onnicomprensivo,
+                 pec, referente,
                  sedi_json, inail_json, inps_json, cc_json, tariff_json,
                  data_inizio_rapporto, note, tariffario_id,
                  cadenza_pagamenti, residuo_iniziale,
                  inizio_paghe, fine_paghe,
                  inizio_contabilita, fine_contabilita,
                  archiviato, annotazioni, tariffario_nome)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ''', (
             data.get('ragione_sociale'),      data.get('partita_iva'),
             data.get('codice_fiscale'),       data.get('forma_giuridica'),
@@ -161,7 +163,7 @@ def create_ditta():
             data.get('cf_amministratore'),    data.get('tel_amministratore'),
             data.get('email_amministratore'), data.get('telefono'),
             data.get('email'),                data.get('pec'),
-            data.get('referente'),            int(data.get('cedolino_onnicomprensivo', 0)),
+            data.get('referente'),
             _json_str(data.get('sedi_json')),
             _json_str(data.get('inail_json')),
             _json_str(data.get('inps_json')),
@@ -220,7 +222,7 @@ def update_ditta(id):
                 indirizzo=?, citta=?, cap=?, provincia=?, cod_catastale=?,
                 amministratore=?, cf_amministratore=?, tel_amministratore=?,
                 email_amministratore=?, telefono=?, email=?, pec=?,
-                referente=?, cedolino_onnicomprensivo=?,
+                referente=?,
                 sedi_json=?, inail_json=?, inps_json=?, cc_json=?,
                 tariff_json=?, data_inizio_rapporto=?, note=?, tariffario_id=?,
                 cadenza_pagamenti=?, residuo_iniziale=?,
@@ -238,7 +240,7 @@ def update_ditta(id):
             data.get('cf_amministratore'),    data.get('tel_amministratore'),
             data.get('email_amministratore'), data.get('telefono'),
             data.get('email'),                data.get('pec'),
-            data.get('referente'),            int(data.get('cedolino_onnicomprensivo', 0)),
+            data.get('referente'),
             _json_str(data.get('sedi_json')),
             _json_str(data.get('inail_json')),
             _json_str(data.get('inps_json')),

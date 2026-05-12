@@ -109,15 +109,14 @@ def contabilizza_preview():
 
         for ditta in ditte:
             voci = db.execute(
-                '''SELECT dv.*, mg.tipo as mg_tipo
+                '''SELECT dv.*
                    FROM ditta_voci dv
-                   JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
-                   WHERE dv.ditta_id=? AND mg.tipo IN (?,?)''',
+                   WHERE dv.ditta_id=? AND dv.tipo IN (?,?)''',
                 (ditta['id'], 'costi_fissi_mensili', 'costi_fissi_annuali')
             ).fetchall()
 
             for voce in voci:
-                tipo = voce['mg_tipo']
+                tipo = voce['tipo']
                 # flag anno precedente
                 richiede_anno_prec = voce['richiede_anno_precedente'] if 'richiede_anno_precedente' in voce.keys() else 0
                 if richiede_anno_prec:
@@ -193,15 +192,14 @@ def contabilizza_esegui():
 
         for ditta in ditte:
             voci = db.execute(
-                '''SELECT dv.*, mg.tipo as mg_tipo
+                '''SELECT dv.*
                    FROM ditta_voci dv
-                   JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
-                   WHERE dv.ditta_id=? AND mg.tipo IN (?,?)''',
+                   WHERE dv.ditta_id=? AND dv.tipo IN (?,?)''',
                 (ditta['id'], 'costi_fissi_mensili', 'costi_fissi_annuali')
             ).fetchall()
 
             for voce in voci:
-                tipo = voce['mg_tipo']
+                tipo = voce['tipo']
                 richiede_anno_prec = voce['richiede_anno_precedente'] if 'richiede_anno_precedente' in voce.keys() else 0
                 if richiede_anno_prec:
                     if not _gestione_attiva(dict(ditta), anno - 1, 'paghe'):
@@ -260,14 +258,13 @@ def variabili_tabella():
 
     db = get_db()
     try:
-        # Raccoglie tutte le voci variabili distinte
+        # Raccoglie tutte le voci variabili distinte dalla COPIA del cliente (dv.tipo)
         tutte_voci = db.execute(
             '''SELECT DISTINCT dv.voce_costo_id, dv.nome, dv.prezzo,
-                      dv.macrogruppo_nome, mg.tipo as mg_tipo, dv.mesi_json
+                      dv.macrogruppo_nome, dv.tipo, dv.mesi_json
                FROM ditta_voci dv
-               JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
                JOIN ditte d ON d.id = dv.ditta_id
-               WHERE mg.tipo IN (?,?) AND d.archiviato=0''',
+               WHERE dv.tipo IN (?,?) AND d.archiviato=0''',
             ('costi_variabili_mensili', 'costi_variabili_annuali')
         ).fetchall()
 
@@ -277,13 +274,13 @@ def variabili_tabella():
         for v in tutte_voci:
             if v['voce_costo_id'] in colonne_ids:
                 continue
-            attiva = _voce_attiva_nel_mese(dict(v), mese, v['mg_tipo'])
+            attiva = _voce_attiva_nel_mese(dict(v), mese, v['tipo'])
             if attiva:
                 colonne.append({
-                    'voce_id':   v['voce_costo_id'],
-                    'nome':      v['nome'],
-                    'mg_nome':   v['macrogruppo_nome'],
-                    'tipo':      v['mg_tipo'],
+                    'voce_id': v['voce_costo_id'],
+                    'nome':    v['nome'],
+                    'mg_nome': v['macrogruppo_nome'],
+                    'tipo':    v['tipo'],
                 })
                 colonne_ids.add(v['voce_costo_id'])
 
@@ -296,19 +293,17 @@ def variabili_tabella():
         for ditta in ditte:
             celle = {}
             for col in colonne:
-                # Verifica che la ditta abbia questa voce
+                # Legge dalla copia del cliente — nessun JOIN al tariffario originale
                 dv = db.execute(
-                    '''SELECT dv.id, dv.prezzo, dv.mesi_json
-                       FROM ditta_voci dv
-                       JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
-                       WHERE dv.ditta_id=? AND dv.voce_costo_id=?
-                         AND mg.tipo IN (?,?)''',
+                    '''SELECT id, prezzo, mesi_json
+                       FROM ditta_voci
+                       WHERE ditta_id=? AND voce_costo_id=?
+                         AND tipo IN (?,?)''',
                     (ditta['id'], col['voce_id'],
                      'costi_variabili_mensili', 'costi_variabili_annuali')
                 ).fetchone()
 
                 if dv and _voce_attiva_nel_mese(dict(dv), mese, col['tipo']):
-                    # Cerca quantità già inserita per questo mese
                     esistente = db.execute(
                         '''SELECT quantita FROM pratiche
                            WHERE ditta_id=? AND voce_id=? AND anno=? AND mese=?
@@ -317,12 +312,12 @@ def variabili_tabella():
                          'costi_variabili_mensili', 'costi_variabili_annuali')
                     ).fetchone()
                     celle[col['voce_id']] = {
-                        'attiva':  True,
-                        'qta':     esistente['quantita'] if esistente else 0,
-                        'prezzo':  float(dv['prezzo'] or 0),
+                        'attiva': True,
+                        'qta':    esistente['quantita'] if esistente else 0,
+                        'prezzo': float(dv['prezzo'] or 0),
                     }
                 else:
-                    celle[col['voce_id']] = {'attiva': False, 'qta': None, 'prezzo': None}
+                    celle[col['voce_id']] = {'attiva': False}
 
             righe.append({
                 'ditta_id':   ditta['id'],
@@ -372,14 +367,14 @@ def variabili_carica():
                     eliminati += 1
                 continue
 
-            # Recupera info voce
+            # Recupera info voce dalla copia del cliente — nessun JOIN al tariffario
             voce_info = db.execute(
-                '''SELECT dv.nome, dv.prezzo, dv.macrogruppo_nome, dv.esente_iva,
-                          mg.tipo as mg_tipo
-                   FROM ditta_voci dv
-                   JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
-                   WHERE dv.ditta_id=? AND dv.voce_costo_id=?''',
-                (ditta_id, voce_id)
+                '''SELECT nome, prezzo, macrogruppo_nome, esente_iva, tipo
+                   FROM ditta_voci
+                   WHERE ditta_id=? AND voce_costo_id=?
+                     AND tipo IN (?,?)''',
+                (ditta_id, voce_id,
+                 'costi_variabili_mensili', 'costi_variabili_annuali')
             ).fetchone()
             if not voce_info:
                 continue
@@ -401,7 +396,7 @@ def variabili_carica():
                     (ditta_id, voce_id, anno, mese,
                      voce_info['nome'], qta,
                      float(voce_info['prezzo'] or 0), importo,
-                     voce_info['mg_tipo'], voce_info['macrogruppo_nome'],
+                     voce_info['tipo'], voce_info['macrogruppo_nome'],
                      int(voce_info['esente_iva'] or 0))
                 )
             salvati += 1

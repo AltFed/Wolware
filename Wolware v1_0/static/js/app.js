@@ -321,7 +321,7 @@ function renderDitte(list) {
     </td></tr>`;
     return;
   }
-  const MESI = ['G','F','M','A','M','G','L','A','S','O','N','D'];
+  const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
   tbody.innerHTML = filtered.map(d => {
     // indicatori mesi CF (fissi) e VR (variabili) — placeholder visivo
     const cfDots = MESI.map((m,i) => {
@@ -336,11 +336,12 @@ function renderDitte(list) {
     const dovuto  = d.totale_dovuto  != null ? formatEur(d.totale_dovuto)  : '—';
     const pagato  = d.totale_pagato  != null ? formatEur(d.totale_pagato)  : '—';
     const residuo = d.totale_residuo != null ? d.totale_residuo : null;
-    const residuoHTML = residuo == null ? '<span style="color:var(--color-text-faint)">—</span>'
+    const residuoHTML = residuo == null
+      ? '<span style="color:var(--color-text-faint)">—</span>'
       : residuo > 0
-        ? `<span class="badge-residuo debito">${formatEur(residuo)}</span>`
+        ? `<span style="color:var(--color-error);font-weight:600">${formatEur(residuo)}</span>`
         : residuo < 0
-          ? `<span class="badge-residuo credito">${formatEur(Math.abs(residuo))}</span>`
+          ? `<span style="color:var(--color-success);font-weight:600">${formatEur(Math.abs(residuo))}</span>`
           : `<span style="color:var(--color-text-faint)">—</span>`;
 
     const cadBadge = d.cadenza
@@ -368,7 +369,7 @@ onclick="openDettaglioCliente(${d.id})" title="${d.ragione_sociale}">
       </td>
       <td class="col-money mono">${dovuto}</td>
       <td class="col-money mono">${pagato}</td>
-      <td class="col-money">${residuoHTML}</td>
+      <td class="col-money mono">${residuoHTML}</td>
       <td class="col-cadenza">${cadBadge}</td>
       <td class="col-data mono">${d.ultimo_ec || '<span style="color:var(--color-text-faint)">—</span>'}</td>
       <td class="col-data mono">${d.ultimo_pag || '<span style="color:var(--color-text-faint)">—</span>'}</td>
@@ -752,7 +753,6 @@ function resetDittaForm() {
   document.getElementById('email').value = '';
   document.getElementById('pec').value = '';
   document.getElementById('telefono').value = '';
-  document.getElementById('cedolino_onnicomprensivo').checked = false;
   sedi = []; sedeIdx = 0; inailList = []; inpsList = []; ccList = []; tariffItems = [];
   renderSedi(); renderInail(); renderInps(); renderCC(); renderTariff();
   currentDittaIdForTariff = null;
@@ -772,6 +772,9 @@ function resetDittaForm() {
   });
   const annotEl = document.getElementById('annotazioni');
   if (annotEl) annotEl.value = '';
+  // In creazione il tariffario è selezionabile liberamente
+  const selTariffReset = document.getElementById('dittaTariffarioSelect');
+  if (selTariffReset) selTariffReset.disabled = false;
   resetModalTabs();
 }
 function openDittaModal() {
@@ -780,6 +783,7 @@ function openDittaModal() {
   if (btnDelModal) btnDelModal.style.display = 'none';
   const btnArchModal2 = document.getElementById('btnArchiviaDittaModal');
   if (btnArchModal2) btnArchModal2.style.display = 'none';
+  loadTariffariSelectDitta(null);
   openModal('modalDitta');
 }
 
@@ -797,7 +801,6 @@ async function editDitta(id) {
         const el = document.getElementById(f);
         if (el && d[f]) el.value = d[f];
       });
-    document.getElementById('cedolino_onnicomprensivo').checked = !!d.cedolino_onnicomprensivo;
     // Carica cadenza pagamenti
     const cadVal = d.cadenza_pagamenti || 'libero';
     const cadHidden = document.getElementById('cadenza_pagamenti');
@@ -818,6 +821,9 @@ async function editDitta(id) {
     renderSedi(); renderInail(); renderInps(); renderCC(); renderTariff();
     currentDittaIdForTariff = d.id;
     await loadDittaVoci(d.id);
+    // In modifica il tariffario si cambia solo dal Dettaglio → "Cambia Tariffario"
+    const selTariffEdit = document.getElementById('dittaTariffarioSelect');
+    if (selTariffEdit) selTariffEdit.disabled = true;
     const btnDelModal = document.getElementById('btnDeleteDittaModal');
     if (btnDelModal) btnDelModal.style.display = 'flex';
     const btnArchModal = document.getElementById('btnArchiviaDittaModal');
@@ -860,7 +866,6 @@ document.getElementById('btnSaveDitta').addEventListener('click', async () => {
     email: document.getElementById('email').value.trim(),
     pec: document.getElementById('pec').value.trim(),
     telefono: document.getElementById('telefono').value.trim(),
-    cedolino_onnicomprensivo: document.getElementById('cedolino_onnicomprensivo').checked ? 1 : 0,
     sedi_json: JSON.stringify(sedi),
     inail_json: JSON.stringify(inailList),
     inps_json: JSON.stringify(inpsList),
@@ -1485,7 +1490,7 @@ const TIPO_META = {
   variabile_mensile:{ label: 'Costi Variabili Mensili',color: 'var(--color-orange)', bg: 'var(--color-orange-highlight)' },
   variabile_annuale:{ label: 'Costi Variabili Annuali',color: 'var(--color-gold)',   bg: 'var(--color-gold-highlight)' },
 };
-const MESI_LABELS = ['G','F','M','A','M','G','L','A','S','O','N','D'];
+const MESI_LABELS = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const TIPI_ANNUALI = ['fisso_annuale','variabile_annuale'];
 
 function isAnnuale(tipo){ return TIPI_ANNUALI.includes(tipo); }
@@ -1541,12 +1546,14 @@ async function selectTariffario(id) {
   renderTariffariList();
   const t = tariffariGlobali.find(x => x.id === id);
   document.getElementById('tariffarioNomeHeader').textContent = t.nome;
-  document.getElementById('tariffarioNoteHeader').textContent = t.note || '';
   document.getElementById('tariffarioRenameInline').style.display = 'none';
   document.getElementById('tariffarioNomeHeader').style.display = '';
+  document.getElementById('tariffarioNoteInline').style.display = 'none';
+  document.getElementById('btnEditNotaTariffario').style.display = '';
   document.getElementById('tariffarioPlaceholder').style.display = 'none';
   const content = document.getElementById('tariffarioContent');
   content.style.display = 'flex';
+  _aggiornaVisibilitaNotaHeader();
   await renderMacrogruppi(id);
 }
 
@@ -1592,7 +1599,7 @@ async function renderMacrogruppi(tariffarioId) {
             <button type="button"
               onclick="toggleMeseAdd(${g.id},${i+1},this)"
               data-mese="${i+1}"
-              style="width:28px;height:28px;border-radius:var(--radius-sm);
+              style="padding:2px 7px;height:26px;border-radius:var(--radius-sm);
                      border:1px solid var(--color-border);font-size:11px;font-weight:600;
                      background:var(--color-surface);color:var(--color-text-muted);cursor:pointer;
                      transition:all var(--transition-interactive)">${m}</button>`).join('')}
@@ -1664,7 +1671,7 @@ async function renderMacrogruppi(tariffarioId) {
                 return `<button type="button"
                   onclick="toggleMeseEdit(${v.id},${i+1},this)"
                   data-mese="${i+1}" data-sel="${sel?1:0}"
-                  style="width:28px;height:28px;border-radius:var(--radius-sm);
+                  style="padding:2px 7px;height:26px;border-radius:var(--radius-sm);
                          border:1px solid ${sel?'var(--color-primary)':'var(--color-border)'};
                          font-size:11px;font-weight:600;cursor:pointer;
                          background:${sel?'var(--color-primary-highlight)':'var(--color-surface)'};
@@ -1727,11 +1734,17 @@ async function renderMacrogruppi(tariffarioId) {
       }
 
       // ── ROW SOLA LETTURA ──────────────────────────────────
+      const mesiPillsHtml = v.mesi && v.mesi.length
+        ? (v.mesi.includes(0)
+            ? '<span style="font-size:10px;padding:2px 6px;border-radius:var(--radius-full);background:var(--color-surface-offset);color:var(--color-text-muted);font-weight:600">Tutti</span>'
+            : v.mesi.map(m => `<span style="font-size:10px;padding:2px 5px;border-radius:var(--radius-full);background:var(--color-surface-offset);color:var(--color-text-muted);font-weight:600">${MESI_LABELS[m-1]}</span>`).join('')
+          )
+        : '';
       const flagsHtml = [
         v.esente_iva ? '<span style="font-size:10px;padding:2px 6px;border-radius:var(--radius-full);background:var(--color-gold-highlight);color:var(--color-gold);font-weight:600">Esente IVA</span>' : '',
         v.richiede_anno_precedente ? '<span style="font-size:10px;padding:2px 6px;border-radius:var(--radius-full);background:var(--color-blue-highlight);color:var(--color-blue);font-weight:600">Anno Prec.</span>' : '',
-        meseLabels ? `<span style="font-size:10px;padding:2px 6px;border-radius:var(--radius-full);background:var(--color-surface-offset);color:var(--color-text-muted);font-weight:600">${meseLabels}</span>` : '',
       ].filter(Boolean).join('');
+      const badgesHtml = [mesiPillsHtml, flagsHtml].filter(Boolean).join('');
 
       return `
         <div id="voce-row-${v.id}"
@@ -1740,18 +1753,18 @@ async function renderMacrogruppi(tariffarioId) {
                     background:var(--color-bg);margin-bottom:var(--space-1);
                     opacity:${frozen&&!isEditing?'0.4':'1'};
                     pointer-events:${frozen&&!isEditing?'none':'auto'}">
-          <span style="font-size:var(--text-sm);font-weight:700;font-variant-numeric:tabular-nums;
-                       color:var(--color-primary);flex-shrink:0;min-width:64px;text-align:right">
-            ${v.prezzo > 0 ? '€ '+Number(v.prezzo).toFixed(2) : '—'}
-          </span>
+          <div style="flex:1;min-width:0">
+            <span style="font-size:var(--text-sm);color:var(--color-text);font-weight:500">${v.nome}</span>
+            ${badgesHtml ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${badgesHtml}</div>` : ''}
+          </div>
           <span style="font-size:var(--text-xs);font-weight:600;padding:2px 7px;flex-shrink:0;
                        border-radius:var(--radius-full);background:${tipo.bg};color:${tipo.color}">
             ${tipo.label}
           </span>
-          <div style="flex:1;min-width:0">
-            <span style="font-size:var(--text-sm);color:var(--color-text)">${v.nome}</span>
-            ${flagsHtml ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${flagsHtml}</div>` : ''}
-          </div>
+          <span style="font-size:var(--text-sm);font-weight:700;font-variant-numeric:tabular-nums;
+                       color:var(--color-primary);flex-shrink:0;min-width:64px;text-align:right">
+            ${v.prezzo > 0 ? '€ '+Number(v.prezzo).toFixed(2) : '—'}
+          </span>
           <div style="display:flex;align-items:center;gap:var(--space-2);flex-shrink:0">
             <button onclick="avviaEditVoce(${g.id},${JSON.stringify(v).replace(/"/g,'&quot;')})"
                     class="btn btn-icon btn-ghost" title="Modifica voce"
@@ -2195,6 +2208,57 @@ async function salvaRinominaTariffario() {
 function annullaRinominaTariffario() {
   document.getElementById('tariffarioRenameInline').style.display = 'none';
   document.getElementById('tariffarioNomeHeader').style.display = '';
+}
+
+// ── Edit note tariffario inline ───────────────────────────────
+function _aggiornaVisibilitaNotaHeader() {
+  const t = tariffariGlobali.find(x => x.id === activeTariffarioId);
+  const nota = (t && t.note) ? t.note.trim() : '';
+  document.getElementById('tariffarioNoteHeader').textContent = nota;
+  document.getElementById('tariffarioNoteHeader').style.display = nota ? '' : 'none';
+  document.getElementById('tariffarioNotePlaceholder').style.display = nota ? 'none' : '';
+}
+
+function avviaEditNotaTariffario() {
+  const t = tariffariGlobali.find(x => x.id === activeTariffarioId);
+  if (!t) return;
+  document.getElementById('tariffarioNoteHeader').style.display = 'none';
+  document.getElementById('tariffarioNotePlaceholder').style.display = 'none';
+  document.getElementById('btnEditNotaTariffario').style.display = 'none';
+  const ta = document.getElementById('tariffarioNoteInline');
+  ta.value = t.note || '';
+  ta.style.display = '';
+  ta.focus();
+}
+
+let _notaSaving = false;
+async function salvaNotaTariffario() {
+  if (_notaSaving) return;
+  const ta = document.getElementById('tariffarioNoteInline');
+  const nota = ta.value.trim();
+  const t = tariffariGlobali.find(x => x.id === activeTariffarioId);
+  if (!t) return;
+  ta.style.display = 'none';
+  document.getElementById('btnEditNotaTariffario').style.display = '';
+  if (nota === (t.note || '').trim()) { _aggiornaVisibilitaNotaHeader(); return; }
+  _notaSaving = true;
+  try {
+    await api(`/api/tariffari/${activeTariffarioId}`, 'PUT', { nome: t.nome, note: nota });
+    await loadTariffari();
+    _aggiornaVisibilitaNotaHeader();
+    toast('Nota salvata', 'success');
+  } catch(e) {
+    toast('Errore salvataggio nota', 'error');
+    _aggiornaVisibilitaNotaHeader();
+  } finally {
+    _notaSaving = false;
+  }
+}
+
+function annullaEditNotaTariffario() {
+  document.getElementById('tariffarioNoteInline').style.display = 'none';
+  document.getElementById('btnEditNotaTariffario').style.display = '';
+  _aggiornaVisibilitaNotaHeader();
 }
 // ═══════════════════════════════════════════════════════
 // TARIFFARIO DITTA (tab tariffario nella modale ditta)
@@ -2681,27 +2745,40 @@ function _dateRange(inizio, fine) {
 }
 
 function _renderDetRiepilogo(s) {
-  const imponibile = s.dovuto - (s.dovuto * 0); // usa dovuto direttamente
   const saldo = s.residuo;
   const saldoColor = saldo > 0 ? 'var(--color-error)' : saldo < 0 ? 'var(--color-success)' : 'var(--color-text)';
   const saldoLabel = saldo > 0 ? 'DEBITO' : saldo < 0 ? 'CREDITO' : 'IN PARI';
+  const arrot = (s.abbuoni || 0) - (s.addebiti || 0);
   document.getElementById('dettaglioRiepilogo').innerHTML = `
     <div class="dettaglio-stat-card">
-      <div class="dettaglio-stat-label">Resid. prec.</div>
+      <div class="dettaglio-stat-label">Resid. anni prec.</div>
       <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.residuo_iniziale)}</div>
     </div>
     <div class="dettaglio-stat-card">
-      <div class="dettaglio-stat-label">Dovuto</div>
+      <div class="dettaglio-stat-label">Imponibile</div>
+      <div class="dettaglio-stat-val">${formatEur(s.imponibile ?? s.dovuto)}</div>
+    </div>
+    ${(s.esente > 0) ? `
+    <div class="dettaglio-stat-card">
+      <div class="dettaglio-stat-label">Esente IVA</div>
+      <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.esente)}</div>
+    </div>` : ''}
+    <div class="dettaglio-stat-card">
+      <div class="dettaglio-stat-label">IVA 22%</div>
+      <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.iva ?? 0)}</div>
+    </div>
+    <div class="dettaglio-stat-card">
+      <div class="dettaglio-stat-label">Totale + IVA</div>
       <div class="dettaglio-stat-val">${formatEur(s.dovuto)}</div>
     </div>
     <div class="dettaglio-stat-card">
-      <div class="dettaglio-stat-label">Pagato</div>
+      <div class="dettaglio-stat-label">Pagamenti</div>
       <div class="dettaglio-stat-val" style="color:var(--color-success)">${formatEur(s.pagato)}</div>
     </div>
-    ${s.abbuoni || s.addebiti ? `
+    ${(s.abbuoni || s.addebiti) ? `
     <div class="dettaglio-stat-card">
       <div class="dettaglio-stat-label">Arrotondamenti</div>
-      <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.abbuoni - s.addebiti)}</div>
+      <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(arrot)}</div>
     </div>` : ''}
     <div class="dettaglio-stat-card" style="border-left:2px solid var(--color-border);padding-left:var(--space-3)">
       <div class="dettaglio-stat-label">Saldo</div>
@@ -2736,10 +2813,14 @@ function _renderDetPratiche(list) {
         ? `${p.nome}${mg} &nbsp;<span style="color:var(--color-text-faint)">${p.quantita} × ${formatEur(p.prezzo)}</span>`
         : `${p.nome}${mg}`;
       const esente = p.esente_iva ? `<span class="badge-tipo esente">ESENTE IVA</span>` : '';
+      const iva22 = (!p.esente_iva && p.importo) ? Math.round(p.importo * 22) / 100 : 0;
+      const ivaStr = p.esente_iva
+        ? `<div style="font-size:10px;color:var(--color-text-muted)">esente IVA</div>`
+        : `<div style="font-size:10px;color:var(--color-text-muted)">+ IVA ${formatEur(iva22)}</div>`;
       return `<tr>
         <td><span class="badge-tipo ${tipoClass}">${tipoLabel}</span>${esente}</td>
         <td>${dettaglio}</td>
-        <td style="text-align:right;font-variant-numeric:tabular-nums">${formatEur(p.importo)}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${formatEur(p.importo)}${ivaStr}</td>
         <td style="text-align:center">
           <button class="btn btn-icon btn-ghost" style="color:var(--color-error);font-size:12px"
             onclick="deletePraticaDet(${p.id})">🗑</button>
@@ -3260,7 +3341,7 @@ function _renderIvTabella() {
     let totaleCliente = 0;
     const celle = colonne.map(c => {
       const cella = r.celle[c.voce_id];
-      if (!cella || !cella.applicabile)
+      if (!cella || !cella.attiva)
         return `<td><span class="variabili-cell-na">×</span></td>`;
       const qta = cella.qta ?? 0;
       const importo = qta * (cella.prezzo || 0);
@@ -3307,7 +3388,7 @@ document.getElementById('btnCaricaVariabili')?.addEventListener('click', async (
     .map(i => ({ ditta_id: +i.dataset.ditta, voce_id: +i.dataset.voce, qta: +i.value }));
   if (!righe.length) { toast('Nessuna quantità inserita', 'error'); return; }
   try {
-    const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, righe });
+    const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, dati: righe });
     toast(`Costi variabili caricati (${res.aggiunte || righe.length} voci)`, 'success');
     closeModal('modalInserimentoVariabili');
     loadDitte();

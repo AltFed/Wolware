@@ -28,22 +28,19 @@ def get_previsionale(ditta_id, anno):
             return jsonify({'error': 'Cliente non trovato'}), 404
 
         voci = db.execute(
-            '''SELECT dv.*, mg.tipo as mg_tipo
-               FROM ditta_voci dv
-               LEFT JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
-               WHERE dv.ditta_id=?''',
+            'SELECT dv.* FROM ditta_voci dv WHERE dv.ditta_id=?',
             (ditta_id,)
         ).fetchall()
 
         # Calcola previsto per mese
         previsto = {m: 0.0 for m in range(1, 13)}
         for v in voci:
-            tipo = v['mg_tipo'] or v.get('tipo') or ''
-            if tipo in ('costi_fissi_mensili', 'fissi_mensili'):
+            tipo = v['tipo'] or ''
+            if tipo in ('costi_fissi_mensili', 'fisso_mensile'):
                 # Applicato ogni mese
                 for m in range(1, 13):
                     previsto[m] += float(v['prezzo'] or 0)
-            elif tipo in ('costi_fissi_annuali', 'fissi_annuali'):
+            elif tipo in ('costi_fissi_annuali', 'fisso_annuale'):
                 # Solo nei mesi indicati in mesi_json
                 try:
                     mesi_abilitati = json.loads(v['mesi_json'] or '[]')
