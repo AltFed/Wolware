@@ -28,8 +28,7 @@ MESI_NOMI = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio',
 # ═══════════════════════════════════════════════════════════
 
 def _voce_attiva_nel_mese(voce, mese: int, tipo: str) -> bool:
-    if tipo in ('costi_fissi_mensili', 'costi_variabili_mensili',
-                'fisso_mensile', 'variabile_mensile'):
+    if tipo in ('costi_fissi_mensili', 'costi_variabili_mensili'):
         return True
     # annuali: controlla mesi_json
     mesi_json = voce.get('mesi_json') if isinstance(voce, dict) else voce['mesi_json']
@@ -261,21 +260,15 @@ def variabili_tabella():
 
     db = get_db()
     try:
-        _TIPI_VAR = ('costi_variabili_mensili', 'costi_variabili_annuali',
-                     'variabile_mensile', 'variabile_annuale')
-
-        # Raccoglie tutte le voci variabili distinte.
-        # LEFT JOIN su macrogruppi: se macrogruppo_id è NULL usa dv.tipo come fallback.
+        # Raccoglie tutte le voci variabili distinte
         tutte_voci = db.execute(
             '''SELECT DISTINCT dv.voce_costo_id, dv.nome, dv.prezzo,
-                      dv.macrogruppo_nome, dv.mesi_json,
-                      COALESCE(mg.tipo, dv.tipo) as mg_tipo
+                      dv.macrogruppo_nome, mg.tipo as mg_tipo, dv.mesi_json
                FROM ditta_voci dv
-               LEFT JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
+               JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
                JOIN ditte d ON d.id = dv.ditta_id
-               WHERE COALESCE(mg.tipo, dv.tipo) IN (?,?,?,?)
-                 AND d.archiviato=0''',
-            _TIPI_VAR
+               WHERE mg.tipo IN (?,?) AND d.archiviato=0''',
+            ('costi_variabili_mensili', 'costi_variabili_annuali')
         ).fetchall()
 
         # Filtra per mese: mensili sempre visibili, annuali solo nei mesi configurati
@@ -284,19 +277,13 @@ def variabili_tabella():
         for v in tutte_voci:
             if v['voce_costo_id'] in colonne_ids:
                 continue
-            tipo_eff = v['mg_tipo']
-            # Normalizza vecchi tipi
-            if tipo_eff == 'variabile_mensile':
-                tipo_eff = 'costi_variabili_mensili'
-            elif tipo_eff == 'variabile_annuale':
-                tipo_eff = 'costi_variabili_annuali'
-            attiva = _voce_attiva_nel_mese(dict(v), mese, tipo_eff)
+            attiva = _voce_attiva_nel_mese(dict(v), mese, v['mg_tipo'])
             if attiva:
                 colonne.append({
                     'voce_id':   v['voce_costo_id'],
                     'nome':      v['nome'],
                     'mg_nome':   v['macrogruppo_nome'],
-                    'tipo':      tipo_eff,
+                    'tipo':      v['mg_tipo'],
                 })
                 colonne_ids.add(v['voce_costo_id'])
 
@@ -309,26 +296,25 @@ def variabili_tabella():
         for ditta in ditte:
             celle = {}
             for col in colonne:
-                # Verifica che la ditta abbia questa voce (LEFT JOIN per macrogruppo_id NULL)
+                # Verifica che la ditta abbia questa voce
                 dv = db.execute(
-                    '''SELECT dv.id, dv.prezzo, dv.mesi_json,
-                              COALESCE(mg.tipo, dv.tipo) as mg_tipo
+                    '''SELECT dv.id, dv.prezzo, dv.mesi_json
                        FROM ditta_voci dv
-                       LEFT JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
+                       JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
                        WHERE dv.ditta_id=? AND dv.voce_costo_id=?
-                         AND COALESCE(mg.tipo, dv.tipo) IN (?,?,?,?)''',
-                    (ditta['id'], col['voce_id']) + _TIPI_VAR
+                         AND mg.tipo IN (?,?)''',
+                    (ditta['id'], col['voce_id'],
+                     'costi_variabili_mensili', 'costi_variabili_annuali')
                 ).fetchone()
 
                 if dv and _voce_attiva_nel_mese(dict(dv), mese, col['tipo']):
-                    # Cerca quantità già inserita per questo mese (accetta entrambi i tipi)
+                    # Cerca quantità già inserita per questo mese
                     esistente = db.execute(
                         '''SELECT quantita FROM pratiche
                            WHERE ditta_id=? AND voce_id=? AND anno=? AND mese=?
-                             AND tipo IN (?,?,?,?)''',
+                             AND tipo IN (?,?)''',
                         (ditta['id'], col['voce_id'], anno, mese,
-                         'costi_variabili_mensili', 'costi_variabili_annuali',
-                         'variabile_mensile', 'variabile_annuale')
+                         'costi_variabili_mensili', 'costi_variabili_annuali')
                     ).fetchone()
                     celle[col['voce_id']] = {
                         'attiva':  True,
@@ -372,14 +358,12 @@ def variabili_carica():
             voce_id  = int(item['voce_id'])
             qta      = int(item.get('qta', 0))
 
-            _TIPI_V = ('costi_variabili_mensili', 'costi_variabili_annuali',
-                       'variabile_mensile', 'variabile_annuale')
-
             esistente = db.execute(
                 '''SELECT id FROM pratiche
                    WHERE ditta_id=? AND voce_id=? AND anno=? AND mese=?
-                     AND tipo IN (?,?,?,?)''',
-                (ditta_id, voce_id, anno, mese) + _TIPI_V
+                     AND tipo IN (?,?)''',
+                (ditta_id, voce_id, anno, mese,
+                 'costi_variabili_mensili', 'costi_variabili_annuali')
             ).fetchone()
 
             if qta == 0:
@@ -388,12 +372,12 @@ def variabili_carica():
                     eliminati += 1
                 continue
 
-            # Recupera info voce (LEFT JOIN per gestire macrogruppo_id NULL)
+            # Recupera info voce
             voce_info = db.execute(
                 '''SELECT dv.nome, dv.prezzo, dv.macrogruppo_nome, dv.esente_iva,
-                          COALESCE(mg.tipo, dv.tipo) as mg_tipo
+                          mg.tipo as mg_tipo
                    FROM ditta_voci dv
-                   LEFT JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
+                   JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
                    WHERE dv.ditta_id=? AND dv.voce_costo_id=?''',
                 (ditta_id, voce_id)
             ).fetchone()
@@ -401,12 +385,6 @@ def variabili_carica():
                 continue
 
             importo = round(float(voce_info['prezzo'] or 0) * qta, 2)
-            # Normalizza tipo per pratiche
-            mg_tipo = voce_info['mg_tipo'] or 'costi_variabili_mensili'
-            if mg_tipo == 'variabile_mensile':
-                mg_tipo = 'costi_variabili_mensili'
-            elif mg_tipo == 'variabile_annuale':
-                mg_tipo = 'costi_variabili_annuali'
 
             if esistente:
                 db.execute(
@@ -423,273 +401,13 @@ def variabili_carica():
                     (ditta_id, voce_id, anno, mese,
                      voce_info['nome'], qta,
                      float(voce_info['prezzo'] or 0), importo,
-                     mg_tipo, voce_info['macrogruppo_nome'],
+                     voce_info['mg_tipo'], voce_info['macrogruppo_nome'],
                      int(voce_info['esente_iva'] or 0))
                 )
             salvati += 1
 
         db.commit()
         return jsonify({'ok': True, 'salvati': salvati, 'eliminati': eliminati})
-    finally:
-        db.close()
-
-
-# ═══════════════════════════════════════════════════════════
-# BLOCCO — VARIABILI PAGHE (4 colonne fisse: CED, A, V, C)
-# ═══════════════════════════════════════════════════════════
-
-# Definizione fissa delle 4 colonne paghe
-_COLONNE_PAGHE = [
-    {'id': 'ced',  'label': 'Nº CED', 'tipo': 'var_ced',  'kw': ['ced']},
-    {'id': 'ass',  'label': 'A',       'tipo': 'var_ass',  'kw': ['assun']},
-    {'id': 'var',  'label': 'V',       'tipo': 'var_var',  'kw': ['varia']},
-    {'id': 'cess', 'label': 'C',       'tipo': 'var_cess', 'kw': ['cess']},
-]
-
-
-def _prezzo_voce_paghe(db, ditta_id, kw_list):
-    """Cerca il prezzo di una voce paghe nel tariffario del cliente per keyword."""
-    voci = db.execute(
-        '''SELECT dv.prezzo FROM ditta_voci dv
-           JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
-           WHERE dv.ditta_id=?
-             AND mg.tipo IN ('costi_variabili_mensili','costi_variabili_annuali')
-           ORDER BY dv.prezzo DESC''',
-        (ditta_id,)
-    ).fetchall()
-    for v in voci:
-        nome_lower = (v.get('nome') or '').lower() if isinstance(v, dict) else ''
-        for kw in kw_list:
-            if kw in nome_lower:
-                return float(v['prezzo'] or 0)
-    # Fallback: cerca per nome senza filtro tipo
-    row = db.execute(
-        '''SELECT dv.nome, dv.prezzo FROM ditta_voci dv
-           WHERE dv.ditta_id=?''', (ditta_id,)
-    ).fetchall()
-    for v in row:
-        v = dict(v)
-        for kw in kw_list:
-            if kw in (v.get('nome') or '').lower():
-                return float(v.get('prezzo') or 0)
-    return 0.0
-
-
-@bp.route('/api/strumenti/variabili-paghe', methods=['GET'])
-@login_required
-def variabili_paghe_tabella():
-    """
-    Restituisce tutti i clienti non archiviati con le quantità paghe
-    (ced, ass, var, cess) per il mese selezionato.
-    """
-    anno = int(request.args.get('anno', 2026))
-    mese = int(request.args.get('mese', 1))
-
-    db = get_db()
-    try:
-        ditte = db.execute(
-            'SELECT id, ragione_sociale FROM ditte WHERE archiviato=0 ORDER BY ragione_sociale COLLATE NOCASE'
-        ).fetchall()
-
-        righe = []
-        for ditta in ditte:
-            did = ditta['id']
-            celle = {}
-            for col in _COLONNE_PAGHE:
-                esistente = db.execute(
-                    '''SELECT quantita FROM pratiche
-                       WHERE ditta_id=? AND anno=? AND mese=? AND tipo=?''',
-                    (did, anno, mese, col['tipo'])
-                ).fetchone()
-                celle[col['id']] = int(esistente['quantita']) if esistente else 0
-
-            righe.append({
-                'ditta_id':   did,
-                'ditta_nome': ditta['ragione_sociale'],
-                'celle':      celle,
-            })
-
-        return jsonify({'colonne': _COLONNE_PAGHE, 'righe': righe})
-    finally:
-        db.close()
-
-
-@bp.route('/api/strumenti/variabili-paghe/carica', methods=['POST'])
-@login_required
-def variabili_paghe_carica():
-    """
-    Salva le quantità paghe per il mese.
-    Body: { anno, mese, righe: [{ ditta_id, ced, ass, var, cess }] }
-    Se quantità = 0, elimina la voce.
-    """
-    d    = request.get_json() or {}
-    anno = int(d.get('anno', 2026))
-    mese = int(d.get('mese', 1))
-    righe = d.get('righe', [])
-
-    db = get_db()
-    try:
-        salvati = eliminati = 0
-        for riga in righe:
-            did = int(riga['ditta_id'])
-            for col in _COLONNE_PAGHE:
-                qta = int(riga.get(col['id'], 0) or 0)
-                tipo = col['tipo']
-                esistente = db.execute(
-                    'SELECT id FROM pratiche WHERE ditta_id=? AND anno=? AND mese=? AND tipo=?',
-                    (did, anno, mese, tipo)
-                ).fetchone()
-
-                if qta == 0:
-                    if esistente:
-                        db.execute('DELETE FROM pratiche WHERE id=?', (esistente['id'],))
-                        eliminati += 1
-                    continue
-
-                prezzo  = _prezzo_voce_paghe(db, did, col['kw'])
-                importo = round(prezzo * qta, 2)
-                nomi    = {'ced': 'Cedolini', 'ass': 'Assunzioni',
-                           'var': 'Variazioni', 'cess': 'Cessazioni'}
-                nome    = nomi[col['id']]
-
-                if esistente:
-                    db.execute(
-                        'UPDATE pratiche SET quantita=?, prezzo=?, importo=? WHERE id=?',
-                        (qta, prezzo, importo, esistente['id'])
-                    )
-                else:
-                    db.execute(
-                        '''INSERT INTO pratiche
-                           (ditta_id, anno, mese, tipo, nome, quantita, prezzo, importo, data_esecuzione)
-                           VALUES (?,?,?,?,?,?,?,?,date('now'))''',
-                        (did, anno, mese, tipo, nome, qta, prezzo, importo)
-                    )
-                salvati += 1
-
-        db.commit()
-        return jsonify({'ok': True, 'salvati': salvati, 'eliminati': eliminati})
-    except Exception as e:
-        db.rollback()
-        return jsonify({'error': str(e)}), 500
-    finally:
-        db.close()
-
-
-# ═══════════════════════════════════════════════════════════
-# BLOCCO — DIPENDENTI ATTIVI (collegamento Scadenzario → costi mensili)
-# ═══════════════════════════════════════════════════════════
-
-@bp.route('/api/strumenti/dipendenti-costi', methods=['GET'])
-@login_required
-def dipendenti_costi():
-    """
-    Restituisce i dipendenti attivi per una specifica ditta,
-    con la loro retribuzione e lo stato di caricamento per il mese selezionato.
-    Query params: ditta_id (required), anno, mese
-    """
-    import datetime as _dt
-    import json as _json
-    ditta_id = request.args.get('ditta_id', type=int)
-    anno     = request.args.get('anno', type=int, default=_dt.date.today().year)
-    mese     = request.args.get('mese', type=int, default=_dt.date.today().month)
-
-    if not ditta_id:
-        return jsonify([])
-
-    db = get_db()
-    try:
-        rows = db.execute(
-            '''SELECT id, cognome, nome, tipo_contratto,
-                      retribuzione_base, netto_busta, retribuzione_pt,
-                      data_assunzione, data_fine_contratto,
-                      cessazione_json, annullata
-               FROM assunzioni
-               WHERE ditta_id=? AND annullata=0
-               ORDER BY cognome, nome''',
-            (ditta_id,)
-        ).fetchall()
-
-        today = _dt.date.today().isoformat()
-        result = []
-        for r in rows:
-            r = dict(r)
-            cess_raw = r.get('cessazione_json')
-            if cess_raw:
-                try:
-                    c = _json.loads(cess_raw) if isinstance(cess_raw, str) else cess_raw
-                    if c and c.get('data', '9999-99-99') < today:
-                        continue
-                except Exception:
-                    pass
-
-            esistente = db.execute(
-                '''SELECT id, quantita, importo FROM pratiche
-                   WHERE ditta_id=? AND anno=? AND mese=?
-                     AND tipo='costo_dipendente' AND note=?''',
-                (ditta_id, anno, mese, f'assunzione:{r["id"]}')
-            ).fetchone()
-
-            r['gia_caricato'] = bool(esistente)
-            r['pratica_id']   = esistente['id']       if esistente else None
-            r['qta_caricata'] = esistente['quantita'] if esistente else 1
-            result.append(r)
-
-        return jsonify(result)
-    finally:
-        db.close()
-
-
-@bp.route('/api/strumenti/dipendenti-costi/carica', methods=['POST'])
-@login_required
-def dipendenti_costi_carica():
-    """
-    Salva i costi dipendenti come pratiche di tipo 'costo_dipendente'.
-    Body: { anno, mese, voci: [{ ditta_id, assunzione_id, nome_dipendente, prezzo, qta }] }
-    """
-    d    = request.get_json() or {}
-    anno = int(d.get('anno', 2026))
-    mese = int(d.get('mese', 1))
-    voci = d.get('voci', [])
-
-    db = get_db()
-    try:
-        salvati = 0
-        for v in voci:
-            ditta_id  = int(v['ditta_id'])
-            ass_id    = int(v['assunzione_id'])
-            nome_dip  = v.get('nome_dipendente', '')
-            prezzo    = float(v.get('prezzo', 0))
-            qta       = float(v.get('qta', 1))
-            importo   = round(prezzo * qta, 2)
-            note_key  = f'assunzione:{ass_id}'
-
-            esistente = db.execute(
-                '''SELECT id FROM pratiche
-                   WHERE ditta_id=? AND anno=? AND mese=?
-                     AND tipo='costo_dipendente' AND note=?''',
-                (ditta_id, anno, mese, note_key)
-            ).fetchone()
-
-            if esistente:
-                db.execute(
-                    'UPDATE pratiche SET quantita=?, prezzo=?, importo=? WHERE id=?',
-                    (qta, prezzo, importo, esistente['id'])
-                )
-            else:
-                db.execute(
-                    '''INSERT INTO pratiche
-                       (ditta_id, anno, mese, tipo, nome, quantita, prezzo, importo, note, data_esecuzione)
-                       VALUES (?,?,?,'costo_dipendente',?,?,?,?,?,date('now'))''',
-                    (ditta_id, anno, mese,
-                     f'Dipendente: {nome_dip}', qta, prezzo, importo, note_key)
-                )
-            salvati += 1
-
-        db.commit()
-        return jsonify({'ok': True, 'salvati': salvati})
-    except Exception as e:
-        db.rollback()
-        return jsonify({'error': str(e)}), 500
     finally:
         db.close()
 

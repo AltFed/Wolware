@@ -42,7 +42,6 @@ def create_app():
     from routes.solleciti           import bp as solleciti_bp
     from routes.prima_nota          import bp as prima_nota_bp
     from routes.rendiconto          import bp as rendiconto_bp
-    from routes.scadenzario         import bp as scadenzario_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(events_bp)
@@ -62,7 +61,6 @@ def create_app():
     app.register_blueprint(solleciti_bp)
     app.register_blueprint(prima_nota_bp)
     app.register_blueprint(rendiconto_bp)
-    app.register_blueprint(scadenzario_bp)
 
     return app
 

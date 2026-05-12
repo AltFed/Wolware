@@ -36,6 +36,7 @@ function switchTab(tabName) {
   if (panel) panel.classList.add('active');
   document.querySelectorAll(`[data-tab="${tabName}"]`).forEach(b => b.classList.add('active'));
   if (tabName === 'home') { loadStats(); loadHomePratiche(); }
+  if (tabName === 'pratiche') loadPratiche();
   if (tabName === 'ditte') loadDitte();
 }
 document.querySelectorAll('[data-tab]').forEach(el => {
@@ -51,9 +52,8 @@ const UnsavedGuard = (() => {
   const GUARDED = [
     'modalDitta','modalAssunzione','modalPratica','modalNuovoTariffario',
     'modalNuovoMacrogruppo','modalDateGestione','modalCambiaTariffario',
-    'modalVoceCustom','modalVariabiliPaghe','modalCostiMassivi',
-    'modalArrotondamento','modalNuovoUtente','modalResetPassword',
-    'modalNuovaProroga','modalNuovaCessazione','modalAnnullamento'
+    'modalVoceCustom','modalInserimentoVariabili','modalCostiMassivi',
+    'modalArrotondamento','modalNuovoUtente','modalResetPassword'
   ];
 
   // Mappa modalId → id del bottone Salva corrispondente
@@ -65,6 +65,7 @@ const UnsavedGuard = (() => {
     'modalVoceCustom':           'btnSalvaVoceCustom',
     'modalDateGestione':         'btnSalvaDateGestione',
     'modalArrotondamento':       'btnSalvaArrotondamento',
+    'modalInserimentoVariabili': 'btnSalvaInserimentoVariabili',
     'modalCostiMassivi':         'btnContabilizzaEsegui',
     'modalAssunzione':           'btnSalvaBozzaAssunzione',
   };
@@ -254,7 +255,6 @@ async function loadPratiche() {
 }
 function renderPratiche(list) {
   const tbody = document.getElementById('praticheTableBody');
-  if (!tbody) return;
   if (!list.length) {
     tbody.innerHTML = `<tr><td colspan="9" class="empty-row"><span class="empty-icon">📋</span><br>Nessuna pratica trovata.</td></tr>`; return;
   }
@@ -276,10 +276,9 @@ function renderPratiche(list) {
     </div></td>
   </tr>`).join('');
 }
-document.getElementById('filterPratiche')?.addEventListener('input', filterPratiche);
-document.getElementById('filterStato')?.addEventListener('change', filterPratiche);
+document.getElementById('filterPratiche').addEventListener('input', filterPratiche);
+document.getElementById('filterStato').addEventListener('change', filterPratiche);
 function filterPratiche() {
-  if (!document.getElementById('filterPratiche')) return;
   const q = document.getElementById('filterPratiche').value.toLowerCase();
   const stato = document.getElementById('filterStato').value;
   let f = allPratiche;
@@ -775,14 +774,12 @@ function resetDittaForm() {
   if (annotEl) annotEl.value = '';
   resetModalTabs();
 }
-async function openDittaModal() {
+function openDittaModal() {
   resetDittaForm();
   const btnDelModal = document.getElementById('btnDeleteDittaModal');
   if (btnDelModal) btnDelModal.style.display = 'none';
   const btnArchModal2 = document.getElementById('btnArchiviaDittaModal');
   if (btnArchModal2) btnArchModal2.style.display = 'none';
-  // Popola la select dei tariffari anche per nuove ditte
-  await loadTariffariSelectDitta(null);
   openModal('modalDitta');
 }
 
@@ -1109,114 +1106,15 @@ document.getElementById('modalAssunzione').addEventListener('input', () => {
   document.getElementById('btnAssumiBtn').style.display = ok ? 'inline-flex' : 'none';
 });
 
-document.getElementById('btnSalvaBozzaAssunzione').addEventListener('click', async () => {
-  const g = id => document.getElementById(id);
-  const v = id => { const el = g(id); return el ? el.value.trim() : ''; };
-  const ck = id => { const el = g(id); return el ? el.checked : false; };
-
-  // Validazione minima
-  const cognome = v('ass_cognome');
-  const nome = v('ass_nome');
-  const errEl = g('formAssunzioneError');
-  if (!cognome || !nome) {
-    if (errEl) { errEl.textContent = 'Cognome e Nome sono obbligatori.'; errEl.style.display = ''; }
-    return;
-  }
-  if (errEl) errEl.style.display = 'none';
-
-  const aid = v('ass_id');
-  const payload = {
-    stato: 'bozza',
-    ditta_id: v('ass_ditta_id') ? parseInt(v('ass_ditta_id'), 10) : null,
-    cognome, nome,
-    codice_fiscale: v('ass_cf'),
-    sesso: v('ass_sesso'),
-    data_nascita: v('ass_data_nascita'),
-    comune_nascita: v('ass_comune_nascita'),
-    catastale_nascita: v('ass_catastale_nascita'),
-    comune_residenza: v('ass_comune_residenza'),
-    catastale_residenza: v('ass_catastale_residenza'),
-    cap_residenza: v('ass_cap_residenza'),
-    indirizzo_residenza: v('ass_indirizzo_residenza'),
-    codice_istruzione: v('ass_cod_istruzione'),
-    livello_istruzione: v('ass_livello_istruzione'),
-    lavoratore_straniero: ck('ass_straniero'),
-    numero_permesso: v('ass_num_permesso'),
-    motivo_permesso: v('ass_motivo_permesso'),
-    rilasciato_da: v('ass_rilasciato_da'),
-    data_rilascio_permesso: v('ass_data_rilascio_perm'),
-    data_scadenza_permesso: v('ass_data_scadenza_perm'),
-    in_rinnovo: ck('ass_in_rinnovo'),
-    data_assunzione: v('ass_data_inizio'),
-    data_fine_contratto: v('ass_data_fine'),
-    tipo_contratto: v('ass_tipologia_contratto'),
-    qualifica: v('ass_qualifica'),
-    livello: v('ass_livello_contr'),
-    codice_istat: v('ass_cod_qualifica_istat'),
-    qualifica_istat: v('ass_qualifica_istat'),
-    mansione: v('ass_mansionario'),
-    tipologia_orario: v('ass_tipo_orario'),
-    ore_settimanali: v('ass_ore_sett'),
-    numero_mensilita: v('ass_mensil'),
-    retribuzione_base: v('ass_retrib_base'),
-    retribuzione_pt: v('ass_retrib_pt'),
-    netto_busta: v('ass_importo_netto'),
-    periodo_prova: v('ass_periodo_prova'),
-    ferie: v('ass_ferie'),
-    permessi_contrattuali: v('ass_permessi_cont'),
-    preavviso: v('ass_preavviso'),
-    distribuzione_orario: v('ass_distr_orario'),
-    assunzione_obbligatoria: ck('ass_obbligatoria') || false,
-    tipo_assunzione_obbligatoria: v('ass_tipo_obbligatoria'),
-  };
-
-  try {
-    const url = aid ? `/api/assunzioni/${aid}` : '/api/assunzioni';
-    const method = aid ? 'PUT' : 'POST';
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Errore salvataggio');
-    }
-    UnsavedGuard.markSaved();
-    closeModal('modalAssunzione');
-    toast(aid ? 'Assunzione aggiornata' : 'Assunzione salvata come bozza', 'success');
-    // Ricarica scadenzario se attivo
-    if (document.getElementById('tab-scadenzario')?.classList.contains('active')) {
-      ScadenzarioModule.init();
-    }
-  } catch (e) {
-    if (errEl) { errEl.textContent = e.message; errEl.style.display = ''; }
-  }
+document.getElementById('btnSalvaBozzaAssunzione').addEventListener('click', () => {
+  UnsavedGuard.markSaved();
+  toast('Bozza salvata', 'success');
 });
-
 document.getElementById('btnDuplicaAssunzione').addEventListener('click', () => {
   toast('Duplica — work in progress', 'info');
 });
-document.getElementById('btnAssumiBtn').addEventListener('click', async () => {
-  // Imposta stato = 'inviata' e salva
-  const g = id => document.getElementById(id);
-  const aid = g('ass_id')?.value;
-  if (!aid) { toast('Prima salva come bozza', 'info'); return; }
-  try {
-    const res = await fetch(`/api/assunzioni/${aid}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stato: 'inviata' }),
-    });
-    if (!res.ok) throw new Error();
-    closeModal('modalAssunzione');
-    toast('Pratica inviata!', 'success');
-    if (document.getElementById('tab-scadenzario')?.classList.contains('active')) {
-      ScadenzarioModule.init();
-    }
-  } catch {
-    toast('Errore invio pratica', 'error');
-  }
+document.getElementById('btnAssumiBtn').addEventListener('click', () => {
+  toast('Assunzione avviata — work in progress', 'success');
 });
 
 setupDropdown('btnNuovaPratica', 'dropdownPratica', openPraticaModal);
@@ -2405,16 +2303,10 @@ function renderDittaVoci(voci) {
 
 // Carica voci dal server
 async function loadDittaVoci(dittaId) {
-  // Carica sempre la lista tariffari nel select (indipendente dalle voci ditta)
-  await loadTariffariSelectDitta(null);
   if (!dittaId) return;
   try {
     const data = await api(`/api/ditte/${dittaId}/tariffario`);
-    // Aggiorna la selezione corrente nel select
-    const sel = document.getElementById('dittaTariffarioSelect');
-    if (sel && data.tariffario) {
-      sel.value = String(data.tariffario.id);
-    }
+    await loadTariffariSelectDitta(data.tariffario ? data.tariffario.id : null);
     renderDittaVoci(data.voci);
     // Mostra bottone Cambia Tariffario solo su ditte esistenti con tariffario
     const btnCambia = document.getElementById('btnCambiaTariffario');
@@ -3328,92 +3220,96 @@ document.getElementById('btnApplicaCostiMassivi')?.addEventListener('click', asy
   } catch(e) { toast('Errore: ' + e.message, 'error'); }
 });
 
-/* ── 4.3 Variabili Paghe (N° CED / A / V / C) ───────────────────────────── */
-let vpDati = null;
+/* ── 4.3 Inserimento Costi Variabili ─────────────────────────────────────── */
+let ivTabData = null;
 
-document.getElementById('btnVariabiliPaghe')?.addEventListener('click', () => {
+document.getElementById('btnInserimentoCostiVariabili')?.addEventListener('click', () => {
   const now = new Date();
-  _buildAnnoSel('vp_anno', now.getFullYear());
-  document.getElementById('vp_mese').value = now.getMonth() + 1;
-  vpDati = null;
-  openModal('modalVariabiliPaghe');
-  _loadVpTabella();
+  _buildAnnoSel('iv_anno', now.getFullYear());
+  document.getElementById('iv_mese').value = now.getMonth() + 1;
+  ivTabData = null;
+  document.getElementById('ivTabella').innerHTML =
+    '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Seleziona anno e mese e clicca "Carica".</p>';
+  openModal('modalInserimentoVariabili');
+  _loadIvTabella();
 });
 
-['vp_anno','vp_mese'].forEach(id =>
-  document.getElementById(id)?.addEventListener('change', _loadVpTabella));
+['iv_anno','iv_mese'].forEach(id =>
+  document.getElementById(id)?.addEventListener('change', _loadIvTabella));
 
-async function _loadVpTabella() {
-  const anno = document.getElementById('vp_anno')?.value;
-  const mese = document.getElementById('vp_mese')?.value;
+async function _loadIvTabella() {
+  const anno = document.getElementById('iv_anno').value;
+  const mese = document.getElementById('iv_mese').value;
   if (!anno || !mese) return;
-  const el = document.getElementById('vpTabella');
-  el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Caricamento...</p>';
   try {
-    // Usa il backend dinamico che legge le voci dal tariffario di ogni cliente
-    vpDati = await api(`/api/strumenti/variabili/tabella?anno=${anno}&mese=${mese}`);
-    _renderVpTabella();
-  } catch(e) {
-    el.innerHTML = `<p style="color:var(--color-error);font-size:var(--text-sm)">Errore: ${e.message}</p>`;
-  }
+    ivTabData = await api(`/api/strumenti/variabili/tabella?anno=${anno}&mese=${mese}`);
+    _renderIvTabella();
+  } catch(e) { toast('Errore caricamento tabella: ' + e.message, 'error'); }
 }
 
-function _renderVpTabella() {
-  const el = document.getElementById('vpTabella');
-  if (!vpDati) return;
-
-  const { colonne, righe } = vpDati;
-
-  if (!colonne || !colonne.length) {
-    el.innerHTML = `<p style="color:var(--color-text-muted);font-size:var(--text-sm)">
-      Nessuna voce variabile configurata nel tariffario per questo mese.<br>
-      <span style="font-size:var(--text-xs)">Aggiungi voci "Costi Variabili Mensili" o "Costi Variabili Annuali" nei tariffari dei clienti.</span>
-    </p>`;
+function _renderIvTabella() {
+  const { colonne, righe } = ivTabData;
+  const el = document.getElementById('ivTabella');
+  if (!colonne.length) {
+    el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Nessuna voce variabile disponibile per questo mese.</p>';
     return;
   }
-
-  // Colore header: mensili = blu, annuali = arancio
-  const thCls = c => c.tipo === 'costi_variabili_annuali' ? 'vp-col-var' : 'vp-col-ced';
   const ths = colonne.map(c =>
-    `<th class="vp-th-col ${thCls(c)}" title="${c.mg_nome}">${c.nome}</th>`).join('');
-
+    `<th title="${c.mg_nome}">${c.nome}</th>`).join('');
   const trs = righe.map(r => {
+    let totaleCliente = 0;
     const celle = colonne.map(c => {
       const cella = r.celle[c.voce_id];
-      // Cella non applicabile (il cliente non ha questa voce nel tariffario)
-      if (!cella || !cella.attiva)
-        return `<td style="color:var(--color-text-faint);text-align:center">×</td>`;
+      if (!cella || !cella.applicabile)
+        return `<td><span class="variabili-cell-na">×</span></td>`;
       const qta = cella.qta ?? 0;
-      const hi = qta > 0 ? 'background:var(--color-primary-faint,rgba(99,102,241,.12))' : '';
-      return `<td style="${hi}"><input type="number" min="0" step="1" value="${qta}"
-        class="vp-input"
+      const importo = qta * (cella.prezzo || 0);
+      totaleCliente += importo;
+      const compilata = qta > 0 ? 'style="background:var(--color-primary-highlight)"' : '';
+      return `<td ${compilata}><input type="number" min="0" step="1" value="${qta}"
         data-ditta="${r.ditta_id}" data-voce="${c.voce_id}" data-prezzo="${cella.prezzo || 0}"
-        oninput="this.closest('td').style.background=+this.value>0?'var(--color-primary-faint,rgba(99,102,241,.12))':''"/></td>`;
+        class="iv-input"
+        oninput="this.closest('td').style.background=+this.value>0?'var(--color-primary-highlight)':'';_aggiornaRigaTotale(this)"
+        /></td>`;
     }).join('');
-    return `<tr><td class="vp-td-cliente">${r.ditta_nome}</td>${celle}</tr>`;
+    return `<tr>
+      <td class="col-cliente">${r.ditta_nome}</td>
+      ${celle}
+      <td class="iv-tot-cliente" id="iv-tot-${r.ditta_id}" style="font-weight:600;text-align:right;white-space:nowrap;color:var(--color-primary)">
+        € ${totaleCliente.toFixed(2)}
+      </td>
+    </tr>`;
   }).join('');
-
-  el.innerHTML = `<table class="vp-table">
-    <thead><tr>
-      <th class="vp-th-cliente">Cliente</th>${ths}
-    </tr></thead>
+  el.innerHTML = `<table class="variabili-table">
+    <thead><tr><th>Cliente</th>${ths}<th style="text-align:right">Totale</th></tr></thead>
     <tbody>${trs}</tbody>
   </table>`;
 }
 
-document.getElementById('btnCaricaVariabiliPaghe')?.addEventListener('click', async () => {
-  const anno = +document.getElementById('vp_anno').value;
-  const mese = +document.getElementById('vp_mese').value;
-  const inputs = [...document.querySelectorAll('.vp-input')];
-  // Usa lo stesso formato del backend esistente variabili/carica
+function _aggiornaRigaTotale(input) {
+  const dittaId = input.dataset.ditta;
+  const riga = input.closest('tr');
+  const inputs = riga.querySelectorAll('.iv-input');
+  let tot = 0;
+  inputs.forEach(inp => {
+    tot += (parseFloat(inp.value) || 0) * (parseFloat(inp.dataset.prezzo) || 0);
+  });
+  const totEl = document.getElementById(`iv-tot-${dittaId}`);
+  if (totEl) totEl.textContent = `€ ${tot.toFixed(2)}`;
+}
+
+document.getElementById('btnCaricaVariabili')?.addEventListener('click', async () => {
+  const anno = +document.getElementById('iv_anno').value;
+  const mese = +document.getElementById('iv_mese').value;
+  const inputs = [...document.querySelectorAll('.iv-input')];
   const righe = inputs
-    .filter(i => parseFloat(i.value) >= 0)
+    .filter(i => parseFloat(i.value) > 0)
     .map(i => ({ ditta_id: +i.dataset.ditta, voce_id: +i.dataset.voce, qta: +i.value }));
   if (!righe.length) { toast('Nessuna quantità inserita', 'error'); return; }
   try {
-    const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, dati: righe });
-    toast(`Variabili paghe caricate (${res.salvati} voci)`, 'success');
-    closeModal('modalVariabiliPaghe');
+    const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, righe });
+    toast(`Costi variabili caricati (${res.aggiunte || righe.length} voci)`, 'success');
+    closeModal('modalInserimentoVariabili');
     loadDitte();
   } catch(e) { toast('Errore: ' + e.message, 'error'); }
 });
@@ -5452,1083 +5348,6 @@ const Rendiconto = (() => {
 
   return { init };
 })();
-
-/* ══════════════════════════════════════════════════════════════════════════
-   SCADENZARIO MODULE
-   ══════════════════════════════════════════════════════════════════════════ */
-const ScadenzarioModule = (() => {
-  'use strict';
-
-  let _dati = [];          // tutte le assunzioni caricate
-  let _modalita = 'attivo'; // 'attivo' | 'archivio'
-  let _searchMatches = [];
-  let _searchIdx = 0;
-  let _openDropdownId = null; // id riga con dropdown aperto
-
-  // ── Mappa tipo contratto → etichetta ────────────────────────────────────
-  const TIPI_CONTRATTO = {
-    tempo_indeterminato: 'T. INDETERMINATO',
-    tempo_determinato: 'T. DETERMINATO',
-    apprendistato: 'APPRENDISTATO',
-    lavoro_intermittente: 'INTERMITTENTE',
-    lavoro_stagionale: 'STAGIONALE',
-    tirocinio: 'TIROCINIO',
-  };
-
-  const MOTIVI_CESSAZIONE = {
-    DL: 'Dimissioni volontarie', DC: 'Dimissioni per giusta causa',
-    LM: 'Licenziamento', SC: 'Scadenza contratto',
-    AC: 'Accordo consensuale', RM: 'Risoluz. periodo di prova',
-    DM: 'Decesso', PE: 'Pensionamento',
-  };
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
-  function _fmtDate(s) {
-    if (!s) return '—';
-    const p = s.split('-');
-    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : s;
-  }
-
-  function _fmtDateLabel(s) {
-    if (!s) return '';
-    const months = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-    const p = s.split('-');
-    if (p.length !== 3) return s;
-    const m = parseInt(p[1], 10) - 1;
-    return `${p[2]} ${months[m]} ${p[0]}`;
-  }
-
-  function _mesiLabel(anno, mese) {
-    const months = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
-      'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-    return `${months[mese - 1]} ${anno}`;
-  }
-
-  function _parseDateVal(s) {
-    if (!s) return null;
-    return new Date(s);
-  }
-
-  // ── Costruisce array di "scadenze" (eventi) da un'assunzione ────────────
-  function _eventiDaAssunzione(a) {
-    const eventi = [];
-    const ditta = a.ditta || {};
-
-    // Evento ASSUNZIONE — sempre presente, anche senza data
-    eventi.push({
-      tipo: 'assunzione',
-      data: a.data_assunzione || '',
-      data_pratica: a.data_unilav || '',
-      ass: a,
-      ditta,
-    });
-
-    // Proroghe
-    const proroghe = a.proroghe_json || [];
-    if (proroghe.length > 0) {
-      // L'ultima proroga è quella "attiva"
-      proroghe.forEach((pr, idx) => {
-        const isUltima = idx === proroghe.length - 1;
-        eventi.push({
-          tipo: isUltima ? 'proroga_attiva' : 'scadenza_prorogata',
-          data: pr.dataFineProroga || pr.data_fine_proroga || '',
-          data_pratica: a.data_unilav_scadenza || '',
-          prorogaIdx: idx,
-          ass: a,
-          ditta,
-        });
-      });
-    } else if (a.tipo_contratto === 'tempo_determinato' && a.data_fine_contratto) {
-      // Contratto a termine senza proroghe → scadenza contratto
-      eventi.push({
-        tipo: 'scadenza_contratto',
-        data: a.data_fine_contratto,
-        data_pratica: a.data_unilav_scadenza || '',
-        ass: a,
-        ditta,
-      });
-    }
-
-    // Trasformazione
-    if (a.trasformazione_json && a.trasformazione_json.data) {
-      const trasf = a.trasformazione_json;
-      eventi.push({
-        tipo: 'trasformazione',
-        data: trasf.data,
-        data_pratica: '',
-        ass: a,
-        ditta,
-      });
-    }
-
-    // Cessazione
-    if (a.cessazione_json && a.cessazione_json.data) {
-      eventi.push({
-        tipo: 'cessazione',
-        data: a.cessazione_json.data,
-        data_pratica: a.data_unilav_cessazione || '',
-        ass: a,
-        ditta,
-      });
-    }
-
-    // Annullamento
-    if (a.annullata) {
-      eventi.push({
-        tipo: 'annullamento',
-        data: a.data_annullamento || a.data_assunzione || '',
-        data_pratica: '',
-        ass: a,
-        ditta,
-      });
-    }
-
-    return eventi;
-  }
-
-  // ── Controlla se un'assunzione è "attiva" (non cessata, non annullata) ──
-  // Attivo = non annullata E (nessuna cessazione O cessazione futura)
-  function _isAssunzioneAttiva(a) {
-    if (a.annullata) return false;
-    const cess = a.cessazione_json;
-    if (cess && cess.data) {
-      const d = _parseDateVal(cess.data);
-      if (d) {
-        const oggi = new Date();
-        oggi.setHours(0, 0, 0, 0);
-        return d >= oggi; // cessazione futura → ancora attiva
-      }
-    }
-    return true;
-  }
-
-  // ── Raggruppa eventi per mese/anno ───────────────────────────────────────
-  function _raggruppaPerMese(eventi) {
-    const mappa = {};
-    eventi.forEach(ev => {
-      const d = _parseDateVal(ev.data);
-      // Senza data → gruppo speciale '0000-00' (in fondo)
-      const key = d
-        ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-        : '0000-00';
-      if (!mappa[key]) mappa[key] = {
-        anno: d ? d.getFullYear() : 0,
-        mese: d ? d.getMonth() + 1 : 0,
-        eventi: [],
-        senzaData: !d,
-      };
-      mappa[key].eventi.push(ev);
-    });
-    // Ordina per data discendente; '0000-00' (senza data) finisce in fondo
-    return Object.keys(mappa).sort().reverse().map(k => mappa[k]);
-  }
-
-  // ── Render principale ────────────────────────────────────────────────────
-  function _render(dati) {
-    const container = document.getElementById('scadenzarioContainer');
-    if (!container) return;
-
-    // Raccogli tutti gli eventi
-    let tuttiEventi = [];
-    dati.forEach(a => {
-      const ev = _eventiDaAssunzione(a);
-      if (_modalita === 'attivo') {
-        ev.forEach(e => { if (_isAssunzioneAttiva(e.ass)) tuttiEventi.push(e); });
-      } else {
-        ev.forEach(e => tuttiEventi.push(e));
-      }
-    });
-
-    // Ordina per data
-    tuttiEventi.sort((a, b) => {
-      const da = _parseDateVal(a.data), db = _parseDateVal(b.data);
-      if (!da || !db) return 0;
-      return db - da;
-    });
-
-    if (!tuttiEventi.length) {
-      container.innerHTML = `<div style="padding:var(--space-12);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto var(--space-3);display:block">
-          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-          <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        Nessuna pratica nel periodo selezionato</div>`;
-      return;
-    }
-
-    const gruppi = _raggruppaPerMese(tuttiEventi);
-    let html = `<table class="scad-table" id="scadTable">
-      <thead><tr>
-        <th style="width:100px">Data Scad.</th>
-        <th style="width:80px">Data Pratica</th>
-        <th style="width:80px">Sito</th>
-        <th style="width:180px">Azienda</th>
-        <th style="width:180px">Dipendente</th>
-        <th style="min-width:280px">Riepilogo Pratica</th>
-        <th style="width:170px">Azioni</th>
-      </tr></thead><tbody>`;
-
-    gruppi.forEach(gruppo => {
-      // Contatori per il mese
-      let nAss = 0, nVar = 0, nCess = 0;
-      gruppo.eventi.forEach(e => {
-        if (e.tipo === 'assunzione') nAss++;
-        else if (['proroga_attiva','scadenza_prorogata','trasformazione','scadenza_contratto'].includes(e.tipo)) nVar++;
-        else if (['cessazione','annullamento'].includes(e.tipo)) nCess++;
-      });
-
-      const meseLabel = gruppo.senzaData ? 'Data non impostata' : _mesiLabel(gruppo.anno, gruppo.mese);
-      html += `<tr class="scad-mese-header"><td colspan="7">
-        ${meseLabel}
-        ${nAss ? `<span class="scad-mese-badge"><span class="scad-mese-count verde">${nAss}</span></span>` : ''}
-        ${nVar ? `<span class="scad-mese-badge"><span class="scad-mese-count giallo">${nVar}</span></span>` : ''}
-        ${nCess ? `<span class="scad-mese-badge"><span class="scad-mese-count rosso">${nCess}</span></span>` : ''}
-      </td></tr>`;
-
-      gruppo.eventi.forEach(ev => { html += _renderRiga(ev); });
-    });
-
-    html += '</tbody></table>';
-    container.innerHTML = html;
-
-    // Rilega i checkbox del modale elimina (se presenti)
-    _bindEliminaCheckbox();
-  }
-
-  // ── Render singola riga ──────────────────────────────────────────────────
-  function _renderRiga(ev) {
-    const { tipo, data, data_pratica, ass, ditta } = ev;
-    const aid = ass.id;
-    const isAnn = tipo === 'annullamento' || ass.annullata;
-    const rowClass = isAnn ? 'scad-row-ann' : '';
-
-    // Cella data scadenza
-    let dataBadge;
-    if (tipo === 'assunzione') dataBadge = `<span class="scad-data-ass">${_fmtDate(data)}</span>`;
-    else if (tipo === 'cessazione') dataBadge = `<span class="scad-data-cess">${_fmtDate(data)}</span>`;
-    else if (['proroga_attiva','scadenza_contratto'].includes(tipo)) dataBadge = `<span class="scad-data-proroga">${_fmtDate(data)}</span>`;
-    else if (tipo === 'scadenza_prorogata') dataBadge = `<span class="scad-data-ann">${_fmtDate(data)}</span>`;
-    else if (tipo === 'annullamento') dataBadge = `<span class="scad-data-ann">${_fmtDate(data)}</span>`;
-    else dataBadge = `<span class="scad-data-ass">${_fmtDate(data)}</span>`;
-
-    // Badge matricola
-    let matClass = 'scad-matricola-ass';
-    if (['scadenza_contratto','proroga_attiva','scadenza_prorogata'].includes(tipo)) matClass = 'scad-matricola-scad';
-    else if (tipo === 'cessazione') matClass = 'scad-matricola-cess';
-    else if (tipo === 'annullamento') matClass = 'scad-matricola-ann';
-
-    // Riepilogo
-    const tipoLabel = TIPI_CONTRATTO[ass.tipo_contratto] || (ass.tipo_contratto || '');
-    let riepilogoClass = 'scad-riepilogo-ass';
-    if (['scadenza_contratto','proroga_attiva','scadenza_prorogata'].includes(tipo)) riepilogoClass = 'scad-riepilogo-scad';
-    else if (tipo === 'cessazione') riepilogoClass = 'scad-riepilogo-cess';
-    else if (tipo === 'annullamento') riepilogoClass = 'scad-riepilogo-ann';
-
-    let riepilogoHtml = '';
-    if (ass.data_assunzione) riepilogoHtml += `<div class="scad-riepilogo-line">Assunto il: <strong>${_fmtDate(ass.data_assunzione)}</strong></div>`;
-    if (ass.qualifica) riepilogoHtml += `<div class="scad-riepilogo-line">${ass.qualifica}${ass.livello ? ' · Lv.' + ass.livello : ''}${ass.ore_settimanali ? ' · ' + ass.ore_settimanali + 'h/sett' : ''}</div>`;
-    riepilogoHtml += `<div class="scad-riepilogo-line">${tipoLabel}${ass.data_fine_contratto ? ' — scad. <strong>' + _fmtDate(ass.data_fine_contratto) + '</strong>' : ''}</div>`;
-    if (tipo === 'cessazione' && ass.cessazione_json) {
-      const motivoCode = ass.cessazione_json.motivoCodice || ass.cessazione_json.motivo || '';
-      const motivoLabel = MOTIVI_CESSAZIONE[motivoCode] || motivoCode;
-      riepilogoHtml += `<div class="scad-riepilogo-line" style="color:var(--color-error)">Cessazione: ${motivoLabel}</div>`;
-    }
-    if (tipo === 'annullamento') riepilogoHtml += `<div class="scad-riepilogo-line" style="color:#6b7280">ANNULLATA il ${_fmtDate(ass.data_annullamento)}</div>`;
-
-    // Azioni
-    const azioniHtml = _renderAzioni(ev);
-
-    return `<tr class="${rowClass}" data-id="${aid}" data-tipo="${tipo}">
-      <td>${dataBadge}</td>
-      <td style="font-size:10px;color:var(--color-text-muted)">${data_pratica ? _fmtDate(data_pratica) : '—'}</td>
-      <td style="font-size:10px;color:var(--color-text-muted)">UNILAV / SITO MIN.</td>
-      <td style="font-weight:500;font-size:var(--text-xs)">${(ditta.ragione_sociale || ass.azienda_nome || '—').toUpperCase()}</td>
-      <td>
-        <div style="font-weight:600;font-size:var(--text-xs)">${ass.cognome || ''} ${ass.nome || ''}</div>
-        <span class="scad-matricola ${matClass}">${ass.matricola || ''}</span>
-      </td>
-      <td><div class="scad-riepilogo ${riepilogoClass}">${riepilogoHtml}</div></td>
-      <td>${isAnn && _modalita === 'archivio' ? '<span class="scad-archiviata-badge">ARCHIVIATA</span>' : azioniHtml}</td>
-    </tr>`;
-  }
-
-  // ── Render azioni per tipo evento ────────────────────────────────────────
-  function _renderAzioni(ev) {
-    const { tipo, ass } = ev;
-    const aid = ass.id;
-
-    if (tipo === 'annullamento') {
-      // Solo: email annullamento + elimina
-      const emailCls = ass.email_annullamento_inviata ? 'fatto' : '';
-      return `<div class="scad-actions">
-        <button class="btn-scad btn-scad-email ${emailCls}" title="Email annullamento" onclick="ScadenzarioModule.toggleFlag(${aid},'email_annullamento_inviata')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2 4 12 14 22 4"/></svg>
-          Email
-        </button>
-        <button class="btn-scad btn-scad-del" title="Elimina pratica" onclick="ScadenzarioModule.openElimina(${aid},'${(ass.cognome || '') + ' ' + (ass.nome || '')}')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        </button>
-      </div>`;
-    }
-
-    if (tipo === 'assunzione') {
-      const univCls = ass.unilav_fatto ? 'fatto' : '';
-      const emailCls = ass.email_assunzione_inviata ? 'fatto' : '';
-      const presCls = ass.presenze_fatto ? 'fatto' : '';
-      const slpCls = ass.slp_fatto ? 'fatto' : '';
-      return `<div class="scad-actions">
-        <button class="btn-scad btn-scad-unilav ${univCls}" title="UNILAV fatto" onclick="ScadenzarioModule.toggleFlag(${aid},'unilav_fatto')">UNILAV</button>
-        <button class="btn-scad btn-scad-email ${emailCls}" title="Email inviata" onclick="ScadenzarioModule.toggleFlag(${aid},'email_assunzione_inviata')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2 4 12 14 22 4"/></svg>
-        </button>
-        <button class="btn-scad btn-scad-presenze ${presCls}" title="Presenze" onclick="ScadenzarioModule.toggleFlag(${aid},'presenze_fatto')">PRE</button>
-        <button class="btn-scad btn-scad-slp ${slpCls}" title="SLP" onclick="ScadenzarioModule.toggleFlag(${aid},'slp_fatto')">SLP</button>
-        <button class="btn-scad btn-scad-edit" title="Modifica" onclick="ScadenzarioModule.openModifica(${aid})">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>
-        <button class="btn-scad btn-scad-del" title="Elimina" onclick="ScadenzarioModule.openElimina(${aid},'${(ass.cognome || '') + ' ' + (ass.nome || '')}')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        </button>
-      </div>`;
-    }
-
-    if (['scadenza_contratto','proroga_attiva'].includes(tipo)) {
-      const univCls = ass.unilav_scadenza_fatto ? 'fatto' : '';
-      const emailCls = ass.email_scadenza_inviata ? 'fatto' : '';
-      const hasProroghe = (ass.proroghe_json || []).length > 0;
-      return `<div class="scad-actions" style="position:relative">
-        <button class="btn-scad btn-scad-unilav ${univCls}" title="UNILAV scadenza" onclick="ScadenzarioModule.toggleFlag(${aid},'unilav_scadenza_fatto')">UNILAV</button>
-        <button class="btn-scad btn-scad-email ${emailCls}" title="Email scadenza" onclick="ScadenzarioModule.toggleFlag(${aid},'email_scadenza_inviata')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2 4 12 14 22 4"/></svg>
-        </button>
-        <button class="btn-scad btn-scad-menu" title="Nuova pratica" onclick="ScadenzarioModule.toggleRowMenu(event,${aid},'scad')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Pratica
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <button class="btn-scad btn-scad-edit" title="Modifica" onclick="ScadenzarioModule.openModifica(${aid})">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>
-        ${hasProroghe ? `<button class="btn-scad btn-scad-del" title="Elimina ultima proroga" onclick="ScadenzarioModule.eliminaUltimaProroga(${aid})">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-        </button>` : ''}
-        <div id="rowmenu-${aid}-scad" class="scad-row-dropdown" style="display:none">
-          <button class="scad-row-dropdown-item" onclick="ScadenzarioModule.openProrogaForAss(${aid},'proroga')">
-            <span class="scad-dot scad-dot-orange"></span> Proroga
-          </button>
-          <button class="scad-row-dropdown-item" onclick="ScadenzarioModule.openProrogaForAss(${aid},'trasformazione')">
-            <span class="scad-dot scad-dot-green"></span> Trasformazione T.I.
-          </button>
-          <button class="scad-row-dropdown-item" onclick="ScadenzarioModule.openProrogaForAss(${aid},'cessazione')">
-            <span class="scad-dot scad-dot-red"></span> Cessazione
-          </button>
-        </div>
-      </div>`;
-    }
-
-    if (tipo === 'cessazione') {
-      const univCls = ass.unilav_cessazione_fatto ? 'fatto' : '';
-      const emailCls = ass.email_cessazione_inviata ? 'fatto' : '';
-      const presCls = ass.presenze_cessazione_fatto ? 'fatto' : '';
-      const slpCls = ass.slp_cessazione_fatto ? 'fatto' : '';
-      return `<div class="scad-actions">
-        <button class="btn-scad btn-scad-unilav ${univCls}" title="UNILAV cessazione" onclick="ScadenzarioModule.toggleFlag(${aid},'unilav_cessazione_fatto')">UNILAV</button>
-        <button class="btn-scad btn-scad-email ${emailCls}" title="Email cessazione" onclick="ScadenzarioModule.toggleFlag(${aid},'email_cessazione_inviata')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2 4 12 14 22 4"/></svg>
-        </button>
-        <button class="btn-scad btn-scad-presenze ${presCls}" onclick="ScadenzarioModule.toggleFlag(${aid},'presenze_cessazione_fatto')">PRE</button>
-        <button class="btn-scad btn-scad-slp ${slpCls}" onclick="ScadenzarioModule.toggleFlag(${aid},'slp_cessazione_fatto')">SLP</button>
-        <button class="btn-scad btn-scad-edit" title="Modifica" onclick="ScadenzarioModule.openModifica(${aid})">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>
-        <button class="btn-scad btn-scad-del" title="Elimina cessazione" onclick="ScadenzarioModule.eliminaCessazione(${aid})">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-        </button>
-      </div>`;
-    }
-
-    // Scadenza prorogata (storica)
-    if (tipo === 'scadenza_prorogata') {
-      const univCls = ass.unilav_scadenza_fatto ? 'fatto' : '';
-      const emailCls = ass.email_scadenza_inviata ? 'fatto' : '';
-      return `<div class="scad-actions">
-        <button class="btn-scad btn-scad-unilav ${univCls}" onclick="ScadenzarioModule.toggleFlag(${aid},'unilav_scadenza_fatto')">UNILAV</button>
-        <button class="btn-scad btn-scad-email ${emailCls}" onclick="ScadenzarioModule.toggleFlag(${aid},'email_scadenza_inviata')">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2 4 12 14 22 4"/></svg>
-        </button>
-      </div>`;
-    }
-
-    return '';
-  }
-
-  // ── Carica dati ──────────────────────────────────────────────────────────
-  async function _carica() {
-    try {
-      const res = await fetch('/api/scadenzario');
-      if (!res.ok) throw new Error('Errore API scadenzario');
-      _dati = await res.json();
-      _render(_dati);
-    } catch (e) {
-      console.error('ScadenzarioModule:', e);
-      const c = document.getElementById('scadenzarioContainer');
-      if (c) c.innerHTML = `<div class="empty-state" style="color:var(--color-error)">Errore caricamento dati</div>`;
-    }
-  }
-
-  // ── Toggle flag ──────────────────────────────────────────────────────────
-  async function toggleFlag(aid, campo) {
-    const ass = _dati.find(a => a.id === aid);
-    if (!ass) return;
-    const nuovoVal = ass[campo] ? 0 : 1;
-    try {
-      const res = await fetch(`/api/assunzioni/${aid}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [campo]: nuovoVal }),
-      });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      const idx = _dati.findIndex(a => a.id === aid);
-      if (idx >= 0) _dati[idx] = updated;
-      _render(_dati);
-    } catch {
-      toast('Errore aggiornamento', 'error');
-    }
-  }
-
-  // ── Elimina cessazione ───────────────────────────────────────────────────
-  async function eliminaCessazione(aid) {
-    if (!confirm('Eliminare la cessazione? Il dipendente tornerà "attivo".')) return;
-    try {
-      const res = await fetch(`/api/assunzioni/${aid}/cessazione`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      const idx = _dati.findIndex(a => a.id === aid);
-      if (idx >= 0) _dati[idx] = updated;
-      _render(_dati);
-      toast('Cessazione rimossa', 'success');
-    } catch {
-      toast('Errore eliminazione cessazione', 'error');
-    }
-  }
-
-  // ── Elimina ultima proroga ───────────────────────────────────────────────
-  async function eliminaUltimaProroga(aid) {
-    if (!confirm('Eliminare l\'ultima proroga? Verrà ripristinata la data precedente.')) return;
-    try {
-      const res = await fetch(`/api/assunzioni/${aid}/ultima-proroga`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      const idx = _dati.findIndex(a => a.id === aid);
-      if (idx >= 0) _dati[idx] = updated;
-      _render(_dati);
-      toast('Ultima proroga eliminata', 'success');
-    } catch {
-      toast('Errore eliminazione proroga', 'error');
-    }
-  }
-
-  // ── Dropdown row menu ────────────────────────────────────────────────────
-  function toggleRowMenu(event, aid, suffix) {
-    event.stopPropagation();
-    const menuId = `rowmenu-${aid}-${suffix}`;
-    const menu = document.getElementById(menuId);
-    if (!menu) return;
-    const isVisible = menu.style.display !== 'none';
-    // Chiudi tutti i dropdown aperti
-    document.querySelectorAll('.scad-row-dropdown').forEach(m => (m.style.display = 'none'));
-    if (!isVisible) menu.style.display = 'block';
-  }
-
-  function toggleNuovaPraticaMenu() {
-    const menu = document.getElementById('menuScadNuovaPratica');
-    if (!menu) return;
-    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-  }
-
-  // ── Modali ───────────────────────────────────────────────────────────────
-  function openNuovaAssunzione() {
-    document.getElementById('menuScadNuovaPratica').style.display = 'none';
-    openAssunzioneModal();
-  }
-
-  function openModifica(aid) {
-    const ass = _dati.find(a => a.id === aid);
-    if (!ass) return;
-    resetAssunzioneForm();
-    // Pre-popola i campi
-    _popolaFormAssunzione(ass);
-    document.getElementById('modalAssunzioneTitle').textContent = 'Modifica Assunzione';
-    openModal('modalAssunzione');
-  }
-
-  function _popolaFormAssunzione(ass) {
-    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-    const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
-    set('ass_id', ass.id);
-    // Azienda
-    const dittaSel = document.getElementById('ass_ditta_id');
-    if (dittaSel) dittaSel.value = ass.ditta_id || '';
-    // Lavoratore
-    set('ass_cognome', ass.cognome); set('ass_nome', ass.nome);
-    set('ass_cf', ass.codice_fiscale); set('ass_sesso', ass.sesso);
-    set('ass_data_nascita', ass.data_nascita);
-    set('ass_comune_nascita', ass.comune_nascita); set('ass_catastale_nascita', ass.catastale_nascita);
-    set('ass_comune_residenza', ass.comune_residenza); set('ass_cap_residenza', ass.cap_residenza);
-    set('ass_indirizzo_residenza', ass.indirizzo_residenza);
-    // Contratto
-    set('ass_data_assunzione', ass.data_assunzione);
-    set('ass_data_fine_contratto', ass.data_fine_contratto);
-    set('ass_tipo_contratto', ass.tipo_contratto);
-    set('ass_qualifica', ass.qualifica); set('ass_livello', ass.livello);
-    set('ass_mansione', ass.mansione);
-    set('ass_tipologia_orario', ass.tipologia_orario);
-    set('ass_ore_settimanali', ass.ore_settimanali);
-    set('ass_retribuzione_base', ass.retribuzione_base);
-    set('ass_retribuzione_pt', ass.retribuzione_pt);
-    set('ass_netto_busta', ass.netto_busta);
-    set('ass_periodo_prova', ass.periodo_prova);
-    setCheck('ass_tredicesima', ass.tredicesima);
-    setCheck('ass_quattordicesima', ass.quattordicesima);
-  }
-
-  function openProrogaForAss(aid, tipoOp) {
-    // Chiudi dropdown
-    document.querySelectorAll('.scad-row-dropdown').forEach(m => (m.style.display = 'none'));
-    document.getElementById('prorogaAssunzioneId').value = aid;
-    // Imposta il radio tipo operazione
-    document.querySelectorAll('[name="proroga_tipo_op"]').forEach(r => {
-      r.checked = r.value === tipoOp;
-    });
-    _aggiornaCampiProroga(tipoOp);
-    const ass = _dati.find(a => a.id === aid);
-    const title = tipoOp === 'proroga' ? 'Nuova Proroga' : tipoOp === 'trasformazione' ? 'Trasformazione T.I.' : 'Registra Cessazione';
-    document.getElementById('modalNuovaProrogaTitle').textContent = title;
-    openModal('modalNuovaProroga');
-  }
-
-  function openNuovaCessazione(aid) {
-    document.getElementById('menuScadNuovaPratica').style.display = 'none';
-    document.getElementById('cessazioneAssunzioneId').value = aid || '';
-    // Popola select ditte per cessazione standalone
-    _popolaSelectDitteCessazione();
-    openModal('modalNuovaCessazione');
-  }
-
-  function openNuovoAnnullamento(aid) {
-    document.getElementById('menuScadNuovaPratica').style.display = 'none';
-    document.getElementById('annullamentoAssunzioneId').value = aid || '';
-    document.getElementById('annullamentoData').value = new Date().toISOString().split('T')[0];
-    openModal('modalAnnullamento');
-  }
-
-  async function _popolaSelectDitteCessazione() {
-    const sel = document.getElementById('cessazioneDittaId');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">-- seleziona ditta --</option>';
-    // Usa le ditte già caricate dal modulo ditte se disponibili
-    try {
-      const res = await fetch('/api/ditte');
-      const ditte = await res.json();
-      ditte.forEach(d => {
-        sel.innerHTML += `<option value="${d.id}">${d.ragione_sociale}</option>`;
-      });
-    } catch { /* ignora */ }
-  }
-
-  function openElimina(aid, nome) {
-    document.getElementById('eliminaScadId').value = aid;
-    document.getElementById('eliminaScadNome').textContent = nome;
-    document.querySelectorAll('#modalConfermaEliminaScad .elim-check').forEach(c => (c.checked = false));
-    document.getElementById('btnConfermaEliminaScad').disabled = true;
-    openModal('modalConfermaEliminaScad');
-  }
-
-  function _bindEliminaCheckbox() {
-    const modal = document.getElementById('modalConfermaEliminaScad');
-    if (!modal) return;
-    modal.querySelectorAll('.elim-check').forEach(c => {
-      c.addEventListener('change', () => {
-        const tutti = [...modal.querySelectorAll('.elim-check')].every(cb => cb.checked);
-        const btn = document.getElementById('btnConfermaEliminaScad');
-        if (btn) btn.disabled = !tutti;
-      });
-    });
-  }
-
-  // ── Toggle campi proroga modale ──────────────────────────────────────────
-  function _aggiornaCampiProroga(tipoOp) {
-    const show = (id, v) => { const el = document.getElementById(id); if (el) el.style.display = v ? '' : 'none'; };
-    show('prorogaFieldsProroga', tipoOp === 'proroga');
-    show('prorogaFieldsTrasformazione', tipoOp === 'trasformazione');
-    show('prorogaFieldsCessazione', tipoOp === 'cessazione');
-  }
-
-  // ── Salva proroga ────────────────────────────────────────────────────────
-  async function salvaProroga() {
-    const aid = parseInt(document.getElementById('prorogaAssunzioneId').value, 10);
-    const tipoOp = document.querySelector('[name="proroga_tipo_op"]:checked')?.value || 'proroga';
-    const errEl = document.getElementById('prorogaError');
-    errEl.style.display = 'none';
-
-    const ass = _dati.find(a => a.id === aid);
-    if (!ass) return;
-
-    if (tipoOp === 'proroga') {
-      const nuovaData = document.getElementById('prorogaNuovaDataFine').value;
-      if (!nuovaData) { errEl.textContent = 'Data obbligatoria'; errEl.style.display = ''; return; }
-      const proroghe = [...(ass.proroghe_json || [])];
-      proroghe.push({ vecchiaDataFine: ass.data_fine_contratto, dataFineProroga: nuovaData });
-      await _patchAss(aid, { proroghe_json: proroghe, data_fine_contratto: nuovaData });
-    } else if (tipoOp === 'trasformazione') {
-      const data = document.getElementById('prorogaDataTrasf').value;
-      if (!data) { errEl.textContent = 'Data obbligatoria'; errEl.style.display = ''; return; }
-      await _patchAss(aid, { trasformazione_json: { tipo: 'tempo_indeterminato', data }, tipo_contratto: 'tempo_indeterminato' });
-    } else if (tipoOp === 'cessazione') {
-      const data = document.getElementById('prorogaDataCess').value;
-      const motivo = document.getElementById('prorogaMotivoCess').value;
-      if (!data) { errEl.textContent = 'Data obbligatoria'; errEl.style.display = ''; return; }
-      await _patchAss(aid, { cessazione_json: { data, motivoCodice: motivo } });
-    }
-
-    closeModal('modalNuovaProroga');
-    toast('Pratica aggiornata', 'success');
-  }
-
-  // ── Salva cessazione standalone ──────────────────────────────────────────
-  async function salvaCessazione() {
-    const aid = parseInt(document.getElementById('cessazioneAssunzioneId').value, 10);
-    const data = document.getElementById('cessazioneData').value;
-    const motivo = document.getElementById('cessazioneMotivo').value;
-    const errEl = document.getElementById('cessazioneError');
-    errEl.style.display = 'none';
-    if (!data) { errEl.textContent = 'Data obbligatoria'; errEl.style.display = ''; return; }
-    if (!aid) { errEl.textContent = 'Seleziona il dipendente'; errEl.style.display = ''; return; }
-    await _patchAss(aid, { cessazione_json: { data, motivoCodice: motivo } });
-    closeModal('modalNuovaCessazione');
-    toast('Cessazione registrata', 'success');
-  }
-
-  // ── Salva annullamento ───────────────────────────────────────────────────
-  async function salvaAnnullamento() {
-    const aid = parseInt(document.getElementById('annullamentoAssunzioneId').value, 10);
-    const data = document.getElementById('annullamentoData').value;
-    const errEl = document.getElementById('annullamentoError');
-    errEl.style.display = 'none';
-    if (!aid) { errEl.textContent = 'Nessuna pratica selezionata'; errEl.style.display = ''; return; }
-    await _patchAss(aid, { annullata: 1, data_annullamento: data || new Date().toISOString().split('T')[0] });
-    closeModal('modalAnnullamento');
-    toast('Pratica annullata', 'success');
-  }
-
-  // ── Conferma elimina ─────────────────────────────────────────────────────
-  async function confermaElimina() {
-    const aid = parseInt(document.getElementById('eliminaScadId').value, 10);
-    try {
-      const res = await fetch(`/api/assunzioni/${aid}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
-      _dati = _dati.filter(a => a.id !== aid);
-      closeModal('modalConfermaEliminaScad');
-      _render(_dati);
-      toast('Pratica eliminata', 'success');
-    } catch {
-      toast('Errore eliminazione', 'error');
-    }
-  }
-
-  // ── Patch helper ─────────────────────────────────────────────────────────
-  async function _patchAss(aid, payload) {
-    try {
-      const res = await fetch(`/api/assunzioni/${aid}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      const idx = _dati.findIndex(a => a.id === aid);
-      if (idx >= 0) _dati[idx] = updated;
-      _render(_dati);
-    } catch {
-      toast('Errore aggiornamento', 'error');
-    }
-  }
-
-  // ── Mostra attivo / archivio ──────────────────────────────────────────────
-  function mostraAttivo() {
-    _modalita = 'attivo';
-    document.getElementById('btnScadAttivo').classList.add('active');
-    document.getElementById('btnScadArchivio').classList.remove('active');
-    const filtri = document.getElementById('scadArchivioFiltri');
-    if (filtri) filtri.style.display = 'none';
-    _render(_dati);
-  }
-
-  function mostraArchivio() {
-    _modalita = 'archivio';
-    document.getElementById('btnScadAttivo').classList.remove('active');
-    document.getElementById('btnScadArchivio').classList.add('active');
-    const filtri = document.getElementById('scadArchivioFiltri');
-    if (filtri) filtri.style.display = 'flex';
-    // Init selettori anno
-    const annoSel = document.getElementById('archivioAnno');
-    if (annoSel && !annoSel.options.length) {
-      const oggi = new Date();
-      for (let y = oggi.getFullYear(); y >= 2020; y--) {
-        annoSel.innerHTML += `<option value="${y}">${y}</option>`;
-      }
-      // Seleziona mese/anno corrente
-      document.getElementById('archivioMese').value = oggi.getMonth() + 1;
-      annoSel.value = oggi.getFullYear();
-    }
-    caricaArchivio();
-  }
-
-  async function caricaArchivio() {
-    const mese = document.getElementById('archivioMese')?.value;
-    const anno = document.getElementById('archivioAnno')?.value;
-    if (!mese || !anno) return;
-    try {
-      // Filtra: assunzioni NON attive (cessate o annullate)
-      // con almeno un evento nel mese/anno selezionato
-      const meseInt = parseInt(mese, 10);
-      const annoInt = parseInt(anno, 10);
-      const meseFiltrato = _dati.filter(a => {
-        if (_isAssunzioneAttiva(a)) return false; // escludi attive
-        const ev = _eventiDaAssunzione(a);
-        return ev.some(e => {
-          const d = _parseDateVal(e.data);
-          if (!d) return false;
-          return d.getMonth() + 1 === meseInt && d.getFullYear() === annoInt;
-        });
-      });
-      _render(meseFiltrato);
-    } catch (e) {
-      console.error('Archivio scadenzario:', e);
-    }
-  }
-
-  // ── Ricerca ───────────────────────────────────────────────────────────────
-  function onSearchInput(val) {
-    const count = document.getElementById('scadSearchCount');
-    if (!val) {
-      _searchMatches = [];
-      if (count) count.textContent = '';
-      // Rimuovi highlight
-      document.querySelectorAll('#scadTable tr.scad-highlight').forEach(r => r.classList.remove('scad-highlight'));
-      return;
-    }
-    const q = val.toLowerCase();
-    _searchMatches = [];
-    _searchIdx = 0;
-    document.querySelectorAll('#scadTable tbody tr:not(.scad-mese-header)').forEach((row, i) => {
-      const testo = row.textContent.toLowerCase();
-      row.classList.remove('scad-highlight');
-      if (testo.includes(q)) _searchMatches.push(row);
-    });
-    if (count) count.textContent = _searchMatches.length ? `1/${_searchMatches.length}` : '0';
-    if (_searchMatches.length) {
-      _searchMatches[0].classList.add('scad-highlight');
-      _searchMatches[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }
-
-  function cercaNext() {
-    if (!_searchMatches.length) return;
-    _searchMatches[_searchIdx].classList.remove('scad-highlight');
-    _searchIdx = (_searchIdx + 1) % _searchMatches.length;
-    _searchMatches[_searchIdx].classList.add('scad-highlight');
-    _searchMatches[_searchIdx].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    const count = document.getElementById('scadSearchCount');
-    if (count) count.textContent = `${_searchIdx + 1}/${_searchMatches.length}`;
-  }
-
-  // ── Init ─────────────────────────────────────────────────────────────────
-  function init() {
-    _carica();
-    // Chiudi dropdown al click esterno
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('#menuScadNuovaPratica') && !e.target.closest('#btnScadNuovaPratica')) {
-        const m = document.getElementById('menuScadNuovaPratica');
-        if (m) m.style.display = 'none';
-      }
-      if (!e.target.closest('.scad-actions')) {
-        document.querySelectorAll('.scad-row-dropdown').forEach(d => (d.style.display = 'none'));
-      }
-    });
-    // Radio proroga tipo
-    document.querySelectorAll('[name="proroga_tipo_op"]').forEach(r => {
-      r.addEventListener('change', () => _aggiornaCampiProroga(r.value));
-    });
-    // Select ditta cessazione → carica dipendenti
-    const cessazioneDittaSel = document.getElementById('cessazioneDittaId');
-    if (cessazioneDittaSel) {
-      cessazioneDittaSel.addEventListener('change', async () => {
-        const dittaId = cessazioneDittaSel.value;
-        const dipSel = document.getElementById('cessazioneAssunzioneSelect');
-        if (!dipSel) return;
-        dipSel.innerHTML = '<option value="">-- seleziona dipendente --</option>';
-        if (!dittaId) return;
-        const attivi = _dati.filter(a => a.ditta_id == dittaId && !a.annullata && !a.cessazione_json);
-        attivi.forEach(a => {
-          dipSel.innerHTML += `<option value="${a.id}">${a.cognome} ${a.nome} (${a.matricola || 'n/d'})</option>`;
-        });
-      });
-    }
-    const dipSel = document.getElementById('cessazioneAssunzioneSelect');
-    if (dipSel) {
-      dipSel.addEventListener('change', () => {
-        document.getElementById('cessazioneAssunzioneId').value = dipSel.value;
-      });
-    }
-  }
-
-  // Esponi al public
-  return {
-    init,
-    toggleFlag,
-    eliminaCessazione,
-    eliminaUltimaProroga,
-    toggleRowMenu,
-    toggleNuovaPraticaMenu,
-    openNuovaAssunzione,
-    openModifica,
-    openProrogaForAss,
-    openNuovaCessazione,
-    openNuovoAnnullamento,
-    openElimina,
-    salvaProroga,
-    salvaCessazione,
-    salvaAnnullamento,
-    confermaElimina,
-    mostraAttivo,
-    mostraArchivio,
-    caricaArchivio,
-    onSearchInput,
-    cercaNext,
-  };
-})();
-
-/* ══════════════════════════════════════════════════════════════════════════
-   DATABASE DIPENDENTI MODULE
-   ══════════════════════════════════════════════════════════════════════════ */
-const AnagraficaModule = (() => {
-  'use strict';
-
-  let _dati = [];
-
-  const TIPI_CONTRATTO = {
-    tempo_indeterminato: 'T. INDETERMINATO',
-    tempo_determinato: 'T. DETERMINATO',
-    apprendistato: 'APPRENDISTATO',
-    lavoro_intermittente: 'INTERMITTENTE',
-    lavoro_stagionale: 'STAGIONALE',
-    tirocinio: 'TIROCINIO',
-  };
-
-  const MOTIVI = {
-    DL: 'Dim. volontarie', DC: 'Dim. giusta causa',
-    LM: 'Licenziamento', SC: 'Scad. contratto',
-    AC: 'Accordo consens.', RM: 'Ris. periodo prova',
-    DM: 'Decesso', PE: 'Pensionamento',
-  };
-
-  function _fmtDate(s) {
-    if (!s) return '—';
-    const p = s.split('-');
-    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : s;
-  }
-
-  function _storico(a) {
-    let html = '';
-    const tipoContr = a.tipo_contratto;
-    if (tipoContr === 'tempo_indeterminato') {
-      html += `<div class="db-storico-ti">T. INDETERMINATO</div>`;
-    } else if (a.data_fine_contratto) {
-      html += `<div class="db-storico-det">T.DET. AL ${_fmtDate(a.data_fine_contratto)}</div>`;
-    }
-    const proroghe = a.proroghe_json || [];
-    proroghe.forEach((pr, idx) => {
-      const num = idx + 1;
-      const ord = num === 1 ? '1ª' : num === 2 ? '2ª' : num === 3 ? '3ª' : `${num}ª`;
-      html += `<div class="db-storico-proroga">${ord} PROROGA AL ${_fmtDate(pr.dataFineProroga || pr.data_fine_proroga)}</div>`;
-    });
-    if (a.trasformazione_json && a.trasformazione_json.data) {
-      html += `<div class="db-storico-trasf">TRASF. T.I. ${_fmtDate(a.trasformazione_json.data)}</div>`;
-    }
-    if (a.cessazione_json && a.cessazione_json.data) {
-      const m = MOTIVI[a.cessazione_json.motivoCodice || ''] || '';
-      html += `<div class="db-storico-cess">CESS: ${m}</div>`;
-    }
-    return html || '—';
-  }
-
-  function _prossimaScadenza(a) {
-    if (a.cessazione_json) return `<span class="db-cell-cessato">CESSATO</span>`;
-    if (a.tipo_contratto === 'tempo_indeterminato') return '—';
-    const proroghe = a.proroghe_json || [];
-    if (proroghe.length > 0) {
-      const ultima = proroghe[proroghe.length - 1];
-      return `<span class="db-pross-scad">${_fmtDate(ultima.dataFineProroga || ultima.data_fine_proroga)}</span>`;
-    }
-    return a.data_fine_contratto ? `<span class="db-pross-scad">${_fmtDate(a.data_fine_contratto)}</span>` : '—';
-  }
-
-  function _retribuzione(a) {
-    let html = '';
-    if (a.retribuzione_base) html += `<div>Lorda: €${a.retribuzione_base}</div>`;
-    if (a.retribuzione_pt) html += `<div>PT: €${a.retribuzione_pt}</div>`;
-    if (a.netto_busta) {
-      let extra = [];
-      if (a.tredicesima) extra.push('13ª');
-      if (a.quattordicesima) extra.push('14ª');
-      if (a.rateo_permessi) extra.push('perm.');
-      html += `<div>Netto: €${a.netto_busta}${extra.length ? ' (' + extra.join('+') + ')' : ''}</div>`;
-    }
-    return html || '—';
-  }
-
-  function _render(dati) {
-    const container = document.getElementById('databaseContainer');
-    if (!container) return;
-
-    if (!dati.length) {
-      container.innerHTML = `<div style="padding:var(--space-12);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)">Nessun dipendente trovato</div>`;
-      return;
-    }
-
-    // Colonne scorrevoli headers
-    const colScorrevoli = [
-      'Data Cess.','Motivo Cess.','Desc. ATECO','Cod. ATECO',
-      'Cod.Cat. Sede Leg.','CAP Sede Leg.','Comune Sede Leg.','Indirizzo Sede Leg.',
-      'Cod.Cat. Sede Lav.','CAP Sede Lav.','Comune Sede Lav.','Indirizzo Sede Lav.',
-      'Legale Rappr.','CF Legale Rappr.',
-      'CF Dipendente','Sesso','Data Nascita','Luogo Nascita','Cod.Cat. Nascita',
-      'Comune Residenza','CAP Residenza','Indirizzo Residenza',
-      'Titolo Studio','Qualifica','Mansioni','Livello','Qualifica ISTAT',
-      'Retribuzione','Periodo Prova','Ferie','Permessi','Preavviso',
-      'CCNL','N° Mensilità','Tipo Contratto','Tipo Orario','Ore Sett.','Distrib. Orario',
-    ];
-
-    let html = `<table class="db-table" id="dbTable">
-      <thead><tr>
-        <th class="db-th-fixed db-col-1">Cod.</th>
-        <th class="db-th-fixed db-col-2">Azienda</th>
-        <th class="db-th-fixed db-col-3">CF Azienda</th>
-        <th class="db-th-fixed db-col-4">PAT INAIL</th>
-        <th class="db-th-fixed db-col-5">Matr. INPS</th>
-        <th class="db-th-fixed db-col-6">Data Ass.</th>
-        <th class="db-th-fixed db-col-7">Matr.</th>
-        <th class="db-th-fixed db-col-8">Cognome</th>
-        <th class="db-th-fixed db-col-9">Nome</th>
-        <th class="db-th-fixed db-col-10">Storico Pratiche</th>
-        <th class="db-th-fixed db-col-11">Pross. Scad.</th>
-        ${colScorrevoli.map(h => `<th>${h}</th>`).join('')}
-      </tr></thead><tbody>`;
-
-    dati.forEach(a => {
-      const ditta = a.ditta || {};
-      const cessato = !!a.cessazione_json;
-      const nomeCls = cessato ? 'db-cell-cessato' : '';
-      const dataCessFmt = a.cessazione_json ? _fmtDate(a.cessazione_json.data) : '—';
-      const motivoCess = a.cessazione_json ? (MOTIVI[a.cessazione_json.motivoCodice || ''] || '') : '—';
-
-      html += `<tr data-cognome="${(a.cognome || '').toLowerCase()}">
-        <td class="db-td-fixed db-col-1" style="font-size:10px">${ditta.codice_interno || '—'}</td>
-        <td class="db-td-fixed db-col-2" style="font-weight:500">${ditta.ragione_sociale || '—'}</td>
-        <td class="db-td-fixed db-col-3">${ditta.codice_fiscale || '—'}</td>
-        <td class="db-td-fixed db-col-4">${ditta.pat_inail_hr || ditta.pat_inail || '—'}</td>
-        <td class="db-td-fixed db-col-5">${ditta.matricola_inps_hr || '—'}</td>
-        <td class="db-td-fixed db-col-6 db-cell-ass">${_fmtDate(a.data_assunzione)}</td>
-        <td class="db-td-fixed db-col-7" style="font-weight:700">${a.matricola || '—'}</td>
-        <td class="db-td-fixed db-col-8 ${nomeCls}">${a.cognome || '—'}</td>
-        <td class="db-td-fixed db-col-9 ${nomeCls}">${a.nome || '—'}</td>
-        <td class="db-td-fixed db-col-10 db-storico">${_storico(a)}</td>
-        <td class="db-td-fixed db-col-11">${_prossimaScadenza(a)}</td>
-        <td>${dataCessFmt}</td>
-        <td>${motivoCess}</td>
-        <td>${ditta.settore_ateco || '—'}</td>
-        <td>${ditta.codice_ateco || '—'}</td>
-        <td>${ditta.cod_catastale || '—'}</td>
-        <td>${ditta.cap || '—'}</td>
-        <td>${ditta.citta || '—'}</td>
-        <td>${ditta.indirizzo || '—'}</td>
-        <td>${ditta.sede_lav_cod_catastale || '—'}</td>
-        <td>${ditta.sede_lav_cap || '—'}</td>
-        <td>${ditta.sede_lav_comune || '—'}</td>
-        <td>${ditta.sede_lav_indirizzo || '—'}</td>
-        <td>${ditta.amministratore || '—'}</td>
-        <td>${ditta.cf_amministratore || '—'}</td>
-        <td>${a.codice_fiscale || '—'}</td>
-        <td>${a.sesso || '—'}</td>
-        <td>${_fmtDate(a.data_nascita)}</td>
-        <td>${a.comune_nascita || '—'}</td>
-        <td>${a.catastale_nascita || '—'}</td>
-        <td>${a.comune_residenza || '—'}</td>
-        <td>${a.cap_residenza || '—'}</td>
-        <td>${a.indirizzo_residenza || '—'}</td>
-        <td>${a.descrizione_istruzione || '—'}</td>
-        <td>${a.qualifica || '—'}</td>
-        <td>${a.mansione || '—'}</td>
-        <td>${a.livello || '—'}</td>
-        <td>${a.qualifica_istat || '—'}</td>
-        <td class="db-retrib">${_retribuzione(a)}</td>
-        <td>${a.periodo_prova || '—'}</td>
-        <td>${a.ferie || '—'}</td>
-        <td>${a.permessi_contrattuali || '—'}</td>
-        <td>${a.preavviso || '—'}</td>
-        <td>${ditta.ccnl || '—'}</td>
-        <td>${a.numero_mensilita || '—'}</td>
-        <td style="white-space:nowrap">${TIPI_CONTRATTO[a.tipo_contratto] || a.tipo_contratto || '—'}</td>
-        <td style="white-space:nowrap">${a.tipologia_orario || '—'}</td>
-        <td>${a.ore_settimanali || '—'}</td>
-        <td>${a.distribuzione_orario || '—'}</td>
-      </tr>`;
-    });
-
-    html += '</tbody></table>';
-    container.innerHTML = html;
-  }
-
-  async function _carica() {
-    try {
-      const res = await fetch('/api/anagrafica-dipendenti');
-      if (!res.ok) throw new Error();
-      _dati = await res.json();
-      _render(_dati);
-    } catch (e) {
-      console.error('AnagraficaModule:', e);
-      const c = document.getElementById('databaseContainer');
-      if (c) c.innerHTML = `<div class="empty-state" style="color:var(--color-error)">Errore caricamento dati</div>`;
-    }
-  }
-
-  function cerca(query) {
-    const q = (query || '').toLowerCase().trim();
-    const table = document.getElementById('dbTable');
-    if (!table) return;
-    table.querySelectorAll('tbody tr').forEach(row => {
-      if (!q) { row.style.display = ''; return; }
-      const cognome = row.dataset.cognome || '';
-      row.style.display = cognome.includes(q) ? '' : 'none';
-    });
-  }
-
-  function init() {
-    _carica();
-  }
-
-  return { init, cerca };
-})();
-
-/* ── Aggancia switchTab per Scadenzario e Anagrafica ── */
-const _origSwitchTabScad = switchTab;
-window.switchTab = function (tabName) {
-  _origSwitchTabScad(tabName);
-  if (tabName === 'scadenzario') ScadenzarioModule.init();
-  if (tabName === 'anagrafica-dipendenti') AnagraficaModule.init();
-};
 
 /* INIT */
 checkAuth();
