@@ -1485,7 +1485,7 @@ const TIPO_META = {
   variabile_mensile:{ label: 'Costi Variabili Mensili',color: 'var(--color-orange)', bg: 'var(--color-orange-highlight)' },
   variabile_annuale:{ label: 'Costi Variabili Annuali',color: 'var(--color-gold)',   bg: 'var(--color-gold-highlight)' },
 };
-const MESI_LABELS = ['G','F','M','A','M','G','L','A','S','O','N','D'];
+const MESI_LABELS = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const TIPI_ANNUALI = ['fisso_annuale','variabile_annuale'];
 
 function isAnnuale(tipo){ return TIPI_ANNUALI.includes(tipo); }
@@ -1594,7 +1594,7 @@ async function renderMacrogruppi(tariffarioId) {
             <button type="button"
               onclick="toggleMeseAdd(${g.id},${i+1},this)"
               data-mese="${i+1}"
-              style="width:28px;height:28px;border-radius:var(--radius-sm);
+              style="padding:2px 7px;height:26px;border-radius:var(--radius-sm);
                      border:1px solid var(--color-border);font-size:11px;font-weight:600;
                      background:var(--color-surface);color:var(--color-text-muted);cursor:pointer;
                      transition:all var(--transition-interactive)">${m}</button>`).join('')}
@@ -1666,7 +1666,7 @@ async function renderMacrogruppi(tariffarioId) {
                 return `<button type="button"
                   onclick="toggleMeseEdit(${v.id},${i+1},this)"
                   data-mese="${i+1}" data-sel="${sel?1:0}"
-                  style="width:28px;height:28px;border-radius:var(--radius-sm);
+                  style="padding:2px 7px;height:26px;border-radius:var(--radius-sm);
                          border:1px solid ${sel?'var(--color-primary)':'var(--color-border)'};
                          font-size:11px;font-weight:600;cursor:pointer;
                          background:${sel?'var(--color-primary-highlight)':'var(--color-surface)'};
