@@ -780,6 +780,7 @@ function openDittaModal() {
   if (btnDelModal) btnDelModal.style.display = 'none';
   const btnArchModal2 = document.getElementById('btnArchiviaDittaModal');
   if (btnArchModal2) btnArchModal2.style.display = 'none';
+  loadTariffariSelectDitta(null);
   openModal('modalDitta');
 }
 
