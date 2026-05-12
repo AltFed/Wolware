@@ -3330,13 +3330,30 @@ document.getElementById('btnInserimentoCostiVariabili')?.addEventListener('click
   document.getElementById('iv_mese').value = now.getMonth() + 1;
   ivTabData = null;
   document.getElementById('ivTabella').innerHTML =
-    '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Seleziona anno e mese e clicca "Carica".</p>';
+    '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Seleziona anno e mese per caricare la tabella.</p>';
+  // Popola filtro azienda
+  const ivDittaSel = document.getElementById('iv_ditta');
+  if (ivDittaSel) {
+    ivDittaSel.innerHTML = '<option value="">— Tutte le aziende —</option>' +
+      (allDitte || []).filter(d => !d.archiviato)
+        .map(d => `<option value="${d.id}">${d.ragione_sociale}</option>`).join('');
+    ivDittaSel.value = '';
+  }
+  document.getElementById('ivDipendenti').style.display = 'none';
   openModal('modalInserimentoVariabili');
   _loadIvTabella();
 });
 
 ['iv_anno','iv_mese'].forEach(id =>
-  document.getElementById(id)?.addEventListener('change', _loadIvTabella));
+  document.getElementById(id)?.addEventListener('change', () => {
+    _loadIvTabella();
+    if (document.getElementById('iv_ditta')?.value) _loadIvDipendenti();
+  }));
+
+document.getElementById('iv_ditta')?.addEventListener('change', () => {
+  _filtroIvDitta();
+  _loadIvDipendenti();
+});
 
 async function _loadIvTabella() {
   const anno = document.getElementById('iv_anno').value;
@@ -3387,6 +3404,92 @@ function _renderIvTabella() {
   </table>`;
 }
 
+// ── Filtra le righe della tabella variabili per azienda ───────────────────
+function _filtroIvDitta() {
+  const dittaId = document.getElementById('iv_ditta')?.value;
+  const tbody = document.querySelector('#ivTabella table tbody');
+  if (!tbody) return;
+  tbody.querySelectorAll('tr').forEach(tr => {
+    if (!dittaId) {
+      tr.style.display = '';
+      return;
+    }
+    const inp = tr.querySelector('.iv-input');
+    tr.style.display = (!inp || inp.dataset.ditta === dittaId) ? '' : 'none';
+  });
+}
+
+// ── Carica dipendenti attivi per l'azienda selezionata ───────────────────
+async function _loadIvDipendenti() {
+  const dittaId = document.getElementById('iv_ditta')?.value;
+  const sez = document.getElementById('ivDipendenti');
+  if (!sez) return;
+  if (!dittaId) { sez.style.display = 'none'; return; }
+
+  const anno = document.getElementById('iv_anno')?.value;
+  const mese = document.getElementById('iv_mese')?.value;
+  try {
+    const data = await api(`/api/strumenti/dipendenti-costi?ditta_id=${dittaId}&anno=${anno}&mese=${mese}`);
+    sez.style.display = '';
+    _renderIvDipendenti(data, +dittaId);
+  } catch(e) {
+    document.getElementById('ivDipendentiTabella').innerHTML =
+      `<p style="color:var(--color-error);font-size:var(--text-sm)">Errore caricamento dipendenti: ${e.message}</p>`;
+    sez.style.display = '';
+  }
+}
+
+// ── Render tabella dipendenti ─────────────────────────────────────────────
+function _renderIvDipendenti(dipendenti, dittaId) {
+  const el = document.getElementById('ivDipendentiTabella');
+  if (!dipendenti.length) {
+    el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Nessun dipendente attivo per questa azienda.</p>';
+    return;
+  }
+  const TIPI = { tempo_indeterminato:'T. Indeterminato', tempo_determinato:'T. Determinato',
+    apprendistato:'Apprendistato', lavoro_intermittente:'Intermittente',
+    lavoro_stagionale:'Stagionale', tirocinio:'Tirocinio' };
+
+  const rows = dipendenti.map(d => {
+    const nominativo = `${d.cognome || ''} ${d.nome || ''}`.trim();
+    const tipo = TIPI[d.tipo_contratto] || d.tipo_contratto || '—';
+    const retrib = parseFloat(d.retribuzione_base || d.netto_busta || 0);
+    const qta = d.qta_caricata || 1;
+    const stato = d.gia_caricato
+      ? `<span style="color:var(--color-success);font-size:var(--text-xs);font-weight:600">✓ Già caricato</span>`
+      : '';
+    return `<tr data-ass-id="${d.id}" data-ditta="${dittaId}" data-prezzo="${retrib}">
+      <td style="font-weight:500">${nominativo}</td>
+      <td style="color:var(--color-text-muted);font-size:var(--text-xs)">${tipo}</td>
+      <td style="font-size:var(--text-sm)">€ ${retrib.toFixed(2)}</td>
+      <td><input type="number" min="0" step="0.5" value="${qta}"
+          class="iv-dip-input" style="width:70px;padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface-2);color:var(--color-text);font-size:var(--text-sm)"
+          oninput="_aggiornaRigaDip(this)"
+          data-ass="${d.id}" data-ditta="${dittaId}" data-prezzo="${retrib}"/></td>
+      <td class="iv-dip-tot-${d.id}" style="font-weight:600;color:var(--color-primary);text-align:right;white-space:nowrap">
+        € ${(retrib * qta).toFixed(2)}
+      </td>
+      <td>${stato}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `<table class="variabili-table">
+    <thead><tr>
+      <th>Dipendente</th><th>Contratto</th><th>Retribuzione</th>
+      <th>Qtà mesi</th><th style="text-align:right">Totale</th><th>Stato</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function _aggiornaRigaDip(input) {
+  const qta = parseFloat(input.value) || 0;
+  const prezzo = parseFloat(input.dataset.prezzo) || 0;
+  const assId = input.dataset.ass;
+  const totEl = document.querySelector(`.iv-dip-tot-${assId}`);
+  if (totEl) totEl.textContent = `€ ${(prezzo * qta).toFixed(2)}`;
+}
+
 function _aggiornaRigaTotale(input) {
   const dittaId = input.dataset.ditta;
   const riga = input.closest('tr');
@@ -3402,14 +3505,48 @@ function _aggiornaRigaTotale(input) {
 document.getElementById('btnCaricaVariabili')?.addEventListener('click', async () => {
   const anno = +document.getElementById('iv_anno').value;
   const mese = +document.getElementById('iv_mese').value;
+
+  // ── Costi variabili da tariffario ───────────────────────────────────────
   const inputs = [...document.querySelectorAll('.iv-input')];
   const righe = inputs
     .filter(i => parseFloat(i.value) > 0)
     .map(i => ({ ditta_id: +i.dataset.ditta, voce_id: +i.dataset.voce, qta: +i.value }));
-  if (!righe.length) { toast('Nessuna quantità inserita', 'error'); return; }
+
+  // ── Costi dipendenti da Scadenzario ────────────────────────────────────
+  const dipInputs = [...document.querySelectorAll('.iv-dip-input')];
+  const vociDip = dipInputs
+    .filter(i => parseFloat(i.value) > 0)
+    .map(i => {
+      // Recupera il nominativo dalla riga
+      const tr = i.closest('tr');
+      const nomeTd = tr?.querySelector('td:first-child');
+      return {
+        ditta_id: +i.dataset.ditta,
+        assunzione_id: +i.dataset.ass,
+        nome_dipendente: nomeTd?.textContent?.trim() || '',
+        prezzo: +i.dataset.prezzo,
+        qta: +i.value,
+      };
+    });
+
+  if (!righe.length && !vociDip.length) {
+    toast('Nessuna quantità inserita', 'error');
+    return;
+  }
+
   try {
-    const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, righe });
-    toast(`Costi variabili caricati (${res.aggiunte || righe.length} voci)`, 'success');
+    let totSalvati = 0;
+    // Carica costi variabili tariffario
+    if (righe.length) {
+      const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, dati: righe });
+      totSalvati += res.salvati || righe.length;
+    }
+    // Carica costi dipendenti
+    if (vociDip.length) {
+      const res2 = await api('/api/strumenti/dipendenti-costi/carica', 'POST', { anno, mese, voci: vociDip });
+      totSalvati += res2.salvati || vociDip.length;
+    }
+    toast(`Caricamento completato (${totSalvati} voci)`, 'success');
     closeModal('modalInserimentoVariabili');
     loadDitte();
   } catch(e) { toast('Errore: ' + e.message, 'error'); }

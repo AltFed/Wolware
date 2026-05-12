@@ -2538,12 +2538,12 @@
       <button class="modal-close" data-close="modalInserimentoVariabili">&#x2715;</button>
     </div>
     <div class="modal-body">
-      <div class="form-grid" style="max-width:320px;margin-bottom:var(--space-4)">
-        <div class="form-field">
+      <div style="display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:flex-end;margin-bottom:var(--space-4)">
+        <div class="form-field" style="min-width:100px">
           <label>Anno</label>
           <select id="iv_anno"></select>
         </div>
-        <div class="form-field">
+        <div class="form-field" style="min-width:120px">
           <label>Mese</label>
           <select id="iv_mese">
             <option value="1">Gennaio</option><option value="2">Febbraio</option>
@@ -2554,6 +2554,12 @@
             <option value="11">Novembre</option><option value="12">Dicembre</option>
           </select>
         </div>
+        <div class="form-field" style="min-width:220px;flex:1">
+          <label>Filtra per azienda</label>
+          <select id="iv_ditta">
+            <option value="">— Tutte le aziende —</option>
+          </select>
+        </div>
       </div>
       <div id="ivTabella" style="overflow-x:auto">
         <p style="color:var(--color-text-muted);font-size:var(--text-sm)">Seleziona anno e mese per caricare la tabella.</p>
@@ -2561,6 +2567,15 @@
       <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-3)">
         Legenda: <strong>[N]</strong> = quantità &nbsp;·&nbsp; <strong>×</strong> = voce non applicabile a questo cliente
       </p>
+      <!-- Sezione dipendenti attivi (visibile solo quando si seleziona un'azienda) -->
+      <div id="ivDipendenti" style="display:none;margin-top:var(--space-5)">
+        <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3);padding-bottom:var(--space-2);border-bottom:1px solid var(--color-border)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          <span style="font-size:var(--text-sm);font-weight:600;color:var(--color-text)">Dipendenti Attivi</span>
+          <span style="font-size:var(--text-xs);color:var(--color-text-muted)">— costi mensili da Scadenzario</span>
+        </div>
+        <div id="ivDipendentiTabella"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-close="modalInserimentoVariabili">Annulla</button>

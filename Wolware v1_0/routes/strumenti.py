@@ -413,6 +413,125 @@ def variabili_carica():
 
 
 # ═══════════════════════════════════════════════════════════
+# BLOCCO — DIPENDENTI ATTIVI (collegamento Scadenzario → costi mensili)
+# ═══════════════════════════════════════════════════════════
+
+@bp.route('/api/strumenti/dipendenti-costi', methods=['GET'])
+@login_required
+def dipendenti_costi():
+    """
+    Restituisce i dipendenti attivi per una specifica ditta,
+    con la loro retribuzione e lo stato di caricamento per il mese selezionato.
+    Query params: ditta_id (required), anno, mese
+    """
+    import datetime as _dt
+    import json as _json
+    ditta_id = request.args.get('ditta_id', type=int)
+    anno     = request.args.get('anno', type=int, default=_dt.date.today().year)
+    mese     = request.args.get('mese', type=int, default=_dt.date.today().month)
+
+    if not ditta_id:
+        return jsonify([])
+
+    db = get_db()
+    try:
+        rows = db.execute(
+            '''SELECT id, cognome, nome, tipo_contratto,
+                      retribuzione_base, netto_busta, retribuzione_pt,
+                      data_assunzione, data_fine_contratto,
+                      cessazione_json, annullata
+               FROM assunzioni
+               WHERE ditta_id=? AND annullata=0
+               ORDER BY cognome, nome''',
+            (ditta_id,)
+        ).fetchall()
+
+        today = _dt.date.today().isoformat()
+        result = []
+        for r in rows:
+            r = dict(r)
+            cess_raw = r.get('cessazione_json')
+            if cess_raw:
+                try:
+                    c = _json.loads(cess_raw) if isinstance(cess_raw, str) else cess_raw
+                    if c and c.get('data', '9999-99-99') < today:
+                        continue
+                except Exception:
+                    pass
+
+            esistente = db.execute(
+                '''SELECT id, quantita, importo FROM pratiche
+                   WHERE ditta_id=? AND anno=? AND mese=?
+                     AND tipo='costo_dipendente' AND note=?''',
+                (ditta_id, anno, mese, f'assunzione:{r["id"]}')
+            ).fetchone()
+
+            r['gia_caricato'] = bool(esistente)
+            r['pratica_id']   = esistente['id']       if esistente else None
+            r['qta_caricata'] = esistente['quantita'] if esistente else 1
+            result.append(r)
+
+        return jsonify(result)
+    finally:
+        db.close()
+
+
+@bp.route('/api/strumenti/dipendenti-costi/carica', methods=['POST'])
+@login_required
+def dipendenti_costi_carica():
+    """
+    Salva i costi dipendenti come pratiche di tipo 'costo_dipendente'.
+    Body: { anno, mese, voci: [{ ditta_id, assunzione_id, nome_dipendente, prezzo, qta }] }
+    """
+    d    = request.get_json() or {}
+    anno = int(d.get('anno', 2026))
+    mese = int(d.get('mese', 1))
+    voci = d.get('voci', [])
+
+    db = get_db()
+    try:
+        salvati = 0
+        for v in voci:
+            ditta_id  = int(v['ditta_id'])
+            ass_id    = int(v['assunzione_id'])
+            nome_dip  = v.get('nome_dipendente', '')
+            prezzo    = float(v.get('prezzo', 0))
+            qta       = float(v.get('qta', 1))
+            importo   = round(prezzo * qta, 2)
+            note_key  = f'assunzione:{ass_id}'
+
+            esistente = db.execute(
+                '''SELECT id FROM pratiche
+                   WHERE ditta_id=? AND anno=? AND mese=?
+                     AND tipo='costo_dipendente' AND note=?''',
+                (ditta_id, anno, mese, note_key)
+            ).fetchone()
+
+            if esistente:
+                db.execute(
+                    'UPDATE pratiche SET quantita=?, prezzo=?, importo=? WHERE id=?',
+                    (qta, prezzo, importo, esistente['id'])
+                )
+            else:
+                db.execute(
+                    '''INSERT INTO pratiche
+                       (ditta_id, anno, mese, tipo, nome, quantita, prezzo, importo, note, data_esecuzione)
+                       VALUES (?,?,?,'costo_dipendente',?,?,?,?,?,date('now'))''',
+                    (ditta_id, anno, mese,
+                     f'Dipendente: {nome_dip}', qta, prezzo, importo, note_key)
+                )
+            salvati += 1
+
+        db.commit()
+        return jsonify({'ok': True, 'salvati': salvati})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+# ═══════════════════════════════════════════════════════════
 #  BLOCCO 4.2 — COSTI MASSIVI
 # ═══════════════════════════════════════════════════════════
 
