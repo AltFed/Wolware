@@ -775,12 +775,14 @@ function resetDittaForm() {
   if (annotEl) annotEl.value = '';
   resetModalTabs();
 }
-function openDittaModal() {
+async function openDittaModal() {
   resetDittaForm();
   const btnDelModal = document.getElementById('btnDeleteDittaModal');
   if (btnDelModal) btnDelModal.style.display = 'none';
   const btnArchModal2 = document.getElementById('btnArchiviaDittaModal');
   if (btnArchModal2) btnArchModal2.style.display = 'none';
+  // Popola la select dei tariffari anche per nuove ditte
+  await loadTariffariSelectDitta(null);
   openModal('modalDitta');
 }
 
@@ -2403,10 +2405,16 @@ function renderDittaVoci(voci) {
 
 // Carica voci dal server
 async function loadDittaVoci(dittaId) {
+  // Carica sempre la lista tariffari nel select (indipendente dalle voci ditta)
+  await loadTariffariSelectDitta(null);
   if (!dittaId) return;
   try {
     const data = await api(`/api/ditte/${dittaId}/tariffario`);
-    await loadTariffariSelectDitta(data.tariffario ? data.tariffario.id : null);
+    // Aggiorna la selezione corrente nel select
+    const sel = document.getElementById('dittaTariffarioSelect');
+    if (sel && data.tariffario) {
+      sel.value = String(data.tariffario.id);
+    }
     renderDittaVoci(data.voci);
     // Mostra bottone Cambia Tariffario solo su ditte esistenti con tariffario
     const btnCambia = document.getElementById('btnCambiaTariffario');
