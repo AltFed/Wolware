@@ -109,15 +109,14 @@ def contabilizza_preview():
 
         for ditta in ditte:
             voci = db.execute(
-                '''SELECT dv.*, mg.tipo as mg_tipo
+                '''SELECT dv.*
                    FROM ditta_voci dv
-                   JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
-                   WHERE dv.ditta_id=? AND mg.tipo IN (?,?)''',
+                   WHERE dv.ditta_id=? AND dv.tipo IN (?,?)''',
                 (ditta['id'], 'costi_fissi_mensili', 'costi_fissi_annuali')
             ).fetchall()
 
             for voce in voci:
-                tipo = voce['mg_tipo']
+                tipo = voce['tipo']
                 # flag anno precedente
                 richiede_anno_prec = voce['richiede_anno_precedente'] if 'richiede_anno_precedente' in voce.keys() else 0
                 if richiede_anno_prec:
@@ -193,15 +192,14 @@ def contabilizza_esegui():
 
         for ditta in ditte:
             voci = db.execute(
-                '''SELECT dv.*, mg.tipo as mg_tipo
+                '''SELECT dv.*
                    FROM ditta_voci dv
-                   JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
-                   WHERE dv.ditta_id=? AND mg.tipo IN (?,?)''',
+                   WHERE dv.ditta_id=? AND dv.tipo IN (?,?)''',
                 (ditta['id'], 'costi_fissi_mensili', 'costi_fissi_annuali')
             ).fetchall()
 
             for voce in voci:
-                tipo = voce['mg_tipo']
+                tipo = voce['tipo']
                 richiede_anno_prec = voce['richiede_anno_precedente'] if 'richiede_anno_precedente' in voce.keys() else 0
                 if richiede_anno_prec:
                     if not _gestione_attiva(dict(ditta), anno - 1, 'paghe'):
