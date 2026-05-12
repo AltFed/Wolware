@@ -336,11 +336,12 @@ function renderDitte(list) {
     const dovuto  = d.totale_dovuto  != null ? formatEur(d.totale_dovuto)  : '—';
     const pagato  = d.totale_pagato  != null ? formatEur(d.totale_pagato)  : '—';
     const residuo = d.totale_residuo != null ? d.totale_residuo : null;
-    const residuoHTML = residuo == null ? '<span style="color:var(--color-text-faint)">—</span>'
+    const residuoHTML = residuo == null
+      ? '<span style="color:var(--color-text-faint)">—</span>'
       : residuo > 0
-        ? `<span class="badge-residuo debito">${formatEur(residuo)}</span>`
+        ? `<span style="color:var(--color-error);font-weight:600">${formatEur(residuo)}</span>`
         : residuo < 0
-          ? `<span class="badge-residuo credito">${formatEur(Math.abs(residuo))}</span>`
+          ? `<span style="color:var(--color-success);font-weight:600">${formatEur(Math.abs(residuo))}</span>`
           : `<span style="color:var(--color-text-faint)">—</span>`;
 
     const cadBadge = d.cadenza
@@ -368,7 +369,7 @@ onclick="openDettaglioCliente(${d.id})" title="${d.ragione_sociale}">
       </td>
       <td class="col-money mono">${dovuto}</td>
       <td class="col-money mono">${pagato}</td>
-      <td class="col-money">${residuoHTML}</td>
+      <td class="col-money mono">${residuoHTML}</td>
       <td class="col-cadenza">${cadBadge}</td>
       <td class="col-data mono">${d.ultimo_ec || '<span style="color:var(--color-text-faint)">—</span>'}</td>
       <td class="col-data mono">${d.ultimo_pag || '<span style="color:var(--color-text-faint)">—</span>'}</td>
