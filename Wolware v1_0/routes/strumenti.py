@@ -413,6 +413,147 @@ def variabili_carica():
 
 
 # ═══════════════════════════════════════════════════════════
+# BLOCCO — VARIABILI PAGHE (4 colonne fisse: CED, A, V, C)
+# ═══════════════════════════════════════════════════════════
+
+# Definizione fissa delle 4 colonne paghe
+_COLONNE_PAGHE = [
+    {'id': 'ced',  'label': 'Nº CED', 'tipo': 'var_ced',  'kw': ['ced']},
+    {'id': 'ass',  'label': 'A',       'tipo': 'var_ass',  'kw': ['assun']},
+    {'id': 'var',  'label': 'V',       'tipo': 'var_var',  'kw': ['varia']},
+    {'id': 'cess', 'label': 'C',       'tipo': 'var_cess', 'kw': ['cess']},
+]
+
+
+def _prezzo_voce_paghe(db, ditta_id, kw_list):
+    """Cerca il prezzo di una voce paghe nel tariffario del cliente per keyword."""
+    voci = db.execute(
+        '''SELECT dv.prezzo FROM ditta_voci dv
+           JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
+           WHERE dv.ditta_id=?
+             AND mg.tipo IN ('costi_variabili_mensili','costi_variabili_annuali')
+           ORDER BY dv.prezzo DESC''',
+        (ditta_id,)
+    ).fetchall()
+    for v in voci:
+        nome_lower = (v.get('nome') or '').lower() if isinstance(v, dict) else ''
+        for kw in kw_list:
+            if kw in nome_lower:
+                return float(v['prezzo'] or 0)
+    # Fallback: cerca per nome senza filtro tipo
+    row = db.execute(
+        '''SELECT dv.nome, dv.prezzo FROM ditta_voci dv
+           WHERE dv.ditta_id=?''', (ditta_id,)
+    ).fetchall()
+    for v in row:
+        v = dict(v)
+        for kw in kw_list:
+            if kw in (v.get('nome') or '').lower():
+                return float(v.get('prezzo') or 0)
+    return 0.0
+
+
+@bp.route('/api/strumenti/variabili-paghe', methods=['GET'])
+@login_required
+def variabili_paghe_tabella():
+    """
+    Restituisce tutti i clienti non archiviati con le quantità paghe
+    (ced, ass, var, cess) per il mese selezionato.
+    """
+    anno = int(request.args.get('anno', 2026))
+    mese = int(request.args.get('mese', 1))
+
+    db = get_db()
+    try:
+        ditte = db.execute(
+            'SELECT id, ragione_sociale FROM ditte WHERE archiviato=0 ORDER BY ragione_sociale COLLATE NOCASE'
+        ).fetchall()
+
+        righe = []
+        for ditta in ditte:
+            did = ditta['id']
+            celle = {}
+            for col in _COLONNE_PAGHE:
+                esistente = db.execute(
+                    '''SELECT quantita FROM pratiche
+                       WHERE ditta_id=? AND anno=? AND mese=? AND tipo=?''',
+                    (did, anno, mese, col['tipo'])
+                ).fetchone()
+                celle[col['id']] = int(esistente['quantita']) if esistente else 0
+
+            righe.append({
+                'ditta_id':   did,
+                'ditta_nome': ditta['ragione_sociale'],
+                'celle':      celle,
+            })
+
+        return jsonify({'colonne': _COLONNE_PAGHE, 'righe': righe})
+    finally:
+        db.close()
+
+
+@bp.route('/api/strumenti/variabili-paghe/carica', methods=['POST'])
+@login_required
+def variabili_paghe_carica():
+    """
+    Salva le quantità paghe per il mese.
+    Body: { anno, mese, righe: [{ ditta_id, ced, ass, var, cess }] }
+    Se quantità = 0, elimina la voce.
+    """
+    d    = request.get_json() or {}
+    anno = int(d.get('anno', 2026))
+    mese = int(d.get('mese', 1))
+    righe = d.get('righe', [])
+
+    db = get_db()
+    try:
+        salvati = eliminati = 0
+        for riga in righe:
+            did = int(riga['ditta_id'])
+            for col in _COLONNE_PAGHE:
+                qta = int(riga.get(col['id'], 0) or 0)
+                tipo = col['tipo']
+                esistente = db.execute(
+                    'SELECT id FROM pratiche WHERE ditta_id=? AND anno=? AND mese=? AND tipo=?',
+                    (did, anno, mese, tipo)
+                ).fetchone()
+
+                if qta == 0:
+                    if esistente:
+                        db.execute('DELETE FROM pratiche WHERE id=?', (esistente['id'],))
+                        eliminati += 1
+                    continue
+
+                prezzo  = _prezzo_voce_paghe(db, did, col['kw'])
+                importo = round(prezzo * qta, 2)
+                nomi    = {'ced': 'Cedolini', 'ass': 'Assunzioni',
+                           'var': 'Variazioni', 'cess': 'Cessazioni'}
+                nome    = nomi[col['id']]
+
+                if esistente:
+                    db.execute(
+                        'UPDATE pratiche SET quantita=?, prezzo=?, importo=? WHERE id=?',
+                        (qta, prezzo, importo, esistente['id'])
+                    )
+                else:
+                    db.execute(
+                        '''INSERT INTO pratiche
+                           (ditta_id, anno, mese, tipo, nome, quantita, prezzo, importo, data_esecuzione)
+                           VALUES (?,?,?,?,?,?,?,?,date('now'))''',
+                        (did, anno, mese, tipo, nome, qta, prezzo, importo)
+                    )
+                salvati += 1
+
+        db.commit()
+        return jsonify({'ok': True, 'salvati': salvati, 'eliminati': eliminati})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+# ═══════════════════════════════════════════════════════════
 # BLOCCO — DIPENDENTI ATTIVI (collegamento Scadenzario → costi mensili)
 # ═══════════════════════════════════════════════════════════
 

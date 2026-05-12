@@ -3321,233 +3321,80 @@ document.getElementById('btnApplicaCostiMassivi')?.addEventListener('click', asy
   } catch(e) { toast('Errore: ' + e.message, 'error'); }
 });
 
-/* ── 4.3 Inserimento Costi Variabili ─────────────────────────────────────── */
-let ivTabData = null;
+/* ── 4.3 Variabili Paghe (N° CED / A / V / C) ───────────────────────────── */
+let vpDati = null;
 
-document.getElementById('btnInserimentoCostiVariabili')?.addEventListener('click', () => {
+document.getElementById('btnVariabiliPaghe')?.addEventListener('click', () => {
   const now = new Date();
-  _buildAnnoSel('iv_anno', now.getFullYear());
-  document.getElementById('iv_mese').value = now.getMonth() + 1;
-  ivTabData = null;
-  document.getElementById('ivTabella').innerHTML =
-    '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Seleziona anno e mese per caricare la tabella.</p>';
-  // Popola filtro azienda
-  const ivDittaSel = document.getElementById('iv_ditta');
-  if (ivDittaSel) {
-    ivDittaSel.innerHTML = '<option value="">— Tutte le aziende —</option>' +
-      (allDitte || []).filter(d => !d.archiviato)
-        .map(d => `<option value="${d.id}">${d.ragione_sociale}</option>`).join('');
-    ivDittaSel.value = '';
-  }
-  document.getElementById('ivDipendenti').style.display = 'none';
-  openModal('modalInserimentoVariabili');
-  _loadIvTabella();
+  _buildAnnoSel('vp_anno', now.getFullYear());
+  document.getElementById('vp_mese').value = now.getMonth() + 1;
+  vpDati = null;
+  openModal('modalVariabiliPaghe');
+  _loadVpTabella();
 });
 
-['iv_anno','iv_mese'].forEach(id =>
-  document.getElementById(id)?.addEventListener('change', () => {
-    _loadIvTabella();
-    if (document.getElementById('iv_ditta')?.value) _loadIvDipendenti();
-  }));
+['vp_anno','vp_mese'].forEach(id =>
+  document.getElementById(id)?.addEventListener('change', _loadVpTabella));
 
-document.getElementById('iv_ditta')?.addEventListener('change', () => {
-  _filtroIvDitta();
-  _loadIvDipendenti();
-});
-
-async function _loadIvTabella() {
-  const anno = document.getElementById('iv_anno').value;
-  const mese = document.getElementById('iv_mese').value;
+async function _loadVpTabella() {
+  const anno = document.getElementById('vp_anno')?.value;
+  const mese = document.getElementById('vp_mese')?.value;
   if (!anno || !mese) return;
+  const el = document.getElementById('vpTabella');
+  el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Caricamento...</p>';
   try {
-    ivTabData = await api(`/api/strumenti/variabili/tabella?anno=${anno}&mese=${mese}`);
-    _renderIvTabella();
-  } catch(e) { toast('Errore caricamento tabella: ' + e.message, 'error'); }
+    vpDati = await api(`/api/strumenti/variabili-paghe?anno=${anno}&mese=${mese}`);
+    _renderVpTabella();
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--color-error);font-size:var(--text-sm)">Errore: ${e.message}</p>`;
+  }
 }
 
-function _renderIvTabella() {
-  const { colonne, righe } = ivTabData;
-  const el = document.getElementById('ivTabella');
-  if (!colonne.length) {
-    el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Nessuna voce variabile disponibile per questo mese.</p>';
+function _renderVpTabella() {
+  const el = document.getElementById('vpTabella');
+  if (!vpDati || !vpDati.righe.length) {
+    el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Nessun cliente attivo.</p>';
     return;
   }
-  const ths = colonne.map(c =>
-    `<th title="${c.mg_nome}">${c.nome}</th>`).join('');
-  const trs = righe.map(r => {
-    let totaleCliente = 0;
-    const celle = colonne.map(c => {
-      const cella = r.celle[c.voce_id];
-      if (!cella || !cella.applicabile)
-        return `<td><span class="variabili-cell-na">×</span></td>`;
-      const qta = cella.qta ?? 0;
-      const importo = qta * (cella.prezzo || 0);
-      totaleCliente += importo;
-      const compilata = qta > 0 ? 'style="background:var(--color-primary-highlight)"' : '';
-      return `<td ${compilata}><input type="number" min="0" step="1" value="${qta}"
-        data-ditta="${r.ditta_id}" data-voce="${c.voce_id}" data-prezzo="${cella.prezzo || 0}"
-        class="iv-input"
-        oninput="this.closest('td').style.background=+this.value>0?'var(--color-primary-highlight)':'';_aggiornaRigaTotale(this)"
-        /></td>`;
+  const COL_CLASS = { ced:'vp-col-ced', ass:'vp-col-ass', var:'vp-col-var', cess:'vp-col-cess' };
+  const ths = vpDati.colonne.map(c =>
+    `<th class="vp-th-col ${COL_CLASS[c.id]}">${c.label}</th>`).join('');
+
+  const trs = vpDati.righe.map(r => {
+    const celle = vpDati.colonne.map(c => {
+      const val = r.celle[c.id] || 0;
+      const hi = val > 0 ? 'style="background:var(--color-primary-faint,rgba(99,102,241,.12))"' : '';
+      return `<td ${hi}><input type="number" min="0" step="1" value="${val}"
+        class="vp-input" data-ditta="${r.ditta_id}" data-col="${c.id}"
+        oninput="this.closest('td').style.background=+this.value>0?'var(--color-primary-faint,rgba(99,102,241,.12))':''"/></td>`;
     }).join('');
-    return `<tr>
-      <td class="col-cliente">${r.ditta_nome}</td>
-      ${celle}
-      <td class="iv-tot-cliente" id="iv-tot-${r.ditta_id}" style="font-weight:600;text-align:right;white-space:nowrap;color:var(--color-primary)">
-        € ${totaleCliente.toFixed(2)}
-      </td>
-    </tr>`;
+    return `<tr><td class="vp-td-cliente">${r.ditta_nome}</td>${celle}</tr>`;
   }).join('');
-  el.innerHTML = `<table class="variabili-table">
-    <thead><tr><th>Cliente</th>${ths}<th style="text-align:right">Totale</th></tr></thead>
+
+  el.innerHTML = `<table class="vp-table">
+    <thead><tr>
+      <th class="vp-th-cliente">Cliente</th>${ths}
+    </tr></thead>
     <tbody>${trs}</tbody>
   </table>`;
 }
 
-// ── Filtra le righe della tabella variabili per azienda ───────────────────
-function _filtroIvDitta() {
-  const dittaId = document.getElementById('iv_ditta')?.value;
-  const tbody = document.querySelector('#ivTabella table tbody');
-  if (!tbody) return;
-  tbody.querySelectorAll('tr').forEach(tr => {
-    if (!dittaId) {
-      tr.style.display = '';
-      return;
-    }
-    const inp = tr.querySelector('.iv-input');
-    tr.style.display = (!inp || inp.dataset.ditta === dittaId) ? '' : 'none';
-  });
-}
-
-// ── Carica dipendenti attivi per l'azienda selezionata ───────────────────
-async function _loadIvDipendenti() {
-  const dittaId = document.getElementById('iv_ditta')?.value;
-  const sez = document.getElementById('ivDipendenti');
-  if (!sez) return;
-  if (!dittaId) { sez.style.display = 'none'; return; }
-
-  const anno = document.getElementById('iv_anno')?.value;
-  const mese = document.getElementById('iv_mese')?.value;
-  try {
-    const data = await api(`/api/strumenti/dipendenti-costi?ditta_id=${dittaId}&anno=${anno}&mese=${mese}`);
-    sez.style.display = '';
-    _renderIvDipendenti(data, +dittaId);
-  } catch(e) {
-    document.getElementById('ivDipendentiTabella').innerHTML =
-      `<p style="color:var(--color-error);font-size:var(--text-sm)">Errore caricamento dipendenti: ${e.message}</p>`;
-    sez.style.display = '';
-  }
-}
-
-// ── Render tabella dipendenti ─────────────────────────────────────────────
-function _renderIvDipendenti(dipendenti, dittaId) {
-  const el = document.getElementById('ivDipendentiTabella');
-  if (!dipendenti.length) {
-    el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Nessun dipendente attivo per questa azienda.</p>';
-    return;
-  }
-  const TIPI = { tempo_indeterminato:'T. Indeterminato', tempo_determinato:'T. Determinato',
-    apprendistato:'Apprendistato', lavoro_intermittente:'Intermittente',
-    lavoro_stagionale:'Stagionale', tirocinio:'Tirocinio' };
-
-  const rows = dipendenti.map(d => {
-    const nominativo = `${d.cognome || ''} ${d.nome || ''}`.trim();
-    const tipo = TIPI[d.tipo_contratto] || d.tipo_contratto || '—';
-    const retrib = parseFloat(d.retribuzione_base || d.netto_busta || 0);
-    const qta = d.qta_caricata || 1;
-    const stato = d.gia_caricato
-      ? `<span style="color:var(--color-success);font-size:var(--text-xs);font-weight:600">✓ Già caricato</span>`
-      : '';
-    return `<tr data-ass-id="${d.id}" data-ditta="${dittaId}" data-prezzo="${retrib}">
-      <td style="font-weight:500">${nominativo}</td>
-      <td style="color:var(--color-text-muted);font-size:var(--text-xs)">${tipo}</td>
-      <td style="font-size:var(--text-sm)">€ ${retrib.toFixed(2)}</td>
-      <td><input type="number" min="0" step="0.5" value="${qta}"
-          class="iv-dip-input" style="width:70px;padding:4px 6px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface-2);color:var(--color-text);font-size:var(--text-sm)"
-          oninput="_aggiornaRigaDip(this)"
-          data-ass="${d.id}" data-ditta="${dittaId}" data-prezzo="${retrib}"/></td>
-      <td class="iv-dip-tot-${d.id}" style="font-weight:600;color:var(--color-primary);text-align:right;white-space:nowrap">
-        € ${(retrib * qta).toFixed(2)}
-      </td>
-      <td>${stato}</td>
-    </tr>`;
-  }).join('');
-
-  el.innerHTML = `<table class="variabili-table">
-    <thead><tr>
-      <th>Dipendente</th><th>Contratto</th><th>Retribuzione</th>
-      <th>Qtà mesi</th><th style="text-align:right">Totale</th><th>Stato</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
-}
-
-function _aggiornaRigaDip(input) {
-  const qta = parseFloat(input.value) || 0;
-  const prezzo = parseFloat(input.dataset.prezzo) || 0;
-  const assId = input.dataset.ass;
-  const totEl = document.querySelector(`.iv-dip-tot-${assId}`);
-  if (totEl) totEl.textContent = `€ ${(prezzo * qta).toFixed(2)}`;
-}
-
-function _aggiornaRigaTotale(input) {
-  const dittaId = input.dataset.ditta;
-  const riga = input.closest('tr');
-  const inputs = riga.querySelectorAll('.iv-input');
-  let tot = 0;
+document.getElementById('btnCaricaVariabiliPaghe')?.addEventListener('click', async () => {
+  const anno = +document.getElementById('vp_anno').value;
+  const mese = +document.getElementById('vp_mese').value;
+  const inputs = [...document.querySelectorAll('.vp-input')];
+  const byDitta = {};
   inputs.forEach(inp => {
-    tot += (parseFloat(inp.value) || 0) * (parseFloat(inp.dataset.prezzo) || 0);
+    const did = inp.dataset.ditta;
+    if (!byDitta[did]) byDitta[did] = { ditta_id: +did, ced:0, ass:0, var:0, cess:0 };
+    byDitta[did][inp.dataset.col] = +inp.value || 0;
   });
-  const totEl = document.getElementById(`iv-tot-${dittaId}`);
-  if (totEl) totEl.textContent = `€ ${tot.toFixed(2)}`;
-}
-
-document.getElementById('btnCaricaVariabili')?.addEventListener('click', async () => {
-  const anno = +document.getElementById('iv_anno').value;
-  const mese = +document.getElementById('iv_mese').value;
-
-  // ── Costi variabili da tariffario ───────────────────────────────────────
-  const inputs = [...document.querySelectorAll('.iv-input')];
-  const righe = inputs
-    .filter(i => parseFloat(i.value) > 0)
-    .map(i => ({ ditta_id: +i.dataset.ditta, voce_id: +i.dataset.voce, qta: +i.value }));
-
-  // ── Costi dipendenti da Scadenzario ────────────────────────────────────
-  const dipInputs = [...document.querySelectorAll('.iv-dip-input')];
-  const vociDip = dipInputs
-    .filter(i => parseFloat(i.value) > 0)
-    .map(i => {
-      // Recupera il nominativo dalla riga
-      const tr = i.closest('tr');
-      const nomeTd = tr?.querySelector('td:first-child');
-      return {
-        ditta_id: +i.dataset.ditta,
-        assunzione_id: +i.dataset.ass,
-        nome_dipendente: nomeTd?.textContent?.trim() || '',
-        prezzo: +i.dataset.prezzo,
-        qta: +i.value,
-      };
-    });
-
-  if (!righe.length && !vociDip.length) {
-    toast('Nessuna quantità inserita', 'error');
-    return;
-  }
-
+  const righe = Object.values(byDitta).filter(r => r.ced || r.ass || r.var || r.cess);
+  if (!righe.length) { toast('Nessuna quantità inserita', 'error'); return; }
   try {
-    let totSalvati = 0;
-    // Carica costi variabili tariffario
-    if (righe.length) {
-      const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, dati: righe });
-      totSalvati += res.salvati || righe.length;
-    }
-    // Carica costi dipendenti
-    if (vociDip.length) {
-      const res2 = await api('/api/strumenti/dipendenti-costi/carica', 'POST', { anno, mese, voci: vociDip });
-      totSalvati += res2.salvati || vociDip.length;
-    }
-    toast(`Caricamento completato (${totSalvati} voci)`, 'success');
-    closeModal('modalInserimentoVariabili');
+    const res = await api('/api/strumenti/variabili-paghe/carica', 'POST', { anno, mese, righe });
+    toast(`Variabili paghe caricate (${res.salvati} voci)`, 'success');
+    closeModal('modalVariabiliPaghe');
     loadDitte();
   } catch(e) { toast('Errore: ' + e.message, 'error'); }
 });

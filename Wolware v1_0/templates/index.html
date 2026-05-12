@@ -330,9 +330,9 @@
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
                 Costi Massivi
               </button>
-              <button class="btn btn-secondary btn-sm" id="btnInserimentoCostiVariabili">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Inserimento Costi Variabili
+              <button class="btn btn-secondary btn-sm" id="btnVariabiliPaghe">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/><line x1="15" y1="9" x2="15" y2="21"/></svg>
+                Variabili Paghe
               </button>
               <button class="btn btn-secondary btn-sm" id="btnContabilizzaCostiFissi">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
@@ -2531,21 +2531,21 @@
 </div>
 
 <!-- 4.3 Inserimento Costi Variabili -->
-<div class="modal-overlay" id="modalInserimentoVariabili">
-  <div class="modal modal-xxl" style="max-width:1100px">
+<div class="modal-overlay" id="modalVariabiliPaghe">
+  <div class="modal modal-xxl" style="max-width:900px">
     <div class="modal-header">
-      <h2 class="modal-title">Inserimento Costi Variabili</h2>
-      <button class="modal-close" data-close="modalInserimentoVariabili">&#x2715;</button>
+      <h2 class="modal-title">Variabili Paghe</h2>
+      <button class="modal-close" data-close="modalVariabiliPaghe">&#x2715;</button>
     </div>
     <div class="modal-body">
-      <div style="display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:flex-end;margin-bottom:var(--space-4)">
-        <div class="form-field" style="min-width:100px">
-          <label>Anno</label>
-          <select id="iv_anno"></select>
-        </div>
+      <div style="display:flex;gap:var(--space-4);align-items:flex-end;margin-bottom:var(--space-5)">
         <div class="form-field" style="min-width:120px">
+          <label>Anno</label>
+          <select id="vp_anno"></select>
+        </div>
+        <div class="form-field" style="min-width:140px">
           <label>Mese</label>
-          <select id="iv_mese">
+          <select id="vp_mese">
             <option value="1">Gennaio</option><option value="2">Febbraio</option>
             <option value="3">Marzo</option><option value="4">Aprile</option>
             <option value="5">Maggio</option><option value="6">Giugno</option>
@@ -2554,32 +2554,14 @@
             <option value="11">Novembre</option><option value="12">Dicembre</option>
           </select>
         </div>
-        <div class="form-field" style="min-width:220px;flex:1">
-          <label>Filtra per azienda</label>
-          <select id="iv_ditta">
-            <option value="">— Tutte le aziende —</option>
-          </select>
-        </div>
       </div>
-      <div id="ivTabella" style="overflow-x:auto">
-        <p style="color:var(--color-text-muted);font-size:var(--text-sm)">Seleziona anno e mese per caricare la tabella.</p>
-      </div>
-      <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-3)">
-        Legenda: <strong>[N]</strong> = quantità &nbsp;·&nbsp; <strong>×</strong> = voce non applicabile a questo cliente
-      </p>
-      <!-- Sezione dipendenti attivi (visibile solo quando si seleziona un'azienda) -->
-      <div id="ivDipendenti" style="display:none;margin-top:var(--space-5)">
-        <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3);padding-bottom:var(--space-2);border-bottom:1px solid var(--color-border)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          <span style="font-size:var(--text-sm);font-weight:600;color:var(--color-text)">Dipendenti Attivi</span>
-          <span style="font-size:var(--text-xs);color:var(--color-text-muted)">— costi mensili da Scadenzario</span>
-        </div>
-        <div id="ivDipendentiTabella"></div>
+      <div id="vpTabella" style="overflow-x:auto">
+        <p style="color:var(--color-text-muted);font-size:var(--text-sm)">Caricamento...</p>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" data-close="modalInserimentoVariabili">Annulla</button>
-      <button class="btn btn-primary" id="btnCaricaVariabili">Caricamento su Scheda Cliente</button>
+      <button class="btn btn-ghost" data-close="modalVariabiliPaghe">Annulla</button>
+      <button class="btn btn-primary" id="btnCaricaVariabiliPaghe">Caricamento su Scheda Cliente</button>
     </div>
   </div>
 </div>
