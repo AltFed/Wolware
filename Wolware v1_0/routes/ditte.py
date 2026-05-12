@@ -81,13 +81,15 @@ def get_ditte():
 
             # ── Indicatori mesi CF e VR per l'anno richiesto ──
             mesi_cf = conn.execute(
-                "SELECT DISTINCT mese FROM pratiche WHERE ditta_id=? AND anno=? AND tipo='costo_fisso'",
+                """SELECT DISTINCT mese FROM pratiche WHERE ditta_id=? AND anno=?
+                   AND tipo IN ('costi_fissi_mensili','fisso_mensile',
+                                'costi_fissi_annuali','fisso_annuale')""",
                 (did, anno)
             ).fetchall()
             mesi_vr = conn.execute(
-                """SELECT DISTINCT mese FROM pratiche
-                   WHERE ditta_id=? AND anno=?
-                   AND tipo IN ('variabile','variabile_mensile','variabile_annuale')""",
+                """SELECT DISTINCT mese FROM pratiche WHERE ditta_id=? AND anno=?
+                   AND tipo IN ('costi_variabili_mensili','costi_variabili_annuali',
+                                'variabile','variabile_mensile','variabile_annuale')""",
                 (did, anno)
             ).fetchall()
 

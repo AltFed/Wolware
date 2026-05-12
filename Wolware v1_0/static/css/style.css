@@ -459,7 +459,7 @@ table{border-collapse:collapse;width:100%}
 .mesi-label{font-size:9px;font-weight:700;color:var(--color-text-faint);width:14px;flex-shrink:0;text-transform:uppercase}
 .mesi-dots{display:flex;gap:2px}
 .mese-dot{display:flex;align-items:center;justify-content:center;
-  width:16px;height:16px;border-radius:3px;font-size:8px;font-weight:600;
+  width:24px;height:16px;border-radius:3px;font-size:7px;font-weight:600;
   background:var(--color-surface-offset);color:var(--color-text-faint);
   cursor:default;transition:background var(--transition),color var(--transition)}
 .mese-dot.done{background:var(--color-primary-light);color:var(--color-primary)}

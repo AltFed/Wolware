@@ -321,7 +321,7 @@ function renderDitte(list) {
     </td></tr>`;
     return;
   }
-  const MESI = ['G','F','M','A','M','G','L','A','S','O','N','D'];
+  const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
   tbody.innerHTML = filtered.map(d => {
     // indicatori mesi CF (fissi) e VR (variabili) — placeholder visivo
     const cfDots = MESI.map((m,i) => {

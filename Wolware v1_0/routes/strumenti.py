@@ -367,14 +367,14 @@ def variabili_carica():
                     eliminati += 1
                 continue
 
-            # Recupera info voce
+            # Recupera info voce dalla copia del cliente — nessun JOIN al tariffario
             voce_info = db.execute(
-                '''SELECT dv.nome, dv.prezzo, dv.macrogruppo_nome, dv.esente_iva,
-                          mg.tipo as mg_tipo
-                   FROM ditta_voci dv
-                   JOIN macrogruppi mg ON mg.id = dv.macrogruppo_id
-                   WHERE dv.ditta_id=? AND dv.voce_costo_id=?''',
-                (ditta_id, voce_id)
+                '''SELECT nome, prezzo, macrogruppo_nome, esente_iva, tipo
+                   FROM ditta_voci
+                   WHERE ditta_id=? AND voce_costo_id=?
+                     AND tipo IN (?,?)''',
+                (ditta_id, voce_id,
+                 'costi_variabili_mensili', 'costi_variabili_annuali')
             ).fetchone()
             if not voce_info:
                 continue
@@ -396,7 +396,7 @@ def variabili_carica():
                     (ditta_id, voce_id, anno, mese,
                      voce_info['nome'], qta,
                      float(voce_info['prezzo'] or 0), importo,
-                     voce_info['mg_tipo'], voce_info['macrogruppo_nome'],
+                     voce_info['tipo'], voce_info['macrogruppo_nome'],
                      int(voce_info['esente_iva'] or 0))
                 )
             salvati += 1
