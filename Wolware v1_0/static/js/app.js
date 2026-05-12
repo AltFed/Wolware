@@ -3343,7 +3343,8 @@ async function _loadVpTabella() {
   const el = document.getElementById('vpTabella');
   el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Caricamento...</p>';
   try {
-    vpDati = await api(`/api/strumenti/variabili-paghe?anno=${anno}&mese=${mese}`);
+    // Usa il backend dinamico che legge le voci dal tariffario di ogni cliente
+    vpDati = await api(`/api/strumenti/variabili/tabella?anno=${anno}&mese=${mese}`);
     _renderVpTabella();
   } catch(e) {
     el.innerHTML = `<p style="color:var(--color-error);font-size:var(--text-sm)">Errore: ${e.message}</p>`;
@@ -3352,20 +3353,34 @@ async function _loadVpTabella() {
 
 function _renderVpTabella() {
   const el = document.getElementById('vpTabella');
-  if (!vpDati || !vpDati.righe.length) {
-    el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Nessun cliente attivo.</p>';
+  if (!vpDati) return;
+
+  const { colonne, righe } = vpDati;
+
+  if (!colonne || !colonne.length) {
+    el.innerHTML = `<p style="color:var(--color-text-muted);font-size:var(--text-sm)">
+      Nessuna voce variabile configurata nel tariffario per questo mese.<br>
+      <span style="font-size:var(--text-xs)">Aggiungi voci "Costi Variabili Mensili" o "Costi Variabili Annuali" nei tariffari dei clienti.</span>
+    </p>`;
     return;
   }
-  const COL_CLASS = { ced:'vp-col-ced', ass:'vp-col-ass', var:'vp-col-var', cess:'vp-col-cess' };
-  const ths = vpDati.colonne.map(c =>
-    `<th class="vp-th-col ${COL_CLASS[c.id]}">${c.label}</th>`).join('');
 
-  const trs = vpDati.righe.map(r => {
-    const celle = vpDati.colonne.map(c => {
-      const val = r.celle[c.id] || 0;
-      const hi = val > 0 ? 'style="background:var(--color-primary-faint,rgba(99,102,241,.12))"' : '';
-      return `<td ${hi}><input type="number" min="0" step="1" value="${val}"
-        class="vp-input" data-ditta="${r.ditta_id}" data-col="${c.id}"
+  // Colore header: mensili = blu, annuali = arancio
+  const thCls = c => c.tipo === 'costi_variabili_annuali' ? 'vp-col-var' : 'vp-col-ced';
+  const ths = colonne.map(c =>
+    `<th class="vp-th-col ${thCls(c)}" title="${c.mg_nome}">${c.nome}</th>`).join('');
+
+  const trs = righe.map(r => {
+    const celle = colonne.map(c => {
+      const cella = r.celle[c.voce_id];
+      // Cella non applicabile (il cliente non ha questa voce nel tariffario)
+      if (!cella || !cella.attiva)
+        return `<td style="color:var(--color-text-faint);text-align:center">×</td>`;
+      const qta = cella.qta ?? 0;
+      const hi = qta > 0 ? 'background:var(--color-primary-faint,rgba(99,102,241,.12))' : '';
+      return `<td style="${hi}"><input type="number" min="0" step="1" value="${qta}"
+        class="vp-input"
+        data-ditta="${r.ditta_id}" data-voce="${c.voce_id}" data-prezzo="${cella.prezzo || 0}"
         oninput="this.closest('td').style.background=+this.value>0?'var(--color-primary-faint,rgba(99,102,241,.12))':''"/></td>`;
     }).join('');
     return `<tr><td class="vp-td-cliente">${r.ditta_nome}</td>${celle}</tr>`;
@@ -3383,16 +3398,13 @@ document.getElementById('btnCaricaVariabiliPaghe')?.addEventListener('click', as
   const anno = +document.getElementById('vp_anno').value;
   const mese = +document.getElementById('vp_mese').value;
   const inputs = [...document.querySelectorAll('.vp-input')];
-  const byDitta = {};
-  inputs.forEach(inp => {
-    const did = inp.dataset.ditta;
-    if (!byDitta[did]) byDitta[did] = { ditta_id: +did, ced:0, ass:0, var:0, cess:0 };
-    byDitta[did][inp.dataset.col] = +inp.value || 0;
-  });
-  const righe = Object.values(byDitta).filter(r => r.ced || r.ass || r.var || r.cess);
+  // Usa lo stesso formato del backend esistente variabili/carica
+  const righe = inputs
+    .filter(i => parseFloat(i.value) >= 0)
+    .map(i => ({ ditta_id: +i.dataset.ditta, voce_id: +i.dataset.voce, qta: +i.value }));
   if (!righe.length) { toast('Nessuna quantità inserita', 'error'); return; }
   try {
-    const res = await api('/api/strumenti/variabili-paghe/carica', 'POST', { anno, mese, righe });
+    const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, dati: righe });
     toast(`Variabili paghe caricate (${res.salvati} voci)`, 'success');
     closeModal('modalVariabiliPaghe');
     loadDitte();
