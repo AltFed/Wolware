@@ -752,7 +752,6 @@ function resetDittaForm() {
   document.getElementById('email').value = '';
   document.getElementById('pec').value = '';
   document.getElementById('telefono').value = '';
-  document.getElementById('cedolino_onnicomprensivo').checked = false;
   sedi = []; sedeIdx = 0; inailList = []; inpsList = []; ccList = []; tariffItems = [];
   renderSedi(); renderInail(); renderInps(); renderCC(); renderTariff();
   currentDittaIdForTariff = null;
@@ -798,7 +797,6 @@ async function editDitta(id) {
         const el = document.getElementById(f);
         if (el && d[f]) el.value = d[f];
       });
-    document.getElementById('cedolino_onnicomprensivo').checked = !!d.cedolino_onnicomprensivo;
     // Carica cadenza pagamenti
     const cadVal = d.cadenza_pagamenti || 'libero';
     const cadHidden = document.getElementById('cadenza_pagamenti');
@@ -861,7 +859,6 @@ document.getElementById('btnSaveDitta').addEventListener('click', async () => {
     email: document.getElementById('email').value.trim(),
     pec: document.getElementById('pec').value.trim(),
     telefono: document.getElementById('telefono').value.trim(),
-    cedolino_onnicomprensivo: document.getElementById('cedolino_onnicomprensivo').checked ? 1 : 0,
     sedi_json: JSON.stringify(sedi),
     inail_json: JSON.stringify(inailList),
     inps_json: JSON.stringify(inpsList),
