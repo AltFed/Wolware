@@ -5506,28 +5506,19 @@ const ScadenzarioModule = (() => {
     return new Date(s);
   }
 
-  // Data limite: primo giorno di 2 mesi fa
-  function _dataLimiteAttivo() {
-    const oggi = new Date();
-    const d = new Date(oggi.getFullYear(), oggi.getMonth() - 2, 1);
-    return d;
-  }
-
   // ── Costruisce array di "scadenze" (eventi) da un'assunzione ────────────
   function _eventiDaAssunzione(a) {
     const eventi = [];
     const ditta = a.ditta || {};
 
-    // Evento ASSUNZIONE
-    if (a.data_assunzione) {
-      eventi.push({
-        tipo: 'assunzione',
-        data: a.data_assunzione,
-        data_pratica: a.data_unilav || '',
-        ass: a,
-        ditta,
-      });
-    }
+    // Evento ASSUNZIONE — sempre presente, anche senza data
+    eventi.push({
+      tipo: 'assunzione',
+      data: a.data_assunzione || '',
+      data_pratica: a.data_unilav || '',
+      ass: a,
+      ditta,
+    });
 
     // Proroghe
     const proroghe = a.proroghe_json || [];
@@ -5592,17 +5583,20 @@ const ScadenzarioModule = (() => {
     return eventi;
   }
 
-  // ── Filtra eventi per "attivo" (ultimi 2 mesi + futuro) ─────────────────
-  function _isAttivo(evento) {
-    const limite = _dataLimiteAttivo();
-    const d = _parseDateVal(evento.data);
-    if (!d) return false;
-    if (d >= limite) return true;
-    // Contratti a termine con data fine futura rimangono attivi
-    if (['scadenza_contratto', 'proroga_attiva'].includes(evento.tipo)) {
-      return d >= new Date();
+  // ── Controlla se un'assunzione è "attiva" (non cessata, non annullata) ──
+  // Attivo = non annullata E (nessuna cessazione O cessazione futura)
+  function _isAssunzioneAttiva(a) {
+    if (a.annullata) return false;
+    const cess = a.cessazione_json;
+    if (cess && cess.data) {
+      const d = _parseDateVal(cess.data);
+      if (d) {
+        const oggi = new Date();
+        oggi.setHours(0, 0, 0, 0);
+        return d >= oggi; // cessazione futura → ancora attiva
+      }
     }
-    return false;
+    return true;
   }
 
   // ── Raggruppa eventi per mese/anno ───────────────────────────────────────
@@ -5610,12 +5604,19 @@ const ScadenzarioModule = (() => {
     const mappa = {};
     eventi.forEach(ev => {
       const d = _parseDateVal(ev.data);
-      if (!d) return;
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (!mappa[key]) mappa[key] = { anno: d.getFullYear(), mese: d.getMonth() + 1, eventi: [] };
+      // Senza data → gruppo speciale '0000-00' (in fondo)
+      const key = d
+        ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        : '0000-00';
+      if (!mappa[key]) mappa[key] = {
+        anno: d ? d.getFullYear() : 0,
+        mese: d ? d.getMonth() + 1 : 0,
+        eventi: [],
+        senzaData: !d,
+      };
       mappa[key].eventi.push(ev);
     });
-    // Ordina le chiavi per data discendente
+    // Ordina per data discendente; '0000-00' (senza data) finisce in fondo
     return Object.keys(mappa).sort().reverse().map(k => mappa[k]);
   }
 
@@ -5629,7 +5630,7 @@ const ScadenzarioModule = (() => {
     dati.forEach(a => {
       const ev = _eventiDaAssunzione(a);
       if (_modalita === 'attivo') {
-        ev.forEach(e => { if (_isAttivo(e)) tuttiEventi.push(e); });
+        ev.forEach(e => { if (_isAssunzioneAttiva(e.ass)) tuttiEventi.push(e); });
       } else {
         ev.forEach(e => tuttiEventi.push(e));
       }
@@ -5673,8 +5674,9 @@ const ScadenzarioModule = (() => {
         else if (['cessazione','annullamento'].includes(e.tipo)) nCess++;
       });
 
+      const meseLabel = gruppo.senzaData ? 'Data non impostata' : _mesiLabel(gruppo.anno, gruppo.mese);
       html += `<tr class="scad-mese-header"><td colspan="7">
-        ${_mesiLabel(gruppo.anno, gruppo.mese)}
+        ${meseLabel}
         ${nAss ? `<span class="scad-mese-badge"><span class="scad-mese-count verde">${nAss}</span></span>` : ''}
         ${nVar ? `<span class="scad-mese-badge"><span class="scad-mese-count giallo">${nVar}</span></span>` : ''}
         ${nCess ? `<span class="scad-mese-badge"><span class="scad-mese-count rosso">${nCess}</span></span>` : ''}
@@ -6185,15 +6187,17 @@ const ScadenzarioModule = (() => {
     const anno = document.getElementById('archivioAnno')?.value;
     if (!mese || !anno) return;
     try {
-      const res = await fetch(`/api/scadenzario/archivio?mese=${mese}&anno=${anno}`);
-      const data = await res.json();
-      // Il backend restituisce tutti i dati, filtra lato frontend per il mese selezionato
+      // Filtra: assunzioni NON attive (cessate o annullate)
+      // con almeno un evento nel mese/anno selezionato
+      const meseInt = parseInt(mese, 10);
+      const annoInt = parseInt(anno, 10);
       const meseFiltrato = _dati.filter(a => {
+        if (_isAssunzioneAttiva(a)) return false; // escludi attive
         const ev = _eventiDaAssunzione(a);
         return ev.some(e => {
           const d = _parseDateVal(e.data);
           if (!d) return false;
-          return d.getMonth() + 1 === parseInt(mese, 10) && d.getFullYear() === parseInt(anno, 10);
+          return d.getMonth() + 1 === meseInt && d.getFullYear() === annoInt;
         });
       });
       _render(meseFiltrato);
