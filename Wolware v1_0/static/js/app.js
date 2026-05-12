@@ -2764,6 +2764,10 @@ function _renderDetRiepilogo(s) {
       <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.esente)}</div>
     </div>` : ''}
     <div class="dettaglio-stat-card">
+      <div class="dettaglio-stat-label">IVA 22%</div>
+      <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.iva ?? 0)}</div>
+    </div>
+    <div class="dettaglio-stat-card">
       <div class="dettaglio-stat-label">Totale + IVA</div>
       <div class="dettaglio-stat-val">${formatEur(s.dovuto)}</div>
     </div>
@@ -2809,10 +2813,14 @@ function _renderDetPratiche(list) {
         ? `${p.nome}${mg} &nbsp;<span style="color:var(--color-text-faint)">${p.quantita} × ${formatEur(p.prezzo)}</span>`
         : `${p.nome}${mg}`;
       const esente = p.esente_iva ? `<span class="badge-tipo esente">ESENTE IVA</span>` : '';
+      const iva22 = (!p.esente_iva && p.importo) ? Math.round(p.importo * 22) / 100 : 0;
+      const ivaStr = p.esente_iva
+        ? `<div style="font-size:10px;color:var(--color-text-muted)">esente IVA</div>`
+        : `<div style="font-size:10px;color:var(--color-text-muted)">+ IVA ${formatEur(iva22)}</div>`;
       return `<tr>
         <td><span class="badge-tipo ${tipoClass}">${tipoLabel}</span>${esente}</td>
         <td>${dettaglio}</td>
-        <td style="text-align:right;font-variant-numeric:tabular-nums">${formatEur(p.importo)}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${formatEur(p.importo)}${ivaStr}</td>
         <td style="text-align:center">
           <button class="btn btn-icon btn-ghost" style="color:var(--color-error);font-size:12px"
             onclick="deletePraticaDet(${p.id})">🗑</button>
@@ -3380,7 +3388,7 @@ document.getElementById('btnCaricaVariabili')?.addEventListener('click', async (
     .map(i => ({ ditta_id: +i.dataset.ditta, voce_id: +i.dataset.voce, qta: +i.value }));
   if (!righe.length) { toast('Nessuna quantità inserita', 'error'); return; }
   try {
-    const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, righe });
+    const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, dati: righe });
     toast(`Costi variabili caricati (${res.aggiunte || righe.length} voci)`, 'success');
     closeModal('modalInserimentoVariabili');
     loadDitte();
