@@ -1107,15 +1107,114 @@ document.getElementById('modalAssunzione').addEventListener('input', () => {
   document.getElementById('btnAssumiBtn').style.display = ok ? 'inline-flex' : 'none';
 });
 
-document.getElementById('btnSalvaBozzaAssunzione').addEventListener('click', () => {
-  UnsavedGuard.markSaved();
-  toast('Bozza salvata', 'success');
+document.getElementById('btnSalvaBozzaAssunzione').addEventListener('click', async () => {
+  const g = id => document.getElementById(id);
+  const v = id => { const el = g(id); return el ? el.value.trim() : ''; };
+  const ck = id => { const el = g(id); return el ? el.checked : false; };
+
+  // Validazione minima
+  const cognome = v('ass_cognome');
+  const nome = v('ass_nome');
+  const errEl = g('formAssunzioneError');
+  if (!cognome || !nome) {
+    if (errEl) { errEl.textContent = 'Cognome e Nome sono obbligatori.'; errEl.style.display = ''; }
+    return;
+  }
+  if (errEl) errEl.style.display = 'none';
+
+  const aid = v('ass_id');
+  const payload = {
+    stato: 'bozza',
+    ditta_id: v('ass_ditta_id') ? parseInt(v('ass_ditta_id'), 10) : null,
+    cognome, nome,
+    codice_fiscale: v('ass_cf'),
+    sesso: v('ass_sesso'),
+    data_nascita: v('ass_data_nascita'),
+    comune_nascita: v('ass_comune_nascita'),
+    catastale_nascita: v('ass_catastale_nascita'),
+    comune_residenza: v('ass_comune_residenza'),
+    catastale_residenza: v('ass_catastale_residenza'),
+    cap_residenza: v('ass_cap_residenza'),
+    indirizzo_residenza: v('ass_indirizzo_residenza'),
+    codice_istruzione: v('ass_cod_istruzione'),
+    livello_istruzione: v('ass_livello_istruzione'),
+    lavoratore_straniero: ck('ass_straniero'),
+    numero_permesso: v('ass_num_permesso'),
+    motivo_permesso: v('ass_motivo_permesso'),
+    rilasciato_da: v('ass_rilasciato_da'),
+    data_rilascio_permesso: v('ass_data_rilascio_perm'),
+    data_scadenza_permesso: v('ass_data_scadenza_perm'),
+    in_rinnovo: ck('ass_in_rinnovo'),
+    data_assunzione: v('ass_data_inizio'),
+    data_fine_contratto: v('ass_data_fine'),
+    tipo_contratto: v('ass_tipologia_contratto'),
+    qualifica: v('ass_qualifica'),
+    livello: v('ass_livello_contr'),
+    codice_istat: v('ass_cod_qualifica_istat'),
+    qualifica_istat: v('ass_qualifica_istat'),
+    mansione: v('ass_mansionario'),
+    tipologia_orario: v('ass_tipo_orario'),
+    ore_settimanali: v('ass_ore_sett'),
+    numero_mensilita: v('ass_mensil'),
+    retribuzione_base: v('ass_retrib_base'),
+    retribuzione_pt: v('ass_retrib_pt'),
+    netto_busta: v('ass_importo_netto'),
+    periodo_prova: v('ass_periodo_prova'),
+    ferie: v('ass_ferie'),
+    permessi_contrattuali: v('ass_permessi_cont'),
+    preavviso: v('ass_preavviso'),
+    distribuzione_orario: v('ass_distr_orario'),
+    assunzione_obbligatoria: ck('ass_obbligatoria') || false,
+    tipo_assunzione_obbligatoria: v('ass_tipo_obbligatoria'),
+  };
+
+  try {
+    const url = aid ? `/api/assunzioni/${aid}` : '/api/assunzioni';
+    const method = aid ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Errore salvataggio');
+    }
+    UnsavedGuard.markSaved();
+    closeModal('modalAssunzione');
+    toast(aid ? 'Assunzione aggiornata' : 'Assunzione salvata come bozza', 'success');
+    // Ricarica scadenzario se attivo
+    if (document.getElementById('tab-scadenzario')?.classList.contains('active')) {
+      ScadenzarioModule.init();
+    }
+  } catch (e) {
+    if (errEl) { errEl.textContent = e.message; errEl.style.display = ''; }
+  }
 });
+
 document.getElementById('btnDuplicaAssunzione').addEventListener('click', () => {
   toast('Duplica — work in progress', 'info');
 });
-document.getElementById('btnAssumiBtn').addEventListener('click', () => {
-  toast('Assunzione avviata — work in progress', 'success');
+document.getElementById('btnAssumiBtn').addEventListener('click', async () => {
+  // Imposta stato = 'inviata' e salva
+  const g = id => document.getElementById(id);
+  const aid = g('ass_id')?.value;
+  if (!aid) { toast('Prima salva come bozza', 'info'); return; }
+  try {
+    const res = await fetch(`/api/assunzioni/${aid}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stato: 'inviata' }),
+    });
+    if (!res.ok) throw new Error();
+    closeModal('modalAssunzione');
+    toast('Pratica inviata!', 'success');
+    if (document.getElementById('tab-scadenzario')?.classList.contains('active')) {
+      ScadenzarioModule.init();
+    }
+  } catch {
+    toast('Errore invio pratica', 'error');
+  }
 });
 
 setupDropdown('btnNuovaPratica', 'dropdownPratica', openPraticaModal);
