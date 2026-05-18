@@ -457,11 +457,11 @@ table{border-collapse:collapse;width:100%}
 .mesi-block{display:flex;align-items:center;gap:var(--space-1);line-height:1}
 .mesi-block+.mesi-block{margin-top:3px}
 .mesi-label{font-size:9px;font-weight:700;color:var(--color-text-faint);width:14px;flex-shrink:0;text-transform:uppercase}
-.mesi-dots{display:flex;gap:2px}
+.mesi-dots{display:flex;gap:2px;flex-wrap:nowrap;overflow:hidden}
 .mese-dot{display:flex;align-items:center;justify-content:center;
-  width:24px;height:16px;border-radius:3px;font-size:7px;font-weight:600;
+  width:18px;height:15px;border-radius:3px;font-size:7px;font-weight:600;
   background:var(--color-surface-offset);color:var(--color-text-faint);
-  cursor:default;transition:background var(--transition),color var(--transition)}
+  cursor:default;transition:background var(--transition),color var(--transition);flex-shrink:0}
 .mese-dot.done{background:var(--color-primary-light);color:var(--color-primary)}
 
 /* badge residuo */

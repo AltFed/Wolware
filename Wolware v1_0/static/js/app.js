@@ -3797,12 +3797,63 @@ document.getElementById('btnEstGeneraPdf')?.addEventListener('click', async () =
 // ── PREVISIONALE ──────────────────────────────────────────────────────────────
 let _prevId = null;
 let _prevFissi = 0;
+// Set dei mesi selezionati (1=Gen … 12=Dic)
+let _prevMesiSelezionati = new Set([1,2,3,4,5,6,7,8,9,10,11,12]);
+
+const _NOMI_MESI_PREV = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
+function _renderPrevMesiChips() {
+  const container = document.getElementById('prevMesiChips');
+  if (!container) return;
+  container.innerHTML = _NOMI_MESI_PREV.map((nome, i) => {
+    const m = i + 1;
+    const sel = _prevMesiSelezionati.has(m);
+    return `<button
+      onclick="_togglePrevMese(${m})"
+      data-mese="${m}"
+      class="prev-mese-chip${sel ? ' selected' : ''}"
+      style="padding:4px 8px;border-radius:var(--radius-sm);border:1px solid ${sel ? 'var(--color-primary)' : 'var(--color-border)'};
+             background:${sel ? 'var(--color-primary-light)' : 'var(--color-surface)'};
+             color:${sel ? 'var(--color-primary)' : 'var(--color-text-muted)'};
+             font-size:var(--text-xs);font-weight:600;cursor:pointer;transition:all .15s">
+      ${nome}
+    </button>`;
+  }).join('');
+  const n = _prevMesiSelezionati.size;
+  const countEl = document.getElementById('prevMesiCount');
+  if (countEl) countEl.textContent = n === 0 ? 'Nessun mese selezionato' : `${n} ${n === 1 ? 'mese selezionato' : 'mesi selezionati'}`;
+}
+
+async function _togglePrevMese(m) {
+  if (_prevMesiSelezionati.has(m)) {
+    _prevMesiSelezionati.delete(m);
+  } else {
+    _prevMesiSelezionati.add(m);
+  }
+  _renderPrevMesiChips();
+  await calcolaPrevisione();
+  ricalcolaStima();
+}
+
+function prevSelezionaTutti() {
+  _prevMesiSelezionati = new Set([1,2,3,4,5,6,7,8,9,10,11,12]);
+  _renderPrevMesiChips();
+  calcolaPrevisione().then(ricalcolaStima);
+}
+
+function prevDeselezionaTutti() {
+  _prevMesiSelezionati = new Set();
+  _renderPrevMesiChips();
+  calcolaPrevisione().then(ricalcolaStima);
+}
 
 async function openPrevisionale() {
   _prevId = currentDetId;
   const d = allDitte?.find(x => x.id === currentDetId);
-  document.getElementById('previsioneClienteNome').textContent = d?.ragionesociale || '';
-  document.getElementById('prevMesi').value = '12';
+  document.getElementById('previsioneClienteNome').textContent = d?.ragione_sociale || '';
+  // Mesi: di default seleziona tutti
+  _prevMesiSelezionati = new Set([1,2,3,4,5,6,7,8,9,10,11,12]);
+  _renderPrevMesiChips();
   document.getElementById('stimaPratichePanel').style.display = 'none';
   document.getElementById('btnStimaPratiche').textContent = 'Stima Pratiche';
   document.getElementById('stimaNumPratiche').value = '3';
@@ -3810,19 +3861,26 @@ async function openPrevisionale() {
   document.getElementById('previsioneVociContainer').innerHTML = '';
   document.getElementById('prevTotaleFisso').textContent = eur(0);
   document.getElementById('prevTotaleFinale').textContent = eur(0);
-  document.getElementById('prevMesi').onchange = async () => {
-    await calcolaPrevisione();
-    ricalcolaStima();
-  };
 
   openModal('modalPrevisione');
   await calcolaPrevisione();
 }
 
 async function calcolaPrevisione() {
-  const mesi = parseInt(document.getElementById('prevMesi').value) || 12;
+  if (_prevMesiSelezionati.size === 0) {
+    // Nessun mese selezionato: azzera tutto
+    _prevFissi = 0;
+    document.getElementById('previsioneVociContainer').innerHTML =
+      `<p style="font-size:var(--text-sm);color:var(--color-text-muted);padding:var(--space-3) 0">
+        Seleziona almeno un mese per calcolare il previsionale.
+      </p>`;
+    document.getElementById('prevTotaleFisso').textContent = eur(0);
+    aggiornaStimaTotale();
+    return;
+  }
+  const mesiParam = [..._prevMesiSelezionati].sort((a,b) => a-b).join(',');
   try {
-    const data = await api(`/api/ditte/${_prevId}/previsione?mesi=${mesi}`);
+    const data = await api(`/api/ditte/${_prevId}/previsione?mesi=${mesiParam}`);
     renderPrevisioneVoci(data);
   } catch(e) {
     toast('Errore previsione: ' + e.message, 'error');
@@ -3877,7 +3935,8 @@ function renderPrevisioneVoci(data) {
         </div>
         <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0">
           <span style="font-size:var(--text-xs);color:var(--color-text-muted)">
-            ${eur(v.prezzo_unitario)} × ${v.anni} ann${v.anni === 1 ? 'o' : 'i'}
+            ${eur(v.prezzo_unitario)} × ${v.anni} ${v.anni === 1 ? 'mese applicato' : 'mesi applicati'}
+            ${v.mesi_applicati?.length ? `(${v.mesi_applicati.map(m => _NOMI_MESI_PREV[m-1]).join(', ')})` : ''}
           </span>
           <span style="font-size:var(--text-sm);font-weight:600;min-width:72px;
                        text-align:right;font-variant-numeric:tabular-nums">
@@ -3909,13 +3968,13 @@ function toggleStimaPratiche() {
 }
 
 function ricalcolaStima() {
-  const mesi  = parseInt(document.getElementById('prevMesi').value) || 12;
+  const mesi  = _prevMesiSelezionati.size || 0;
   const n     = parseFloat(document.getElementById('stimaNumPratiche').value) || 0;
   const p     = parseFloat(document.getElementById('stimaPrezzoPratica').value) || 0;
   const tot   = n * p * mesi;
   document.getElementById('stimaRiepilogo').innerHTML = n && p
-    ? `<strong>${n}</strong> prat./mese × <strong>${eur(p)}</strong> × 
-       <strong>${mesi}</strong> mesi = 
+    ? `<strong>${n}</strong> prat./mese × <strong>${eur(p)}</strong> ×
+       <strong>${mesi}</strong> ${mesi === 1 ? 'mese' : 'mesi'} =
        <strong style="color:var(--color-orange)">${eur(tot)}</strong>`
     : `<span style="color:var(--color-text-muted)">Inserisci numero pratiche e prezzo medio.</span>`;
   aggiornaStimaTotale();
@@ -3925,7 +3984,7 @@ function aggiornaStimaTotale() {
   const panelAperto = document.getElementById('stimaPratichePanel').style.display !== 'none';
   let totVar = 0;
   if (panelAperto) {
-    const mesi = parseInt(document.getElementById('prevMesi').value) || 12;
+    const mesi = _prevMesiSelezionati.size || 0;
     const n    = parseFloat(document.getElementById('stimaNumPratiche').value) || 0;
     const p    = parseFloat(document.getElementById('stimaPrezzoPratica').value) || 0;
     totVar = n * p * mesi;

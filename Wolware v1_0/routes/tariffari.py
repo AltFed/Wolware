@@ -305,12 +305,32 @@ def delete_voce(vid):
 @tariffari_bp.route('/api/ditte/<int:id>/previsione')
 @login_required
 def previsione_cliente(id):
-    mesi = int(request.args.get('mesi', 12))
+    """
+    Accetta due modalità:
+    - mesi=N      (vecchio) → N mesi consecutivi generici
+    - mesi=1,3,5  (nuovo)  → elenco esplicito di mesi selezionati (1=Gen … 12=Dic)
+    """
+    raw = request.args.get('mesi', '12')
+    # Parsing flessibile: può essere "12" o "1,3,5,7"
+    try:
+        if ',' in raw:
+            mesi_selezionati = sorted({int(m) for m in raw.split(',') if m.strip()})
+            mesi_selezionati = [m for m in mesi_selezionati if 1 <= m <= 12]
+        else:
+            n = int(raw) if raw.strip() else 12
+            mesi_selezionati = list(range(1, n + 1))
+    except (ValueError, TypeError):
+        mesi_selezionati = list(range(1, 13))
+
+    num_mesi = len(mesi_selezionati)
+    mesi_set = set(mesi_selezionati)
+
     db = get_db()
     try:
         ditta = db.execute('SELECT * FROM ditte WHERE id=?', (id,)).fetchone()
         if not ditta:
-            return jsonify({'fissi_mensili': [], 'fissi_annuali': [], 'totale': 0, 'mesi': mesi})
+            return jsonify({'fissi_mensili': [], 'fissi_annuali': [], 'totale': 0,
+                            'mesi_selezionati': mesi_selezionati})
 
         # Legge dalla copia del cliente (ditta_voci), non dal tariffario originale
         voci = db.execute(
@@ -335,33 +355,44 @@ def previsione_cliente(id):
             mg     = v['macrogruppo_nome'] or ''
 
             if tipo in ('costi_fissi_mensili', 'fisso_mensile'):
-                tot = round(prezzo * mesi, 2)
+                # Applicato in ogni mese selezionato
+                tot = round(prezzo * num_mesi, 2)
                 totale += tot
                 fissi_mensili.append({
                     'nome':            nome,
                     'macrogruppo':     mg,
                     'prezzo_unitario': prezzo,
-                    'mesi':            mesi,
+                    'mesi':            num_mesi,
                     'totale':          tot,
                 })
             elif tipo in ('costi_fissi_annuali', 'fisso_annuale'):
-                anni = round(mesi / 12, 4)
-                tot  = round(prezzo * anni, 2)
+                # Applicato solo nei mesi selezionati che rientrano in mesi_json
+                try:
+                    mesi_abilitati = set(json.loads(v['mesi_json'] or '[]'))
+                except Exception:
+                    mesi_abilitati = set()
+                mesi_coincidenti = sorted(mesi_set & mesi_abilitati)
+                n_coinc = len(mesi_coincidenti)
+                if n_coinc == 0:
+                    continue
+                tot = round(prezzo * n_coinc, 2)
                 totale += tot
                 fissi_annuali.append({
-                    'nome':            nome,
-                    'macrogruppo':     mg,
-                    'prezzo_unitario': prezzo,
-                    'anni':            anni,
-                    'totale':          tot,
+                    'nome':             nome,
+                    'macrogruppo':      mg,
+                    'prezzo_unitario':  prezzo,
+                    'anni':             n_coinc,   # numero di mesi applicati (non anni)
+                    'mesi_applicati':   mesi_coincidenti,
+                    'totale':           tot,
                 })
 
         return jsonify({
-            'cliente':       ditta['ragione_sociale'],
-            'mesi':          mesi,
-            'fissi_mensili': fissi_mensili,
-            'fissi_annuali': fissi_annuali,
-            'totale':        round(totale, 2),
+            'cliente':          ditta['ragione_sociale'],
+            'mesi_selezionati': mesi_selezionati,
+            'num_mesi':         num_mesi,
+            'fissi_mensili':    fissi_mensili,
+            'fissi_annuali':    fissi_annuali,
+            'totale':           round(totale, 2),
         })
     finally:
         db.close()

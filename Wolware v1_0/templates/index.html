@@ -3225,22 +3225,25 @@
 
     <div class="modal-body" style="padding:var(--space-5)">
 
-      <!-- Selettore periodo -->
-      <div style="display:flex;align-items:center;gap:var(--space-4);margin-bottom:var(--space-5);
-                  padding:var(--space-3) var(--space-4);background:var(--color-surface-2);
-                  border-radius:var(--radius-md);border:1px solid var(--color-border)">
-        <label style="font-size:var(--text-sm);font-weight:600;color:var(--color-text);white-space:nowrap">
-          Periodo di stima
-        </label>
-        <select id="prevMesi"
-                style="padding:6px 10px;border:1px solid var(--color-border);border-radius:var(--radius-sm);
-                       background:var(--color-surface);font-size:var(--text-sm);color:var(--color-text)">
-          <option value="1">1 mese</option>
-          <option value="3">3 mesi</option>
-          <option value="6">6 mesi</option>
-          <option value="12">12 mesi</option>
-          <option value="24">24 mesi</option>
-        </select>
+      <!-- Selettore periodo: chip mesi cliccabili -->
+      <div style="margin-bottom:var(--space-5);padding:var(--space-3) var(--space-4);
+                  background:var(--color-surface-2);border-radius:var(--radius-md);
+                  border:1px solid var(--color-border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
+          <label style="font-size:var(--text-sm);font-weight:600;color:var(--color-text)">
+            Mesi da includere nel calcolo
+          </label>
+          <div style="display:flex;gap:var(--space-2)">
+            <button onclick="prevSelezionaTutti()" class="btn btn-ghost" style="font-size:var(--text-xs);padding:2px 8px">Tutti</button>
+            <button onclick="prevDeselezionaTutti()" class="btn btn-ghost" style="font-size:var(--text-xs);padding:2px 8px">Nessuno</button>
+          </div>
+        </div>
+        <div id="prevMesiChips" style="display:flex;flex-wrap:wrap;gap:var(--space-1)">
+          <!-- popolato via JS in openPrevisionale() -->
+        </div>
+        <div style="margin-top:var(--space-2);font-size:var(--text-xs);color:var(--color-text-muted)">
+          <span id="prevMesiCount">12 mesi selezionati</span>
+        </div>
       </div>
 
       <!-- Tabella costi fissi -->
