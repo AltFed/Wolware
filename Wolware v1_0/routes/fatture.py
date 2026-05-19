@@ -5,6 +5,13 @@ from flask import Blueprint, request, jsonify, send_file
 from database import get_db
 from auth.routes import login_required
 
+# IMPORT DI REPORTLAB SPOSTATI IN CIMA
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
 bp = Blueprint('fatture_bp', __name__)
 
 IVA = 1.22  # Aliquota fissa 22%
@@ -247,15 +254,8 @@ def pdf_fattura(ditta_id, fid):
 
 def _genera_pdf_fattura(fattura, ditta, righe):
     """Genera il PDF della fattura usando reportlab."""
-    try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.units import cm
-        from reportlab.lib import colors
-        from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
-                                        Paragraph, Spacer)
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    except ImportError:
-        raise RuntimeError("reportlab non installato. Esegui: pip install reportlab")
+    
+    # QUI IL VECCHIO BLOCCO TRY/EXCEPT E' STATO COMPLETAMENTE RIMOSSO
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4,
