@@ -75,6 +75,13 @@
           Clienti
         </a>
         <!-- Solo admin -->
+        <a href="#" class="nav-item" data-tab="impostazioni" id="navImpostazioni" style="display:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Impostazioni
+        </a>
         <a href="#" class="nav-item" data-tab="admin" id="navAdmin" style="display:none">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -157,6 +164,13 @@
               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
             </svg>
             Clienti
+          </button>
+          <button class="tab-btn" data-tab="impostazioni" id="tabBtnImpostazioni" style="display:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            Impostazioni
           </button>
           <button class="tab-btn" data-tab="admin" id="tabBtnAdmin" style="display:none">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -939,6 +953,67 @@
             </div>
           </div>
         </section>
+
+        <!-- IMPOSTAZIONI -->
+        <section class="tab-panel" id="tab-impostazioni">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Impostazioni</h1>
+              <p class="page-subtitle">Configurazione e gestione del sistema</p>
+            </div>
+          </div>
+
+          <div class="section-block" style="max-width:560px">
+            <h2 style="font-size:var(--text-sm);font-weight:600;margin-bottom:var(--space-4)">Backup Database</h2>
+
+            <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+
+              <!-- Esporta -->
+              <div style="display:flex;align-items:center;justify-content:space-between;
+                          padding:var(--space-4);border:1px solid var(--color-border);
+                          border-radius:var(--radius-md);background:var(--color-surface)">
+                <div>
+                  <div style="font-size:var(--text-sm);font-weight:600;margin-bottom:2px">Esporta backup</div>
+                  <div style="font-size:var(--text-xs);color:var(--color-text-muted)">
+                    Scarica una copia del database corrente
+                  </div>
+                </div>
+                <a href="/api/backup/export" class="btn btn-secondary btn-sm" download>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Esporta
+                </a>
+              </div>
+
+              <!-- Importa -->
+              <div style="display:flex;align-items:center;justify-content:space-between;
+                          padding:var(--space-4);border:1px solid var(--color-border);
+                          border-radius:var(--radius-md);background:var(--color-surface)">
+                <div>
+                  <div style="font-size:var(--text-sm);font-weight:600;margin-bottom:2px">Importa backup</div>
+                  <div style="font-size:var(--text-xs);color:var(--color-text-muted)">
+                    Ripristina il database da un file di backup
+                  </div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('inputImportDb').click()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  Importa
+                </button>
+                <input type="file" id="inputImportDb" accept=".db" style="display:none"
+                       onchange="onImportDbSelected(this)">
+              </div>
+
+            </div>
+          </div>
+        </section>
+        <!-- /IMPOSTAZIONI -->
 
       </main>
     </div>
@@ -3382,6 +3457,49 @@
   </div>
 </div>
 <!-- /MODAL Esporta PDF Riepilogo -->
+
+<!-- MODAL Conferma Import DB -->
+<div class="modal-overlay" id="modalImportDb">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3 class="modal-title">Importa backup</h3>
+      <button class="modal-close" data-close="modalImportDb">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:var(--space-3);align-items:flex-start;
+                  padding:var(--space-3);border-radius:var(--radius-md);
+                  background:var(--color-error-light);border:1px solid var(--color-error);
+                  margin-bottom:var(--space-4)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" stroke-width="2"
+             style="flex-shrink:0;margin-top:1px;color:var(--color-error)">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <div style="font-size:var(--text-sm);color:var(--color-text)">
+          <strong>Attenzione:</strong> importando questo backup il database attuale verrà
+          <strong>eliminato e sostituito</strong> con quello selezionato. Tutti i dati non inclusi
+          nel backup andranno persi definitivamente.
+        </div>
+      </div>
+      <p style="font-size:var(--text-sm);color:var(--color-text-muted)">
+        File selezionato: <strong id="importDbFileName">—</strong>
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalImportDb"
+              onclick="document.getElementById('inputImportDb').value=''">Annulla</button>
+      <button class="btn btn-danger" id="btnConfermaImportDb" onclick="eseguiImportDb()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        </svg>
+        Importa e sostituisci
+      </button>
+    </div>
+  </div>
+</div>
+<!-- /MODAL Conferma Import DB -->
 
 <div class="toast-container" id="toastContainer"></div>
   <script src="/static/js/app.js" defer></script>

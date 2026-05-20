@@ -1159,6 +1159,8 @@ async function checkAuth() {
     if (user.role === 'admin') {
       document.getElementById('navAdmin').style.display = '';
       document.getElementById('tabBtnAdmin').style.display = '';
+      document.getElementById('navImpostazioni').style.display = '';
+      document.getElementById('tabBtnImpostazioni').style.display = '';
     }
   } catch (e) { console.error(e); }
 }
@@ -5488,6 +5490,42 @@ const Rendiconto = (() => {
 
   return { init };
 })();
+
+/* ══════════════════════════════════════════════════════════
+   IMPOSTAZIONI — BACKUP DB
+══════════════════════════════════════════════════════════ */
+let _importDbFile = null;
+
+function onImportDbSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  _importDbFile = file;
+  document.getElementById('importDbFileName').textContent = file.name;
+  openModal('modalImportDb');
+}
+
+async function eseguiImportDb() {
+  if (!_importDbFile) return;
+  const btn = document.getElementById('btnConfermaImportDb');
+  btn.disabled = true;
+  btn.textContent = 'Importazione…';
+  try {
+    const fd = new FormData();
+    fd.append('file', _importDbFile);
+    const res = await fetch('/api/backup/import', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore durante l\'importazione');
+    closeModal('modalImportDb');
+    toast('Database importato con successo', 'success');
+    document.getElementById('inputImportDb').value = '';
+    _importDbFile = null;
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Importa e sostituisci';
+  }
+}
 
 /* INIT */
 checkAuth();
