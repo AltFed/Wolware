@@ -2355,20 +2355,37 @@ function renderDittaVoci(voci) {
 
   el.innerHTML = Object.values(gruppi).map(g => {
     const meta = TIPOMETA_DV[g.tipo] || TIPOMETA_DV['fisso_mensile'];
-    const vociHtml = g.voci.map(v => `
-      <div style="display:flex;align-items:center;justify-content:space-between;
+    const isVar = g.tipo === 'costi_variabili_mensili' || g.tipo === 'costi_variabili_annuali';
+    const vociHtml = g.voci.map(v => {
+      const mesiStr = (() => {
+        if (!v.mesi_json) return '';
+        try {
+          const m = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+          return JSON.parse(v.mesi_json).map(i => m[i-1]).join(' ');
+        } catch(e) { return ''; }
+      })();
+      const badges = [
+        v.custom ? `<span style="font-size:10px;padding:1px 5px;border-radius:var(--radius-full);background:var(--color-orange-highlight);color:var(--color-orange);font-weight:600">custom</span>` : '',
+        v.esente_iva ? `<span style="font-size:10px;padding:1px 5px;border-radius:var(--radius-full);background:var(--color-gold-highlight);color:var(--color-gold);font-weight:600">Esente IVA</span>` : '',
+        v.richiede_anno_precedente ? `<span style="font-size:10px;padding:1px 5px;border-radius:var(--radius-full);background:var(--color-blue-highlight);color:var(--color-blue);font-weight:600">Anno Prec.</span>` : '',
+        mesiStr ? `<span style="font-size:10px;padding:1px 5px;border-radius:var(--radius-full);background:var(--color-surface-offset);color:var(--color-text-muted);font-weight:600">${mesiStr}</span>` : '',
+      ].filter(Boolean).join('');
+      const colorDot = isVar && v.colore
+        ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${v.colore};flex-shrink:0;border:1px solid rgba(0,0,0,0.12)" title="${v.colore}"></span>`
+        : '';
+      return `
+      <div style="display:flex;align-items:center;gap:var(--space-3);
                   padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);
                   background:var(--color-bg);margin-bottom:var(--space-1)">
         <div style="flex:1;min-width:0">
-          <span style="font-size:var(--text-sm);color:var(--color-text)">${v.nome}</span>
-          ${v.custom ? `<span style="font-size:var(--text-xs);color:var(--color-warning);margin-left:var(--space-2);font-style:italic">custom</span>` : ''}
-          ${v.esente_iva ? `<span style="font-size:var(--text-xs);color:var(--color-text-muted);margin-left:var(--space-2)">Esente IVA</span>` : ''}
-          ${v.mesi_json ? (() => { try { const m=['G','F','M','A','M','G','L','A','S','O','N','D']; return JSON.parse(v.mesi_json).map(i=>m[i-1]).join(' ') } catch(e){return''} })() !== '' ? `<span style="font-size:var(--text-xs);color:var(--color-text-muted);margin-left:var(--space-2)">${(() => { try { const m=['G','F','M','A','M','G','L','A','S','O','N','D']; return JSON.parse(v.mesi_json).map(i=>m[i-1]).join(' ') } catch(e){return''} })()}</span>` : '' : ''}
+          <span style="font-size:var(--text-sm);color:var(--color-text);font-weight:500">${v.nome}</span>
+          ${badges ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">${badges}</div>` : ''}
         </div>
-        <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0">
-          <span style="font-size:var(--text-sm);font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-text)">
-            ${v.prezzo > 0 ? '€ ' + Number(v.prezzo).toFixed(2) : '—'}
-          </span>
+        ${colorDot}
+        <span style="font-size:var(--text-sm);font-weight:600;font-variant-numeric:tabular-nums;color:var(--color-text);flex-shrink:0;min-width:56px;text-align:right">
+          ${v.prezzo > 0 ? '€ ' + Number(v.prezzo).toFixed(2) : '—'}
+        </span>
+        <div style="display:flex;align-items:center;gap:var(--space-2);flex-shrink:0">
           <button onclick="openEditVoceCustom(${v.id}, ${JSON.stringify(v).replace(/"/g, '&quot;')})"
                   class="btn btn-icon btn-ghost" title="Modifica voce">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2385,7 +2402,8 @@ function renderDittaVoci(voci) {
             </svg>
           </button>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     return `
       <div style="border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:var(--space-3)">
@@ -2622,37 +2640,105 @@ document.getElementById('btnAggiornaTariffario')?.addEventListener('click', asyn
 });
 
 
+// ── Helper: render chips mesi nella modale voce cliente ──────
+const _VC_MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
+function _renderVcMesiChips(selectedMesi) {
+  const container = document.getElementById('vcMesiChips');
+  if (!container) return;
+  container.innerHTML = _VC_MESI.map((m, i) => {
+    const sel = selectedMesi && selectedMesi.includes(i + 1);
+    return `<button type="button"
+      data-mese="${i + 1}" data-sel="${sel ? 1 : 0}"
+      onclick="this.setAttribute('data-sel', this.getAttribute('data-sel')==='1'?'0':'1'); _applyVcMeseStyle(this)"
+      style="padding:2px 7px;height:26px;border-radius:var(--radius-sm);
+             border:1px solid ${sel ? 'var(--color-primary)' : 'var(--color-border)'};
+             font-size:11px;font-weight:600;cursor:pointer;
+             background:${sel ? 'var(--color-primary-highlight)' : 'var(--color-surface)'};
+             color:${sel ? 'var(--color-primary)' : 'var(--color-text-muted)'};">${m}</button>`;
+  }).join('');
+}
+
+function _applyVcMeseStyle(btn) {
+  const sel = btn.getAttribute('data-sel') === '1';
+  btn.style.background   = sel ? 'var(--color-primary-highlight)' : 'var(--color-surface)';
+  btn.style.borderColor  = sel ? 'var(--color-primary)' : 'var(--color-border)';
+  btn.style.color        = sel ? 'var(--color-primary)' : 'var(--color-text-muted)';
+}
+
+function _getVcMesiSelezionati() {
+  const btns = document.querySelectorAll('#vcMesiChips button[data-mese]');
+  const sel = [];
+  btns.forEach(b => { if (b.getAttribute('data-sel') === '1') sel.push(parseInt(b.getAttribute('data-mese'))); });
+  return sel.length ? sel : null;
+}
+
+function _vcAggiornaSezioneDinamica() {
+  const tipo = document.getElementById('vcTipo')?.value || '';
+  const isAnn = tipo === 'costi_fissi_annuali' || tipo === 'costi_variabili_annuali';
+  const isVar = tipo === 'costi_variabili_mensili' || tipo === 'costi_variabili_annuali';
+  const mesiSec   = document.getElementById('vcMesiSection');
+  const coloreSec = document.getElementById('vcColoreSection');
+  if (mesiSec)   mesiSec.style.display   = isAnn ? '' : 'none';
+  if (coloreSec) coloreSec.style.display = isVar ? '' : 'none';
+}
+
+document.getElementById('vcTipo')?.addEventListener('change', _vcAggiornaSezioneDinamica);
+
 // Apri modale voce custom (nuova)
 document.getElementById('btnAddVoceCustom')?.addEventListener('click', () => {
   document.getElementById('voceCustomEditId').value = '';
+  document.getElementById('voceCustomIsCustom').value = '1';
   document.getElementById('modalVoceCustomTitolo').textContent = 'Nuova Voce Custom';
   document.getElementById('vcNome').value = '';
   document.getElementById('vcPrezzo').value = '';
-  document.getElementById('vcUnita').value = '';
   document.getElementById('vcGruppo').value = '';
-  document.getElementById('vcTipo').value = 'fisso_mensile';
+  document.getElementById('vcTipo').value = 'costi_fissi_mensili';
+  document.getElementById('vcTipo').disabled = false;
+  document.getElementById('vcTipoLockBadge').style.display = 'none';
+  document.getElementById('vcGruppoSection').style.display = '';
   document.getElementById('vcNote').value = '';
+  document.getElementById('vcEsente').checked = false;
+  document.getElementById('vcAnnop').checked = false;
+  document.getElementById('vcColore').value = '#6366f1';
   document.getElementById('errVoceCustom').style.display = 'none';
+  _renderVcMesiChips([]);
+  _vcAggiornaSezioneDinamica();
   openModal('modalVoceCustom');
   setTimeout(() => document.getElementById('vcNome').focus(), 120);
 });
 
-// Apri modale voce custom (modifica)
+// Apri modale voce cliente (modifica voce sincronizzata o custom)
 function openEditVoceCustom(id, v) {
+  const isCustom = !!v.custom;
   document.getElementById('voceCustomEditId').value = id;
-  document.getElementById('modalVoceCustomTitolo').textContent = 'Modifica Voce';
+  document.getElementById('voceCustomIsCustom').value = isCustom ? '1' : '0';
+  document.getElementById('modalVoceCustomTitolo').textContent = isCustom ? 'Modifica Voce Custom' : 'Modifica Voce';
   document.getElementById('vcNome').value = v.nome || '';
-  document.getElementById('vcPrezzo').value = v.prezzo || '';
-  document.getElementById('vcUnita').value = v.unita || '';
+  document.getElementById('vcPrezzo').value = v.prezzo != null ? v.prezzo : '';
   document.getElementById('vcGruppo').value = v.macrogruppo_nome || '';
-  document.getElementById('vcTipo').value = v.tipo || 'fisso_mensile';
+  // Tipo: bloccato per voci sincronizzate
+  const tipoSel = document.getElementById('vcTipo');
+  tipoSel.value = v.tipo || 'costi_fissi_mensili';
+  tipoSel.disabled = !isCustom;
+  document.getElementById('vcTipoLockBadge').style.display = isCustom ? 'none' : 'inline';
+  // Gruppo: mostra solo per voci custom
+  document.getElementById('vcGruppoSection').style.display = isCustom ? '' : 'none';
   document.getElementById('vcNote').value = v.note || '';
+  document.getElementById('vcEsente').checked = !!v.esente_iva;
+  document.getElementById('vcAnnop').checked = !!v.richiede_anno_precedente;
+  document.getElementById('vcColore').value = v.colore || '#6366f1';
   document.getElementById('errVoceCustom').style.display = 'none';
+  // Mesi
+  let mesiSel = [];
+  if (v.mesi_json) { try { mesiSel = JSON.parse(v.mesi_json); } catch(e) {} }
+  _renderVcMesiChips(mesiSel);
+  _vcAggiornaSezioneDinamica();
   openModal('modalVoceCustom');
   setTimeout(() => document.getElementById('vcNome').focus(), 120);
 }
 
-// Salva voce custom (nuova o modifica)
+// Salva voce cliente (nuova custom o modifica)
 document.getElementById('btnSalvaVoceCustom')?.addEventListener('click', async function () {
   UnsavedGuard.markSaved();
   const errEl = document.getElementById('errVoceCustom');
@@ -2664,13 +2750,21 @@ document.getElementById('btnSalvaVoceCustom')?.addEventListener('click', async f
     document.getElementById('vcNome').focus();
     return;
   }
+  const tipo = document.getElementById('vcTipo').value;
+  const isAnn = tipo === 'costi_fissi_annuali' || tipo === 'costi_variabili_annuali';
+  const isVar = tipo === 'costi_variabili_mensili' || tipo === 'costi_variabili_annuali';
+  const isCustom = document.getElementById('voceCustomIsCustom').value === '1';
+  const mesi = isAnn ? _getVcMesiSelezionati() : null;
   const payload = {
     nome,
-    prezzo: parseFloat(document.getElementById('vcPrezzo').value) || 0,
-    unita: document.getElementById('vcUnita').value.trim(),
-    macrogruppo_nome: document.getElementById('vcGruppo').value.trim() || 'Extra',
-    tipo: document.getElementById('vcTipo').value,
-    note: document.getElementById('vcNote').value.trim(),
+    prezzo:               parseFloat(document.getElementById('vcPrezzo').value) || 0,
+    macrogruppo_nome:     isCustom ? (document.getElementById('vcGruppo').value.trim() || 'Extra') : undefined,
+    tipo:                 isCustom ? tipo : undefined,
+    note:                 document.getElementById('vcNote').value.trim(),
+    esente_iva:           document.getElementById('vcEsente').checked ? 1 : 0,
+    richiede_anno_precedente: document.getElementById('vcAnnop').checked ? 1 : 0,
+    mesi_json:            mesi ? JSON.stringify(mesi) : null,
+    colore:               isVar ? (document.getElementById('vcColore').value || null) : null,
   };
   const editId = document.getElementById('voceCustomEditId').value;
   const btn = this;
