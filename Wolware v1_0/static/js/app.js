@@ -384,8 +384,7 @@ function formatEur(val) {
 
 document.getElementById('filterDitte')?.addEventListener('input', filterDitte);
 document.getElementById('filterTariffario')?.addEventListener('change', filterDitte);
-document.getElementById('filterPaghe')?.addEventListener('change', filterDitte);
-document.getElementById('filterCont')?.addEventListener('change', filterDitte);
+document.getElementById('filterTipologia')?.addEventListener('change', filterDitte);
 document.getElementById('filterAnno')?.addEventListener('change', e => { ditteAnno = +e.target.value; loadDitte(); });
 document.getElementById('filterArchiviati')?.addEventListener('change', loadDitte);
 
@@ -407,10 +406,9 @@ document.addEventListener('click', e => {
 });
 
 function filterDitte() {
-  const q      = (document.getElementById('filterDitte')?.value || '').toLowerCase();
-  const tariff = document.getElementById('filterTariffario')?.value || '';
-  const chkP   = document.getElementById('filterPaghe')?.checked;
-  const chkC   = document.getElementById('filterCont')?.checked;
+  const q         = (document.getElementById('filterDitte')?.value || '').toLowerCase();
+  const tariff    = document.getElementById('filterTariffario')?.value || '';
+  const tipologia = document.getElementById('filterTipologia')?.value || '';
   let f = allDitte;
   if (q) f = f.filter(d =>
     d.ragione_sociale.toLowerCase().includes(q) ||
@@ -420,8 +418,10 @@ function filterDitte() {
   );
   if (tariff === '__nessuno__') f = f.filter(d => !d.tariffario_id);
   else if (tariff) f = f.filter(d => String(d.tariffario_id) === tariff);
-  if (chkP) f = f.filter(d => !!(d.inizio_paghe));
-  if (chkC) f = f.filter(d => !!(d.inizio_contabilita));
+  if (tipologia === 'paghe')      f = f.filter(d =>  !!(d.inizio_paghe) && !(d.inizio_contabilita));
+  else if (tipologia === 'paghe_cont') f = f.filter(d => !!(d.inizio_paghe) && !!(d.inizio_contabilita));
+  else if (tipologia === 'cont')  f = f.filter(d => !(d.inizio_paghe) &&  !!(d.inizio_contabilita));
+  else if (tipologia === 'altro') f = f.filter(d => !(d.inizio_paghe) &&  !(d.inizio_contabilita));
   renderDitte(f);
 }
 

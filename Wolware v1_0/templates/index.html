@@ -457,9 +457,14 @@
           </div>
           <div class="filter-bar">
             <input type="text" class="filter-input" id="filterDitte" placeholder="Cerca cliente, P.IVA, referente… (Ctrl+F)" />
-<select class="filter-select" id="filterTariffario"><option value="">Tutti i tariffari</option></select>
-            <label class="filter-check"><input type="checkbox" id="filterPaghe" /> Paghe</label>
-            <label class="filter-check"><input type="checkbox" id="filterCont" /> Contabilità</label>
+            <select class="filter-select" id="filterTariffario"><option value="">Tutti i tariffari</option></select>
+            <select class="filter-select" id="filterTipologia">
+              <option value="">Tutti</option>
+              <option value="paghe">Paghe</option>
+              <option value="paghe_cont">Paghe + Contabilità</option>
+              <option value="cont">Contabilità</option>
+              <option value="altro">Altro</option>
+            </select>
             <select class="filter-select" id="filterAnno" style="width:90px"></select>
             <label class="filter-check"><input type="checkbox" id="filterArchiviati" /> Mostra archiviati</label>
           </div>
