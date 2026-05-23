@@ -148,11 +148,11 @@ def duplica_tariffario(tid):
             for v in voci:
                 db.execute(
                     'INSERT INTO voci_costo '
-                    '(macrogruppo_id, nome, prezzo, esente_iva, richiede_anno_precedente, mesi_json, note, ordine) '
-                    'VALUES (?,?,?,?,?,?,?,?)',
+                    '(macrogruppo_id, nome, prezzo, esente_iva, richiede_anno_precedente, mesi_json, note, ordine, colore) '
+                    'VALUES (?,?,?,?,?,?,?,?,?)',
                     (new_gid, v['nome'], v['prezzo'],
                      v['esente_iva'] or 0, v['richiede_anno_precedente'] or 0,
-                     v['mesi_json'], v['note'], v['ordine'])
+                     v['mesi_json'], v['note'], v['ordine'], v['colore'])
                 )
         db.commit()
         new_t = dict(db.execute('SELECT * FROM tariffari WHERE id=?', (new_tid,)).fetchone())
@@ -249,14 +249,15 @@ def create_voce(gid):
     anno_prec  = 1 if data.get('richiede_anno_precedente') else 0
     mesi       = _parse_mesi(data.get('mesi'))
     mesi_json  = json.dumps(mesi) if mesi is not None else None
+    colore     = data.get('colore') or None
     db = get_db()
     try:
         cur = db.execute(
             'INSERT INTO voci_costo '
-            '(macrogruppo_id, nome, prezzo, esente_iva, richiede_anno_precedente, mesi_json, note, ordine) '
-            'VALUES (?,?,?,?,?,?,?,?)',
+            '(macrogruppo_id, nome, prezzo, esente_iva, richiede_anno_precedente, mesi_json, note, ordine, colore) '
+            'VALUES (?,?,?,?,?,?,?,?,?)',
             (gid, nome, data.get('prezzo') or 0.0, esente_iva, anno_prec,
-             mesi_json, data.get('note', ''), data.get('ordine', 0))
+             mesi_json, data.get('note', ''), data.get('ordine', 0), colore)
         )
         row = db.execute('SELECT * FROM voci_costo WHERE id=?', (cur.lastrowid,)).fetchone()
         db.commit()
@@ -274,13 +275,14 @@ def update_voce(vid):
     anno_prec  = 1 if data.get('richiede_anno_precedente') else 0
     mesi       = _parse_mesi(data.get('mesi'))
     mesi_json  = json.dumps(mesi) if mesi is not None else None
+    colore     = data.get('colore') or None
     db = get_db()
     try:
         db.execute(
             'UPDATE voci_costo SET nome=?, prezzo=?, esente_iva=?, '
-            'richiede_anno_precedente=?, mesi_json=?, note=? WHERE id=?',
+            'richiede_anno_precedente=?, mesi_json=?, note=?, colore=? WHERE id=?',
             (data.get('nome', ''), data.get('prezzo') or 0.0,
-             esente_iva, anno_prec, mesi_json, data.get('note', ''), vid)
+             esente_iva, anno_prec, mesi_json, data.get('note', ''), colore, vid)
         )
         db.commit()
         row = db.execute('SELECT * FROM voci_costo WHERE id=?', (vid,)).fetchone()

@@ -1594,6 +1594,7 @@ async function renderMacrogruppi(tariffarioId) {
   container.innerHTML = gruppi.map(g => {
     const tipo = TIPO_META[g.tipo] || TIPO_META.fisso_mensile;
     const annuale = isAnnuale(g.tipo);
+    const isVariabile = g.tipo === 'variabile_mensile' || g.tipo === 'variabile_annuale';
     const isGruppoFrozen = frozen && voceInEditing && voceInEditing.gid !== g.id;
     const opacity = isGruppoFrozen ? '0.35' : '1';
     const pointerEvents = isGruppoFrozen ? 'none' : 'auto';
@@ -1620,7 +1621,7 @@ async function renderMacrogruppi(tariffarioId) {
       <div id="addform-${g.id}" ${addFormDisabled}
            style="padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--color-border);
                   background:var(--color-surface-2)">
-        <div style="display:grid;grid-template-columns:1fr 120px;gap:var(--space-2);align-items:end">
+        <div style="display:grid;grid-template-columns:${isVariabile ? '1fr 120px 70px' : '1fr 120px'};gap:var(--space-2);align-items:end">
           <div>
             <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">
               Descrizione <span style="color:var(--color-error)">*</span>
@@ -1638,6 +1639,13 @@ async function renderMacrogruppi(tariffarioId) {
                           border-radius:var(--radius-sm);background:var(--color-surface);
                           font-size:var(--text-sm);color:var(--color-text)"/>
           </div>
+          ${isVariabile ? `<div>
+            <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">Colore</label>
+            <input id="add-colore-${g.id}" type="color" value="#6366f1"
+                   title="Colore colonna nella tabella variabili"
+                   style="width:100%;height:34px;padding:2px 3px;border:1px solid var(--color-border);
+                          border-radius:var(--radius-sm);cursor:pointer;background:var(--color-surface)"/>
+          </div>` : ''}
         </div>
         <div style="display:flex;gap:var(--space-4);margin-top:var(--space-2);align-items:center">
           <label style="display:flex;align-items:center;gap:6px;font-size:var(--text-xs);cursor:pointer">
@@ -1693,7 +1701,7 @@ async function renderMacrogruppi(tariffarioId) {
                style="padding:var(--space-3) var(--space-4);border-radius:var(--radius-sm);
                       background:var(--color-primary-highlight);
                       border:1px solid var(--color-primary);margin-bottom:var(--space-2)">
-            <div style="display:grid;grid-template-columns:1fr 120px;gap:var(--space-2);align-items:end">
+            <div style="display:grid;grid-template-columns:${isVariabile ? '1fr 120px 70px' : '1fr 120px'};gap:var(--space-2);align-items:end">
               <div>
                 <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">
                   Descrizione <span style="color:var(--color-error)">*</span>
@@ -1712,6 +1720,13 @@ async function renderMacrogruppi(tariffarioId) {
                               border-radius:var(--radius-sm);background:var(--color-surface);
                               font-size:var(--text-sm);color:var(--color-text)"/>
               </div>
+              ${isVariabile ? `<div>
+                <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">Colore</label>
+                <input id="edit-colore-${v.id}" type="color" value="${v.colore || '#6366f1'}"
+                       title="Colore colonna nella tabella variabili"
+                       style="width:100%;height:34px;padding:2px 3px;border:1px solid var(--color-primary);
+                              border-radius:var(--radius-sm);cursor:pointer;background:var(--color-surface)"/>
+              </div>` : ''}
             </div>
             <div style="display:flex;gap:var(--space-4);margin-top:var(--space-2);align-items:center;flex-wrap:wrap">
               <label style="display:flex;align-items:center;gap:6px;font-size:var(--text-xs);cursor:pointer">
@@ -1754,6 +1769,11 @@ async function renderMacrogruppi(tariffarioId) {
       ].filter(Boolean).join('');
       const badgesHtml = [mesiPillsHtml, flagsHtml].filter(Boolean).join('');
 
+      const colorSwatchHtml = isVariabile && v.colore
+        ? `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;
+                        background:${v.colore};flex-shrink:0;
+                        border:1px solid rgba(0,0,0,0.12)" title="Colore: ${v.colore}"></span>`
+        : '';
       return `
         <div id="voce-row-${v.id}"
              style="display:flex;align-items:center;gap:var(--space-3);
@@ -1765,6 +1785,7 @@ async function renderMacrogruppi(tariffarioId) {
             <span style="font-size:var(--text-sm);color:var(--color-text);font-weight:500">${v.nome}</span>
             ${badgesHtml ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${badgesHtml}</div>` : ''}
           </div>
+          ${colorSwatchHtml}
           <span style="font-size:var(--text-xs);font-weight:600;padding:2px 7px;flex-shrink:0;
                        border-radius:var(--radius-full);background:${tipo.bg};color:${tipo.color}">
             ${tipo.label}
@@ -1934,12 +1955,15 @@ async function aggiungiVoce(gid) {
       return;
     }
 
+    const isVarVoce = g.tipo === 'variabile_mensile' || g.tipo === 'variabile_annuale';
+    const colore = isVarVoce ? (document.getElementById(`add-colore-${gid}`)?.value || null) : null;
     await api(`/api/macrogruppi/${gid}/voci`, 'POST', {
       nome,
       prezzo,
       esente_iva: esenteEl ? esenteEl.checked : false,
       richiede_anno_precedente: annopEl ? annopEl.checked : false,
       mesi,
+      colore,
     });
     toast('Voce aggiunta', 'success');
     // Reset form aggiunta
@@ -1947,10 +1971,12 @@ async function aggiungiVoce(gid) {
     const pEl = document.getElementById(`add-prezzo-${gid}`);
     const eEl = document.getElementById(`add-esente-${gid}`);
     const aEl = document.getElementById(`add-annop-${gid}`);
+    const cEl = document.getElementById(`add-colore-${gid}`);
     if (nEl) nEl.value = '';
     if (pEl) pEl.value = '';
     if (eEl) eEl.checked = false;
     if (aEl) aEl.checked = false;
+    if (cEl) cEl.value = '#6366f1';
     // Reset mesi se annuale
     const mesiContainer = document.getElementById(`mesi-add-${gid}`);
     if (mesiContainer) {
@@ -1992,12 +2018,15 @@ async function salvaVoceInline(vid) {
   try {
     const gruppi = await api(`/api/tariffari/${activeTariffarioId}/macrogruppi`);
     const g = gruppi.find(x => x.id === gid);
+    const isVarVoce = g.tipo === 'variabile_mensile' || g.tipo === 'variabile_annuale';
+    const colore = isVarVoce ? (document.getElementById(`edit-colore-${vid}`)?.value || null) : null;
     await api(`/api/voci/${vid}`, 'PUT', {
       nome,
       prezzo,
       esente_iva: esente,
       richiede_anno_precedente: annop,
       mesi,
+      colore,
     });
     voceInEditing = null;
     toast('Voce aggiornata', 'success');
@@ -3486,8 +3515,12 @@ function _renderIvTabella() {
     el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Nessuna voce variabile disponibile per questo mese.</p>';
     return;
   }
-  const ths = colonne.map(c =>
-    `<th title="${c.mg_nome}">${c.nome}</th>`).join('');
+  const ths = colonne.map(c => {
+    const colStyle = c.colore
+      ? ` style="background:${c.colore};color:#fff;border-color:${c.colore}"`
+      : '';
+    return `<th title="${c.mg_nome}"${colStyle}>${c.nome}</th>`;
+  }).join('');
   const trs = righe.map(r => {
     let totaleCliente = 0;
     const celle = colonne.map(c => {
