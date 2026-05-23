@@ -80,6 +80,69 @@ def associa_tariffario(ditta_id):
         db.close()
 
 
+# POST /api/ditte/<id>/cambia-tariffario
+@bp.route('/api/ditte/<int:ditta_id>/cambia-tariffario', methods=['POST'])
+@login_required
+def cambia_tariffario(ditta_id):
+    """Cambia tariffario: aggiorna associazione, salva in storico, sincronizza voci."""
+    data = request.get_json() or {}
+    tariffario_id = data.get('tariffario_id')
+    note          = data.get('note', '')
+    db = get_db()
+    try:
+        tariffario_nome = None
+        if tariffario_id:
+            row = db.execute('SELECT nome FROM tariffari WHERE id=?', (tariffario_id,)).fetchone()
+            tariffario_nome = row['nome'] if row else None
+
+        # Aggiorna ditta
+        db.execute(
+            'UPDATE ditte SET tariffario_id=?, tariffario_nome=? WHERE id=?',
+            (tariffario_id, tariffario_nome, ditta_id)
+        )
+
+        # Storico
+        db.execute(
+            '''INSERT INTO storico_tariffari (ditta_id, tariffario_id, tariffario_nome, note)
+               VALUES (?, ?, ?, ?)''',
+            (ditta_id, tariffario_id, tariffario_nome, note)
+        )
+
+        # Sync voci dal nuovo tariffario (solo se tariffario selezionato)
+        if tariffario_id:
+            voci_standard = db.execute(
+                '''SELECT vc.id, vc.nome, vc.prezzo, vc.note,
+                          vc.esente_iva, vc.richiede_anno_precedente, vc.mesi_json,
+                          mg.id as mg_id, mg.nome as mg_nome, mg.tipo
+                   FROM voci_costo vc
+                   JOIN macrogruppi mg ON mg.id = vc.macrogruppo_id
+                   WHERE mg.tariffario_id = ?''',
+                (tariffario_id,)
+            ).fetchall()
+            # Rimuove voci del tariffario precedente (non custom)
+            db.execute(
+                'DELETE FROM ditta_voci WHERE ditta_id=? AND custom=0',
+                (ditta_id,)
+            )
+            for v in voci_standard:
+                tipo_mapped = TIPO_MAP.get(v['tipo'], v['tipo'])
+                db.execute(
+                    '''INSERT INTO ditta_voci
+                       (ditta_id, voce_costo_id, nome, prezzo, note,
+                        macrogruppo_nome, macrogruppo_id, tipo, custom,
+                        esente_iva, richiede_anno_precedente, mesi_json, sync_override)
+                       VALUES (?,?,?,?,?,?,?,?,0,?,?,?,0)''',
+                    (ditta_id, v['id'], v['nome'], v['prezzo'], v['note'],
+                     v['mg_nome'], v['mg_id'], tipo_mapped,
+                     v['esente_iva'], v['richiede_anno_precedente'], v['mesi_json'])
+                )
+
+        db.commit()
+        return jsonify({'ok': True, 'tariffario_nome': tariffario_nome})
+    finally:
+        db.close()
+
+
 # POST /api/ditte/<id>/tariffario/sync
 @bp.route('/api/ditte/<int:ditta_id>/tariffario/sync', methods=['POST'])
 @login_required
@@ -300,6 +363,24 @@ def voci_per_tipo(ditta_id):
             raggruppate[t].append(dict(v))
 
         return jsonify(raggruppate)
+    finally:
+        db.close()
+
+
+# GET /api/ditte/<id>/storico-tariffari
+@bp.route('/api/ditte/<int:ditta_id>/storico-tariffari', methods=['GET'])
+@login_required
+def get_storico_tariffari(ditta_id):
+    db = get_db()
+    try:
+        rows = db.execute(
+            '''SELECT id, tariffario_id, tariffario_nome, cambiato_il, note
+               FROM storico_tariffari
+               WHERE ditta_id=?
+               ORDER BY cambiato_il DESC''',
+            (ditta_id,)
+        ).fetchall()
+        return jsonify([dict(r) for r in rows])
     finally:
         db.close()
 

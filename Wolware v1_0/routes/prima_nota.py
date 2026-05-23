@@ -390,6 +390,80 @@ def get_categorie():
 
 
 # ─────────────────────────────────────────────────────────────────
+# POST /api/prima-nota/movimento-rapido
+# Movimento semplificato dalla scheda cliente: no categoria/sottovoce.
+# ─────────────────────────────────────────────────────────────────
+@bp.route('/api/prima-nota/movimento-rapido', methods=['POST'])
+@login_required
+def crea_movimento_rapido():
+    from datetime import date as _date
+    db  = get_db()
+    d   = request.get_json() or {}
+    tipo        = d.get('tipo', '').strip()
+    tipologia   = d.get('tipologia', '').strip()
+    importo_raw = d.get('importo', 0)
+    descrizione = d.get('descrizione', '').strip()
+    ditta_id    = d.get('ditta_id')
+    data_mov    = _date.today().isoformat()
+
+    try:
+        importo = float(importo_raw)
+    except (TypeError, ValueError):
+        importo = 0.0
+
+    if tipo not in ('entrata', 'uscita'):
+        db.close(); return jsonify({'error': 'Tipo non valido'}), 400
+    if not tipologia:
+        db.close(); return jsonify({'error': 'Seleziona un conto'}), 400
+    if importo <= 0:
+        db.close(); return jsonify({'error': "L'importo deve essere maggiore di zero"}), 400
+
+    try:
+        # Recupera nome ditta per usarla come sottovoce_nome
+        ditta = None
+        if ditta_id:
+            ditta = db.execute('SELECT ragione_sociale FROM ditte WHERE id=?', (ditta_id,)).fetchone()
+
+        macrogruppo_id   = 'clienti' if ditta else None
+        macrogruppo_nome = 'Clienti' if ditta else None
+        sottovoce_id     = str(ditta_id) if ditta else None
+        sottovoce_nome   = ditta['ragione_sociale'] if ditta else None
+
+        db.execute(
+            '''INSERT INTO movimenti_studio
+               (tipo, data, tipologia, macrogruppo_id, macrogruppo_nome,
+                sottovoce_id, sottovoce_nome, importo, descrizione)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            (tipo, data_mov, tipologia, macrogruppo_id, macrogruppo_nome,
+             sottovoce_id, sottovoce_nome, importo, descrizione or None)
+        )
+        mov_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+        # Se entrata da cliente: crea anche il pagamento
+        if tipo == 'entrata' and ditta:
+            anno = int(data_mov.split('-')[0])
+            if tipologia == 'cassa':
+                mezzo = 'Contanti'
+            elif tipologia.startswith('banca_'):
+                banca_id = tipologia.split('_')[1]
+                banca = db.execute('SELECT nome FROM banche_studio WHERE id=?', (banca_id,)).fetchone()
+                mezzo = f'Bonifico {banca["nome"]}' if banca else 'Bonifico'
+            else:
+                mezzo = tipologia
+            db.execute(
+                '''INSERT INTO pagamenti
+                   (ditta_id, anno, data, importo, metodo, note, movimenti_studio_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                (int(ditta_id), anno, data_mov, importo, mezzo, descrizione or None, mov_id)
+            )
+
+        db.commit()
+        return jsonify({'ok': True})
+    finally:
+        db.close()
+
+
+# ─────────────────────────────────────────────────────────────────
 # POST /api/prima-nota/movimenti
 # Crea un movimento entrata o uscita.
 # Se entrata + categoria "clienti": crea anche il pagamento.
