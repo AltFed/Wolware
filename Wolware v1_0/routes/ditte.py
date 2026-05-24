@@ -92,12 +92,44 @@ def get_ditte():
                                 'variabile','variabile_mensile','variabile_annuale')""",
                 (did, anno)
             ).fetchall()
+            mesi_cm = conn.execute(
+                """SELECT DISTINCT mese FROM pratiche WHERE ditta_id=? AND anno=?
+                AND tipo = 'richiesta'""",
+                (did, anno)
+            ).fetchall()
+            # Date ultima modifica per ciascun tipo
+            data_cf = conn.execute(
+                """SELECT MAX(data_esecuzione) FROM pratiche WHERE ditta_id=? AND anno=?
+                AND tipo IN ('costi_fissi_mensili','fisso_mensile',
+                                'costi_fissi_annuali','fisso_annuale')
+                AND data_esecuzione IS NOT NULL""",
+                (did, anno)
+            ).fetchone()[0]
+            data_vr = conn.execute(
+                """SELECT MAX(data_esecuzione) FROM pratiche WHERE ditta_id=? AND anno=?
+                AND tipo IN ('costi_variabili_mensili','costi_variabili_annuali',
+                                'variabile','variabile_mensile','variabile_annuale')
+                AND data_esecuzione IS NOT NULL""",
+                (did, anno)
+            ).fetchone()[0]
+            data_cm = conn.execute(
+                """SELECT MAX(data_esecuzione) FROM pratiche WHERE ditta_id=? AND anno=?
+                AND tipo = 'richiesta'
+                AND data_esecuzione IS NOT NULL""",
+                (did, anno)
+            ).fetchone()[0]
 
             cf_set = {r[0] for r in mesi_cf}
             vr_set = {r[0] for r in mesi_vr}
+            cm_set = {r[0] for r in mesi_cm}
             for m in range(1, 13):
                 row[f'cf_mese_{m}_{anno}'] = 1 if m in cf_set else 0
                 row[f'vr_mese_{m}_{anno}'] = 1 if m in vr_set else 0
+                row[f'cm_mese_{m}_{anno}'] = 1 if m in cm_set else 0
+                
+            row['data_ultima_cf'] = data_cf or None
+            row['data_ultima_vr'] = data_vr or None
+            row['data_ultima_cm'] = data_cm or None
 
             # ── Ultimo estratto conto e ultimo pagamento ──
             ult_ec = conn.execute(
@@ -107,9 +139,18 @@ def get_ditte():
             ult_pag = conn.execute(
                 'SELECT MAX(data) FROM pagamenti WHERE ditta_id=?', (did,)
             ).fetchone()[0]
+            ult_contab = conn.execute(
+                """SELECT MAX(data_esecuzione) FROM pratiche
+                WHERE ditta_id=?
+                AND tipo IN ('costi_fissi_mensili','fisso_mensile',
+                                'costi_fissi_annuali','fisso_annuale')
+                AND data_esecuzione IS NOT NULL""",
+                (did,)
+            ).fetchone()[0]
 
             row['ultimo_ec']  = ult_ec  or None
             row['ultimo_pag'] = ult_pag or None
+            row['ultima_contab'] = ult_contab or None
 
             result.append(row)
 

@@ -198,12 +198,17 @@ def create_macrogruppo(tid):
         tipo = 'fisso_mensile'
     db = get_db()
     try:
+        row_min = db.execute(
+            'SELECT MIN(ordine) FROM macrogruppi WHERE tariffario_id=?', (tid,)
+        ).fetchone()[0]
+        nuovo_ordine = (row_min - 1) if row_min is not None else 0
+
         cur = db.execute(
             'INSERT INTO macrogruppi (tariffario_id, nome, tipo, ordine) VALUES (?,?,?,?)',
-            (tid, nome, tipo, data.get('ordine', 0))
+            (tid, nome, tipo, nuovo_ordine)
         )
-        row = db.execute('SELECT * FROM macrogruppi WHERE id=?', (cur.lastrowid,)).fetchone()
         db.commit()
+        row = db.execute('SELECT * FROM macrogruppi WHERE id=?', (cur.lastrowid,)).fetchone()
         return jsonify(dict(row)), 201
     finally:
         db.close()

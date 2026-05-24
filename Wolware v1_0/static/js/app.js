@@ -332,6 +332,30 @@ function renderDitte(list) {
       const stato = (d[`vr_mese_${i+1}_${ditteAnno}`]) ? 'done' : '';
       return `<span class="mese-dot ${stato}" title="${m}">${m}</span>`;
     }).join('');
+    const cmDots = MESI.map((m,i) => {
+      const stato = (d[`cm_mese_${i+1}_${ditteAnno}`]) ? 'done' : '';
+      return `<span class="mese-dot ${stato}" title="${m}">${m}</span>`;
+    }).join('');
+    const ultimaContab = d.ultima_contab
+      ? `<div class="contab-box" title="Ultima contabilizzazione">
+          <span class="contab-label">Ult. contab.</span>
+          <span class="contab-date">${d.ultima_contab}</span>
+        </div>`
+      : `<div class="contab-box">
+          <span class="contab-label">Ult. contab.</span>
+          <span class="contab-date contab-date--vuota">—</span>
+        </div>`;
+    const dataCF = d.data_ultima_cf
+      ? `<span class="mesi-date">${d.data_ultima_cf}</span>`
+      : `<span class="mesi-date mesi-date--vuota">—</span>`;
+
+    const dataVR = d.data_ultima_vr
+      ? `<span class="mesi-date">${d.data_ultima_vr}</span>`
+      : `<span class="mesi-date mesi-date--vuota">—</span>`;
+
+    const dataCM = d.data_ultima_cm
+      ? `<span class="mesi-date">${d.data_ultima_cm}</span>`
+      : `<span class="mesi-date mesi-date--vuota">—</span>`;
 
     const dovuto  = d.totale_dovuto  != null ? formatEur(d.totale_dovuto)  : '—';
     const pagato  = d.totale_pagato  != null ? formatEur(d.totale_pagato)  : '—';
@@ -360,11 +384,22 @@ onclick="openDettaglioCliente(${d.id})" title="${d.ragione_sociale}">
         </div>
       </td>
       <td class="col-mesi">
-        <div class="mesi-block">
-          <span class="mesi-label">CF</span><div class="mesi-dots">${cfDots}</div>
-        </div>
-        <div class="mesi-block">
-          <span class="mesi-label">VR</span><div class="mesi-dots">${vrDots}</div>
+        <div class="mesi-wrap">
+          <div class="mesi-block">
+            <span class="mesi-label">CF</span>
+            <div class="mesi-dots">${cfDots}</div>
+            ${dataCF}
+          </div>
+          <div class="mesi-block">
+            <span class="mesi-label">VR</span>
+            <div class="mesi-dots">${vrDots}</div>
+            ${dataVR}
+          </div>
+          <div class="mesi-block">
+            <span class="mesi-label">CM</span>
+            <div class="mesi-dots">${cmDots}</div>
+            ${dataCM}
+          </div>
         </div>
       </td>
       <td class="col-money mono">${dovuto}</td>
