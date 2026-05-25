@@ -1769,23 +1769,19 @@ async function renderMacrogruppi(tariffarioId) {
       ].filter(Boolean).join('');
       const badgesHtml = [mesiPillsHtml, flagsHtml].filter(Boolean).join('');
 
-      const colorSwatchHtml = isVariabile && v.colore
-        ? `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;
-                        background:${v.colore};flex-shrink:0;
-                        border:1px solid rgba(0,0,0,0.12)" title="Colore: ${v.colore}"></span>`
-        : '';
+      const rowBg     = isVariabile && v.colore ? `${v.colore}1a` : 'var(--color-bg)';
+      const rowBorder = isVariabile && v.colore ? `border-left:3px solid ${v.colore};` : 'border-left:3px solid transparent;';
       return `
         <div id="voce-row-${v.id}"
              style="display:flex;align-items:center;gap:var(--space-3);
                     padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);
-                    background:var(--color-bg);margin-bottom:var(--space-1);
+                    background:${rowBg};${rowBorder}margin-bottom:var(--space-1);
                     opacity:${frozen&&!isEditing?'0.4':'1'};
                     pointer-events:${frozen&&!isEditing?'none':'auto'}">
           <div style="flex:1;min-width:0">
             <span style="font-size:var(--text-sm);color:var(--color-text);font-weight:500">${v.nome}</span>
             ${badgesHtml ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${badgesHtml}</div>` : ''}
           </div>
-          ${colorSwatchHtml}
           <span style="font-size:var(--text-xs);font-weight:600;padding:2px 7px;flex-shrink:0;
                        border-radius:var(--radius-full);background:${tipo.bg};color:${tipo.color}">
             ${tipo.label}
