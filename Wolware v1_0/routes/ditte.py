@@ -51,10 +51,16 @@ def get_ditte():
                 SELECT
                     ditta_id,
                     COALESCE(SUM(importo), 0) AS tot_pratiche,
-                    COALESCE(SUM(CASE WHEN esente_iva IS NULL OR esente_iva=0 THEN importo*0.22 ELSE 0 END), 0) AS iva_pratiche
+                    COALESCE(SUM(
+                        CASE
+                            WHEN esente_iva IS NULL OR esente_iva = 0 THEN importo * 0.22
+                            ELSE 0
+                        END
+                    ), 0) AS iva_pratiche
                 FROM pratiche
+                WHERE anno = ?
                 GROUP BY ditta_id
-            ''').fetchall()
+            ''', (anno,)).fetchall()
         }
 
         arrotondamenti_tot = {
@@ -64,8 +70,9 @@ def get_ditte():
                     COALESCE(SUM(CASE WHEN tipo='addebito' THEN importo ELSE 0 END), 0) AS tot_addebiti,
                     COALESCE(SUM(CASE WHEN tipo='abbuono' THEN importo ELSE 0 END), 0) AS tot_abbuoni
                 FROM arrotondamenti
+                WHERE strftime('%Y', data) = ?
                 GROUP BY ditta_id
-            ''').fetchall()
+            ''', (str(anno),)).fetchall()
         }
 
         pagamenti_tot = {
@@ -75,8 +82,9 @@ def get_ditte():
                     COALESCE(SUM(importo), 0) AS tot_pagamenti,
                     MAX(data) AS ultimo_pag
                 FROM pagamenti
+                WHERE anno = ?
                 GROUP BY ditta_id
-            ''').fetchall()
+            ''', (anno,)).fetchall()
         }
 
         fatture_tot = {
@@ -84,8 +92,9 @@ def get_ditte():
                 SELECT ditta_id, MAX(data_emissione) AS ultimo_ec
                 FROM fatture
                 WHERE stato != 'annullata'
+                  AND strftime('%Y', data_emissione) = ?
                 GROUP BY ditta_id
-            ''').fetchall()
+            ''', (str(anno),)).fetchall()
         }
 
         pratiche_anno_rows = conn.execute('''
