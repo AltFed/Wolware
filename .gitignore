@@ -2,36 +2,23 @@
 venv/
 env/
 old/
-
-# Output di PyInstaller (Compilazione Wolware)
-# Usiamo l'asterisco iniziale così intercetta anche "Wolware v1_0/build/"
-**/build/
-**/dist/
-*.spec
-
-# Strumenti IA - Graphify
 graphify-out/
-.graphify/
-.graphify_root
-graphify.txt
-
 # File di database locale (MOLTO IMPORTANTE)
 *.db
 *.sqlite3
 dati_gestionale.db
 gestione_clienti.db
-wolware.db
 
-# File di cache di Python
-**/__pycache__/
+# File di cache di Python (file temporanei inutili su GitHub)
+__pycache__/
 *.pyc
 
 # File di sistema Windows/Mac   
 .DS_Store
 Thumbs.db
+wolware.db
 
-
-# Credenziali, Log e Sicurezza 
+# Credenziali e sicurezza 
 accounts.json
 accounts.json.bak
 *.bak
@@ -39,3 +26,8 @@ accounts.json.bak
 loggin_errore_auth.log
 .secret_key
 .env
+# Strumenti IA - Graphify
+graphify-out/
+.graphify/
+.graphify_root
+graphify.txt
