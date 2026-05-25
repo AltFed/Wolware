@@ -1,4 +1,3 @@
-
 # routes/ditte.py
 # Blueprint 'ditte' — API REST per la gestione delle ditte.
 # GET    /api/ditte        → lista tutte le ditte
@@ -47,110 +46,121 @@ def get_ditte():
             ORDER BY d.ragione_sociale COLLATE NOCASE
         ''').fetchall()
 
+        pratiche_tot = {
+            r['ditta_id']: dict(r) for r in conn.execute('''
+                SELECT
+                    ditta_id,
+                    COALESCE(SUM(importo), 0) AS tot_pratiche,
+                    COALESCE(SUM(CASE WHEN esente_iva IS NULL OR esente_iva=0 THEN importo*0.22 ELSE 0 END), 0) AS iva_pratiche
+                FROM pratiche
+                GROUP BY ditta_id
+            ''').fetchall()
+        }
+
+        arrotondamenti_tot = {
+            r['ditta_id']: dict(r) for r in conn.execute('''
+                SELECT
+                    ditta_id,
+                    COALESCE(SUM(CASE WHEN tipo='addebito' THEN importo ELSE 0 END), 0) AS tot_addebiti,
+                    COALESCE(SUM(CASE WHEN tipo='abbuono' THEN importo ELSE 0 END), 0) AS tot_abbuoni
+                FROM arrotondamenti
+                GROUP BY ditta_id
+            ''').fetchall()
+        }
+
+        pagamenti_tot = {
+            r['ditta_id']: dict(r) for r in conn.execute('''
+                SELECT
+                    ditta_id,
+                    COALESCE(SUM(importo), 0) AS tot_pagamenti,
+                    MAX(data) AS ultimo_pag
+                FROM pagamenti
+                GROUP BY ditta_id
+            ''').fetchall()
+        }
+
+        fatture_tot = {
+            r['ditta_id']: dict(r) for r in conn.execute('''
+                SELECT ditta_id, MAX(data_emissione) AS ultimo_ec
+                FROM fatture
+                WHERE stato != 'annullata'
+                GROUP BY ditta_id
+            ''').fetchall()
+        }
+
+        pratiche_anno_rows = conn.execute('''
+            SELECT ditta_id, mese, tipo, MAX(data_esecuzione) AS ultima_data
+            FROM pratiche
+            WHERE anno = ?
+            GROUP BY ditta_id, mese, tipo
+        ''', (anno,)).fetchall()
+
+        CF_TYPES = {'costi_fissi_mensili', 'fisso_mensile', 'costi_fissi_annuali', 'fisso_annuale'}
+        VR_TYPES = {'costi_variabili_mensili', 'costi_variabili_annuali', 'variabile', 'variabile_mensile', 'variabile_annuale'}
+        CM_TYPES = {'richiesta'}
+
+        cf_map, vr_map, cm_map = {}, {}, {}
+        data_cf_map, data_vr_map, data_cm_map = {}, {}, {}
+
+        for r in pratiche_anno_rows:
+            did = r['ditta_id']
+            mese = r['mese']
+            tipo = r['tipo']
+            ultima_data = r['ultima_data']
+
+            if tipo in CF_TYPES:
+                cf_map.setdefault(did, set()).add(mese)
+                if ultima_data and (did not in data_cf_map or ultima_data > data_cf_map[did]):
+                    data_cf_map[did] = ultima_data
+            elif tipo in VR_TYPES:
+                vr_map.setdefault(did, set()).add(mese)
+                if ultima_data and (did not in data_vr_map or ultima_data > data_vr_map[did]):
+                    data_vr_map[did] = ultima_data
+            elif tipo in CM_TYPES:
+                cm_map.setdefault(did, set()).add(mese)
+                if ultima_data and (did not in data_cm_map or ultima_data > data_cm_map[did]):
+                    data_cm_map[did] = ultima_data
+
         result = []
         for d in ditte:
             row = dict(d)
             did = d['id']
 
-            # ── Totale dovuto (pratiche + IVA + residuo_iniziale + addebiti) ──
             res_iniziale = float(d['residuo_iniziale'] or 0)
-            tot_pratiche = conn.execute(
-                'SELECT COALESCE(SUM(importo),0) FROM pratiche WHERE ditta_id=?', (did,)
-            ).fetchone()[0] or 0.0
-            iva_pratiche = conn.execute(
-                '''SELECT COALESCE(SUM(importo*0.22),0) FROM pratiche
-                   WHERE ditta_id=? AND (esente_iva IS NULL OR esente_iva=0)''', (did,)
-            ).fetchone()[0] or 0.0
-            tot_addebiti = conn.execute(
-                "SELECT COALESCE(SUM(importo),0) FROM arrotondamenti WHERE ditta_id=? AND tipo='addebito'", (did,)
-            ).fetchone()[0] or 0.0
-            tot_abbuoni = conn.execute(
-                "SELECT COALESCE(SUM(importo),0) FROM arrotondamenti WHERE ditta_id=? AND tipo='abbuono'", (did,)
-            ).fetchone()[0] or 0.0
-            tot_pagamenti = conn.execute(
-                'SELECT COALESCE(SUM(importo),0) FROM pagamenti WHERE ditta_id=?', (did,)
-            ).fetchone()[0] or 0.0
+            p = pratiche_tot.get(did, {})
+            a = arrotondamenti_tot.get(did, {})
+            pg = pagamenti_tot.get(did, {})
+            f = fatture_tot.get(did, {})
 
-            totale_dovuto  = round(res_iniziale + tot_pratiche + iva_pratiche + tot_addebiti, 2)
-            totale_pagato  = round(tot_pagamenti + tot_abbuoni, 2)
+            tot_pratiche = float(p.get('tot_pratiche', 0) or 0)
+            iva_pratiche = float(p.get('iva_pratiche', 0) or 0)
+            tot_addebiti = float(a.get('tot_addebiti', 0) or 0)
+            tot_abbuoni = float(a.get('tot_abbuoni', 0) or 0)
+            tot_pagamenti = float(pg.get('tot_pagamenti', 0) or 0)
+
+            totale_dovuto = round(res_iniziale + tot_pratiche + iva_pratiche + tot_addebiti, 2)
+            totale_pagato = round(tot_pagamenti + tot_abbuoni, 2)
             totale_residuo = round(totale_dovuto - totale_pagato, 2)
 
-            row['totale_dovuto']  = totale_dovuto
-            row['totale_pagato']  = totale_pagato
+            row['totale_dovuto'] = totale_dovuto
+            row['totale_pagato'] = totale_pagato
             row['totale_residuo'] = totale_residuo
 
-            # ── Indicatori mesi CF e VR per l'anno richiesto ──
-            mesi_cf = conn.execute(
-                """SELECT DISTINCT mese FROM pratiche WHERE ditta_id=? AND anno=?
-                   AND tipo IN ('costi_fissi_mensili','fisso_mensile',
-                                'costi_fissi_annuali','fisso_annuale')""",
-                (did, anno)
-            ).fetchall()
-            mesi_vr = conn.execute(
-                """SELECT DISTINCT mese FROM pratiche WHERE ditta_id=? AND anno=?
-                   AND tipo IN ('costi_variabili_mensili','costi_variabili_annuali',
-                                'variabile','variabile_mensile','variabile_annuale')""",
-                (did, anno)
-            ).fetchall()
-            mesi_cm = conn.execute(
-                """SELECT DISTINCT mese FROM pratiche WHERE ditta_id=? AND anno=?
-                AND tipo = 'richiesta'""",
-                (did, anno)
-            ).fetchall()
-            # Date ultima modifica per ciascun tipo
-            data_cf = conn.execute(
-                """SELECT MAX(data_esecuzione) FROM pratiche WHERE ditta_id=? AND anno=?
-                AND tipo IN ('costi_fissi_mensili','fisso_mensile',
-                                'costi_fissi_annuali','fisso_annuale')
-                AND data_esecuzione IS NOT NULL""",
-                (did, anno)
-            ).fetchone()[0]
-            data_vr = conn.execute(
-                """SELECT MAX(data_esecuzione) FROM pratiche WHERE ditta_id=? AND anno=?
-                AND tipo IN ('costi_variabili_mensili','costi_variabili_annuali',
-                                'variabile','variabile_mensile','variabile_annuale')
-                AND data_esecuzione IS NOT NULL""",
-                (did, anno)
-            ).fetchone()[0]
-            data_cm = conn.execute(
-                """SELECT MAX(data_esecuzione) FROM pratiche WHERE ditta_id=? AND anno=?
-                AND tipo = 'richiesta'
-                AND data_esecuzione IS NOT NULL""",
-                (did, anno)
-            ).fetchone()[0]
-
-            cf_set = {r[0] for r in mesi_cf}
-            vr_set = {r[0] for r in mesi_vr}
-            cm_set = {r[0] for r in mesi_cm}
+            cf_set = cf_map.get(did, set())
+            vr_set = vr_map.get(did, set())
+            cm_set = cm_map.get(did, set())
             for m in range(1, 13):
                 row[f'cf_mese_{m}_{anno}'] = 1 if m in cf_set else 0
                 row[f'vr_mese_{m}_{anno}'] = 1 if m in vr_set else 0
                 row[f'cm_mese_{m}_{anno}'] = 1 if m in cm_set else 0
-                
-            row['data_ultima_cf'] = data_cf or None
-            row['data_ultima_vr'] = data_vr or None
-            row['data_ultima_cm'] = data_cm or None
 
-            # ── Ultimo estratto conto e ultimo pagamento ──
-            ult_ec = conn.execute(
-                "SELECT MAX(data_emissione) FROM fatture WHERE ditta_id=? AND stato != 'annullata'",
-                (did,)
-            ).fetchone()[0]
-            ult_pag = conn.execute(
-                'SELECT MAX(data) FROM pagamenti WHERE ditta_id=?', (did,)
-            ).fetchone()[0]
-            ult_contab = conn.execute(
-                """SELECT MAX(data_esecuzione) FROM pratiche
-                WHERE ditta_id=?
-                AND tipo IN ('costi_fissi_mensili','fisso_mensile',
-                                'costi_fissi_annuali','fisso_annuale')
-                AND data_esecuzione IS NOT NULL""",
-                (did,)
-            ).fetchone()[0]
+            row['data_ultima_cf'] = data_cf_map.get(did)
+            row['data_ultima_vr'] = data_vr_map.get(did)
+            row['data_ultima_cm'] = data_cm_map.get(did)
 
-            row['ultimo_ec']  = ult_ec  or None
-            row['ultimo_pag'] = ult_pag or None
-            row['ultima_contab'] = ult_contab or None
+            row['ultimo_ec'] = f.get('ultimo_ec') if f else None
+            row['ultimo_pag'] = pg.get('ultimo_pag') if pg else None
+            row['ultima_contab'] = data_cf_map.get(did)
 
             result.append(row)
 
@@ -212,7 +222,6 @@ def create_ditta():
             _json_str(data.get('tariff_json')),
             data.get('data_inizio_rapporto'), data.get('note'),
             tariffario_id,
-            # ── Nuovi campi spec Volume 2 ──
             data.get('cadenza_pagamenti', 'libero'),
             float(data.get('residuo_iniziale', 0.0)),
             data.get('inizio_paghe'),         data.get('fine_paghe'),
@@ -289,7 +298,6 @@ def update_ditta(id):
             _json_str(data.get('tariff_json')),
             data.get('data_inizio_rapporto'), data.get('note'),
             data.get('tariffario_id') or None,
-            # ── Nuovi campi spec Volume 2 ──
             data.get('cadenza_pagamenti', 'libero'),
             float(data.get('residuo_iniziale', 0.0)),
             data.get('inizio_paghe'),         data.get('fine_paghe'),
@@ -303,7 +311,6 @@ def update_ditta(id):
         return jsonify(dict(d))
     finally:
         conn.close()
-
 
 
 # ── PATCH /api/ditte/<id> — aggiornamento parziale (archivia, singoli campi) ──
@@ -436,7 +443,6 @@ def get_cadenze(id):
             (id, anno)
         ).fetchall()
 
-        # Aggrega per macrogruppo
         macro_map = {}
         for r in rows:
             mg = r['macrogruppo_nome']

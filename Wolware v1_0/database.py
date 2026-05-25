@@ -343,5 +343,18 @@ def init_db():
         valore TEXT
     )''')
 
+    # ═══════════════════════════════════════════════════════════════════
+    # INDICI PERFORMANCE
+    # ═══════════════════════════════════════════════════════════════════
+    c.execute("CREATE INDEX IF NOT EXISTS idx_ditte_archiviato ON ditte(archiviato)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_pratiche_ditta ON pratiche(ditta_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_pratiche_ditta_anno ON pratiche(ditta_id, anno)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_pratiche_ditta_anno_tipo_mese ON pratiche(ditta_id, anno, tipo, mese)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_pratiche_ditta_tipo_data ON pratiche(ditta_id, tipo, data_esecuzione)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_pagamenti_ditta ON pagamenti(ditta_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_pagamenti_ditta_data ON pagamenti(ditta_id, data)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_arrotondamenti_ditta_tipo ON arrotondamenti(ditta_id, tipo)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_fatture_ditta_stato_data ON fatture(ditta_id, stato, data_emissione)")
+
     conn.commit()
     conn.close()
