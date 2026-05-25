@@ -3615,16 +3615,19 @@ function _renderIvTabella() {
     let totaleCliente = 0;
     const celle = colonne.map(c => {
       const cella = r.celle[c.voce_id];
+      const bgBase    = c.colore ? `${c.colore}1a` : '';          // 10% opacità — colonna colorata
+      const bgAttiva  = c.colore ? `${c.colore}40` : 'var(--color-primary-highlight)'; // 25% opacità quando compilata
       if (!cella || !cella.attiva)
-        return `<td><span class="variabili-cell-na">×</span></td>`;
+        return `<td style="background:${bgBase}"><span class="variabili-cell-na">×</span></td>`;
       const qta = cella.qta ?? 0;
       const importo = qta * (cella.prezzo || 0);
       totaleCliente += importo;
-      const compilata = qta > 0 ? 'style="background:var(--color-primary-highlight)"' : '';
-      return `<td ${compilata}><input type="number" min="0" step="1" value="${qta}"
+      const bgIniziale = qta > 0 ? bgAttiva : bgBase;
+      return `<td style="background:${bgIniziale}"><input type="number" min="0" step="1" value="${qta}"
         data-ditta="${r.ditta_id}" data-voce="${c.voce_id}" data-prezzo="${cella.prezzo || 0}"
+        data-bg-base="${bgBase}" data-bg-attiva="${bgAttiva}"
         class="iv-input"
-        oninput="this.closest('td').style.background=+this.value>0?'var(--color-primary-highlight)':'';_aggiornaRigaTotale(this)"
+        oninput="this.closest('td').style.background=+this.value>0?this.dataset.bgAttiva:this.dataset.bgBase;_aggiornaRigaTotale(this)"
         /></td>`;
     }).join('');
     return `<tr>
