@@ -262,7 +262,7 @@ def variabili_tabella():
         # Raccoglie tutte le voci variabili distinte dalla COPIA del cliente (dv.tipo)
         tutte_voci = db.execute(
             '''SELECT DISTINCT dv.voce_costo_id, dv.nome, dv.prezzo,
-                      dv.macrogruppo_nome, dv.tipo, dv.mesi_json
+                      dv.macrogruppo_nome, dv.tipo, dv.mesi_json, dv.colore
                FROM ditta_voci dv
                JOIN ditte d ON d.id = dv.ditta_id
                WHERE dv.tipo IN (?,?) AND d.archiviato=0''',
@@ -282,6 +282,7 @@ def variabili_tabella():
                     'nome':    v['nome'],
                     'mg_nome': v['macrogruppo_nome'],
                     'tipo':    v['tipo'],
+                    'colore':  v['colore'],
                 })
                 colonne_ids.add(v['voce_costo_id'])
 

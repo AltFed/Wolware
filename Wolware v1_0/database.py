@@ -204,6 +204,7 @@ def init_db():
         ('esente_iva',               'INTEGER DEFAULT 0'),
         ('richiede_anno_precedente', 'INTEGER DEFAULT 0'),
         ('mesi_json',                'TEXT'),
+        ('colore',                   'TEXT DEFAULT NULL'),
     ]:
         if col not in existing_vc:
             c.execute(f'ALTER TABLE voci_costo ADD COLUMN {col} {typedef}')
@@ -236,6 +237,7 @@ def init_db():
         ('mesi_json',                'TEXT'),
         ('sync_override',            'INTEGER DEFAULT 0'),
         ('macrogruppo_id',           'INTEGER REFERENCES macrogruppi(id)'),
+        ('colore',                   'TEXT DEFAULT NULL'),
     ]:
         if col not in existing_dv:
             c.execute(f'ALTER TABLE ditta_voci ADD COLUMN {col} {typedef}')

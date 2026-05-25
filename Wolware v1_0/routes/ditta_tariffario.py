@@ -112,7 +112,7 @@ def cambia_tariffario(ditta_id):
         if tariffario_id:
             voci_standard = db.execute(
                 '''SELECT vc.id, vc.nome, vc.prezzo, vc.note,
-                          vc.esente_iva, vc.richiede_anno_precedente, vc.mesi_json,
+                          vc.esente_iva, vc.richiede_anno_precedente, vc.mesi_json, vc.colore,
                           mg.id as mg_id, mg.nome as mg_nome, mg.tipo
                    FROM voci_costo vc
                    JOIN macrogruppi mg ON mg.id = vc.macrogruppo_id
@@ -130,11 +130,11 @@ def cambia_tariffario(ditta_id):
                     '''INSERT INTO ditta_voci
                        (ditta_id, voce_costo_id, nome, prezzo, note,
                         macrogruppo_nome, macrogruppo_id, tipo, custom,
-                        esente_iva, richiede_anno_precedente, mesi_json, sync_override)
-                       VALUES (?,?,?,?,?,?,?,?,0,?,?,?,0)''',
+                        esente_iva, richiede_anno_precedente, mesi_json, sync_override, colore)
+                       VALUES (?,?,?,?,?,?,?,?,0,?,?,?,0,?)''',
                     (ditta_id, v['id'], v['nome'], v['prezzo'], v['note'],
                      v['mg_nome'], v['mg_id'], tipo_mapped,
-                     v['esente_iva'], v['richiede_anno_precedente'], v['mesi_json'])
+                     v['esente_iva'], v['richiede_anno_precedente'], v['mesi_json'], v['colore'])
                 )
 
         db.commit()
@@ -156,7 +156,7 @@ def sync_tariffario(ditta_id):
 
         voci_standard = db.execute(
             '''SELECT vc.id, vc.nome, vc.prezzo, vc.note,
-                      vc.esente_iva, vc.richiede_anno_precedente, vc.mesi_json,
+                      vc.esente_iva, vc.richiede_anno_precedente, vc.mesi_json, vc.colore,
                       mg.id as mg_id, mg.nome as mg_nome, mg.tipo
                FROM voci_costo vc
                JOIN macrogruppi mg ON mg.id = vc.macrogruppo_id
@@ -176,11 +176,11 @@ def sync_tariffario(ditta_id):
                     '''UPDATE ditta_voci
                        SET nome=?, prezzo=?, macrogruppo_nome=?, macrogruppo_id=?,
                            tipo=?, esente_iva=?, richiede_anno_precedente=?,
-                           mesi_json=?, sync_override=0
+                           mesi_json=?, sync_override=0, colore=?
                        WHERE id=?''',
                     (v['nome'], v['prezzo'], v['mg_nome'], v['mg_id'],
                      tipo_mapped, v['esente_iva'], v['richiede_anno_precedente'],
-                     v['mesi_json'], existing['id'])
+                     v['mesi_json'], v['colore'], existing['id'])
                 )
                 aggiornate += 1
             else:
@@ -188,11 +188,11 @@ def sync_tariffario(ditta_id):
                     '''INSERT INTO ditta_voci
                        (ditta_id, voce_costo_id, nome, prezzo, note,
                         macrogruppo_nome, macrogruppo_id, tipo, custom,
-                        esente_iva, richiede_anno_precedente, mesi_json, sync_override)
-                       VALUES (?,?,?,?,?,?,?,?,0,?,?,?,0)''',
+                        esente_iva, richiede_anno_precedente, mesi_json, sync_override, colore)
+                       VALUES (?,?,?,?,?,?,?,?,0,?,?,?,0,?)''',
                     (ditta_id, v['id'], v['nome'], v['prezzo'], v['note'],
                      v['mg_nome'], v['mg_id'], tipo_mapped,
-                     v['esente_iva'], v['richiede_anno_precedente'], v['mesi_json'])
+                     v['esente_iva'], v['richiede_anno_precedente'], v['mesi_json'], v['colore'])
                 )
                 aggiunte += 1
 
@@ -215,7 +215,7 @@ def aggiorna_tariffario(ditta_id):
 
         voci_standard = db.execute(
             '''SELECT vc.id, vc.nome, vc.prezzo, vc.note,
-                      vc.esente_iva, vc.richiede_anno_precedente, vc.mesi_json,
+                      vc.esente_iva, vc.richiede_anno_precedente, vc.mesi_json, vc.colore,
                       mg.nome as mg_nome, mg.tipo
                FROM voci_costo vc
                JOIN macrogruppi mg ON mg.id = vc.macrogruppo_id
@@ -237,10 +237,10 @@ def aggiorna_tariffario(ditta_id):
                 db.execute(
                     '''UPDATE ditta_voci
                        SET nome=?, prezzo=?, macrogruppo_nome=?, tipo=?,
-                           esente_iva=?, richiede_anno_precedente=?, mesi_json=?
+                           esente_iva=?, richiede_anno_precedente=?, mesi_json=?, colore=?
                        WHERE id=?''',
                     (v['nome'], v['prezzo'], v['mg_nome'], tipo_mapped,
-                     v['esente_iva'], v['richiede_anno_precedente'], v['mesi_json'],
+                     v['esente_iva'], v['richiede_anno_precedente'], v['mesi_json'], v['colore'],
                      existing['id'])
                 )
                 aggiornate += 1
@@ -249,11 +249,11 @@ def aggiorna_tariffario(ditta_id):
                     '''INSERT INTO ditta_voci
                        (ditta_id, voce_costo_id, nome, prezzo, note,
                         macrogruppo_nome, tipo, custom,
-                        esente_iva, richiede_anno_precedente, mesi_json, sync_override)
-                       VALUES (?,?,?,?,?,?,?,0,?,?,?,0)''',
+                        esente_iva, richiede_anno_precedente, mesi_json, sync_override, colore)
+                       VALUES (?,?,?,?,?,?,?,0,?,?,?,0,?)''',
                     (ditta_id, v['id'], v['nome'], v['prezzo'], v['note'],
                      v['mg_nome'], tipo_mapped,
-                     v['esente_iva'], v['richiede_anno_precedente'], v['mesi_json'])
+                     v['esente_iva'], v['richiede_anno_precedente'], v['mesi_json'], v['colore'])
                 )
                 aggiunte += 1
 
@@ -270,23 +270,30 @@ def add_voce_custom(ditta_id):
     d = request.get_json()
     if not d.get('nome'):
         return jsonify({'error': 'Campo nome obbligatorio'}), 400
+    tipo      = d.get('tipo', 'costi_fissi_mensili')
+    is_var    = tipo in ('costi_variabili_mensili', 'costi_variabili_annuali')
+    mesi_json = d.get('mesi_json')
+    colore    = d.get('colore') or None if is_var else None
     db = get_db()
     try:
         db.execute(
             '''INSERT INTO ditta_voci
                (ditta_id, voce_costo_id, nome, prezzo, note,
                 macrogruppo_nome, macrogruppo_id, tipo, custom,
-                esente_iva, sync_override)
-               VALUES (?,NULL,?,?,?,?,?,?,1,?,1)''',
+                esente_iva, richiede_anno_precedente, mesi_json, colore, sync_override)
+               VALUES (?,NULL,?,?,?,?,?,?,1,?,?,?,?,1)''',
             (
                 ditta_id,
                 d.get('nome'),
                 float(d.get('prezzo', 0)),
                 d.get('note', ''),
                 d.get('macrogruppo_nome', 'Extra'),
-                d.get('macrogruppo_id'),          # può essere None
-                d.get('tipo', 'costi_fissi_mensili'),
+                d.get('macrogruppo_id'),
+                tipo,
                 int(d.get('esente_iva', 0)),
+                int(d.get('richiede_anno_precedente', 0)),
+                mesi_json,
+                colore,
             )
         )
         db.commit()
@@ -304,20 +311,38 @@ def update_voce(ditta_id, vid):
     d = request.get_json()
     db = get_db()
     try:
+        # Legge la voce esistente per sapere se è custom
+        existing = db.execute(
+            'SELECT custom, tipo, macrogruppo_nome, macrogruppo_id FROM ditta_voci WHERE id=? AND ditta_id=?',
+            (vid, ditta_id)
+        ).fetchone()
+        if not existing:
+            return jsonify({'error': 'Voce non trovata'}), 404
+
+        is_custom = existing['custom'] == 1
+        # Tipo e macrogruppo modificabili solo per voci custom
+        tipo           = d.get('tipo') if is_custom and d.get('tipo') else existing['tipo']
+        mg_nome        = d.get('macrogruppo_nome') if is_custom else existing['macrogruppo_nome']
+        mg_id          = d.get('macrogruppo_id')   if is_custom else existing['macrogruppo_id']
+
+        mesi_json = d.get('mesi_json')  # già serializzato dal client
+        colore    = d.get('colore') or None
+
         db.execute(
             '''UPDATE ditta_voci
                SET nome=?, prezzo=?, note=?,
                    macrogruppo_nome=?, macrogruppo_id=?,
-                   tipo=?, esente_iva=?, sync_override=1
+                   tipo=?, esente_iva=?, richiede_anno_precedente=?,
+                   mesi_json=?, colore=?, sync_override=1
                WHERE id=? AND ditta_id=?''',
             (
                 d.get('nome'),
                 float(d.get('prezzo', 0)),
                 d.get('note', ''),
-                d.get('macrogruppo_nome'),
-                d.get('macrogruppo_id'),
-                d.get('tipo'),
+                mg_nome, mg_id, tipo,
                 int(d.get('esente_iva', 0)),
+                int(d.get('richiede_anno_precedente', 0)),
+                mesi_json, colore,
                 vid, ditta_id,
             )
         )
