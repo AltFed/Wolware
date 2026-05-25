@@ -45,12 +45,16 @@ def _calcola_residuo(db, ditta_id: int, anno: str) -> float:
     row = db.execute('SELECT residuo_iniziale FROM ditte WHERE id=?', (ditta_id,)).fetchone()
     res_ini = row['residuo_iniziale'] if row else 0.0
 
-    dovuto  = db.execute('SELECT COALESCE(SUM(importo),0) FROM pratiche WHERE ditta_id=?', (ditta_id,)).fetchone()[0]
+    imponibile = db.execute('SELECT COALESCE(SUM(importo),0) FROM pratiche WHERE ditta_id=?', (ditta_id,)).fetchone()[0]
+    iva        = db.execute(
+        'SELECT COALESCE(SUM(importo*0.22),0) FROM pratiche WHERE ditta_id=? AND (esente_iva IS NULL OR esente_iva=0)',
+        (ditta_id,)
+    ).fetchone()[0]
     pagato  = db.execute('SELECT COALESCE(SUM(importo),0) FROM pagamenti WHERE ditta_id=?', (ditta_id,)).fetchone()[0]
     abbuoni = db.execute("SELECT COALESCE(SUM(importo),0) FROM arrotondamenti WHERE ditta_id=? AND tipo='abbuono'", (ditta_id,)).fetchone()[0]
     addebiti= db.execute("SELECT COALESCE(SUM(importo),0) FROM arrotondamenti WHERE ditta_id=? AND tipo='addebito'", (ditta_id,)).fetchone()[0]
 
-    return round(res_ini + dovuto - pagato - abbuoni + addebiti, 2)
+    return round(res_ini + imponibile + iva + addebiti - pagato - abbuoni, 2)
 
 
 # ─────────────────────────────────────────────────────────────────

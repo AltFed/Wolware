@@ -418,8 +418,9 @@ function formatEur(val) {
 }
 
 document.getElementById('filterDitte')?.addEventListener('input', filterDitte);
-document.getElementById('filterForma')?.addEventListener('change', filterDitte);
 document.getElementById('filterTariffario')?.addEventListener('change', filterDitte);
+document.getElementById('filterPaghe')?.addEventListener('change', filterDitte);
+document.getElementById('filterCont')?.addEventListener('change', filterDitte);
 document.getElementById('filterAnno')?.addEventListener('change', e => { ditteAnno = +e.target.value; loadDitte(); });
 document.getElementById('filterArchiviati')?.addEventListener('change', loadDitte);
 
@@ -441,9 +442,10 @@ document.addEventListener('click', e => {
 });
 
 function filterDitte() {
-  const q       = (document.getElementById('filterDitte')?.value || '').toLowerCase();
-  const forma   = document.getElementById('filterForma')?.value || '';
-  const tariff  = document.getElementById('filterTariffario')?.value || '';
+  const q      = (document.getElementById('filterDitte')?.value || '').toLowerCase();
+  const tariff = document.getElementById('filterTariffario')?.value || '';
+  const chkP   = document.getElementById('filterPaghe')?.checked;
+  const chkC   = document.getElementById('filterCont')?.checked;
   let f = allDitte;
   if (q) f = f.filter(d =>
     d.ragione_sociale.toLowerCase().includes(q) ||
@@ -451,9 +453,10 @@ function filterDitte() {
     (d.referente    || '').toLowerCase().includes(q) ||
     (d.citta        || '').toLowerCase().includes(q)
   );
-  if (forma) f = f.filter(d => d.forma_giuridica === forma);
   if (tariff === '__nessuno__') f = f.filter(d => !d.tariffario_id);
   else if (tariff) f = f.filter(d => String(d.tariffario_id) === tariff);
+  if (chkP) f = f.filter(d => !!(d.inizio_paghe));
+  if (chkC) f = f.filter(d => !!(d.inizio_contabilita));
   renderDitte(f);
 }
 
@@ -855,10 +858,13 @@ async function editDitta(id) {
     if (d.tariff_json) { try { tariffItems = JSON.parse(d.tariff_json); } catch (e) { } }
     renderSedi(); renderInail(); renderInps(); renderCC(); renderTariff();
     currentDittaIdForTariff = d.id;
+    // Reset sub-tab to Voci when opening a different client
+    document.getElementById('tariffSubTabVoci')?.click();
     await loadDittaVoci(d.id);
-    // In modifica il tariffario si cambia solo dal Dettaglio → "Cambia Tariffario"
+    // Se il cliente ha già un tariffario, la select è bloccata: si usa "Cambia Tariffario"
+    // Se non ne ha uno, la select rimane abilitata per poterne assegnare uno
     const selTariffEdit = document.getElementById('dittaTariffarioSelect');
-    if (selTariffEdit) selTariffEdit.disabled = true;
+    if (selTariffEdit) selTariffEdit.disabled = !!(d.tariffario_id);
     const btnDelModal = document.getElementById('btnDeleteDittaModal');
     if (btnDelModal) btnDelModal.style.display = 'flex';
     const btnArchModal = document.getElementById('btnArchiviaDittaModal');
@@ -1194,6 +1200,8 @@ async function checkAuth() {
     if (user.role === 'admin') {
       document.getElementById('navAdmin').style.display = '';
       document.getElementById('tabBtnAdmin').style.display = '';
+      document.getElementById('navImpostazioni').style.display = '';
+      document.getElementById('tabBtnImpostazioni').style.display = '';
     }
   } catch (e) { console.error(e); }
 }
@@ -2420,39 +2428,64 @@ async function loadDittaVoci(dittaId) {
 }
 
 async function loadStoricoTariffario(dittaId) {
-  const section = document.getElementById('storicoTariffarioSection');
-  const list    = document.getElementById('storicoTariffarioList');
-  if (!section || !list) return;
+  const list = document.getElementById('storicoTariffarioList');
+  if (!list) return;
   try {
     const storico = await api(`/api/ditte/${dittaId}/storico-tariffari`);
     if (!storico.length) {
-      section.style.display = 'none';
+      list.innerHTML = '<div class="list-empty-msg">Nessun cambio registrato.</div>';
       return;
     }
-    section.style.display = '';
     list.innerHTML = storico.map(s => `
       <div style="display:flex;align-items:center;justify-content:space-between;
                   padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);
-                  background:var(--color-bg);margin-bottom:var(--space-1)">
-        <div>
+                  background:var(--color-bg);margin-bottom:var(--space-1);gap:var(--space-3)">
+        <div style="display:flex;align-items:baseline;gap:var(--space-2);flex:1;min-width:0">
           <span style="font-size:var(--text-sm);font-weight:500;color:var(--color-text)">
-            ${s.tariffario_nome || '— Nessun tariffario —'}
+            ${(s.tariffario_nome || '— Nessun tariffario —').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
           </span>
-          ${s.note ? `<span style="font-size:var(--text-xs);color:var(--color-text-muted);margin-left:var(--space-2)">${s.note}</span>` : ''}
+          ${s.note ? `<span style="font-size:var(--text-xs);color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.note.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>` : ''}
         </div>
-        <span style="font-size:var(--text-xs);color:var(--color-text-muted);flex-shrink:0;margin-left:var(--space-3)">
-          ${s.cambiato_il || ''}
+        <span style="font-size:var(--text-xs);color:var(--color-text-muted);flex-shrink:0">
+          ${s.cambiato_il ? s.cambiato_il.replace('T', ' ').slice(0, 16) : ''}
         </span>
       </div>`).join('');
   } catch(e) {
-    section.style.display = 'none';
+    list.innerHTML = '<div class="list-empty-msg">Errore nel caricamento storico.</div>';
   }
 }
 
-// Cambia tariffario associato → salva subito
+// Sub-tab switching: Voci / Storico
+(function initTariffSubTabs() {
+  const tabVoci    = document.getElementById('tariffSubTabVoci');
+  const tabStorico = document.getElementById('tariffSubTabStorico');
+  const panelVoci  = document.getElementById('tariffSubPanelVoci');
+  const panelStorico = document.getElementById('tariffSubPanelStorico');
+  if (!tabVoci || !tabStorico) return;
+
+  function activateTab(which) {
+    const isVoci = which === 'voci';
+    tabVoci.style.borderBottomColor    = isVoci ? 'var(--color-primary)' : 'transparent';
+    tabVoci.style.color                = isVoci ? 'var(--color-primary)' : 'var(--color-text-muted)';
+    tabStorico.style.borderBottomColor = isVoci ? 'transparent' : 'var(--color-primary)';
+    tabStorico.style.color             = isVoci ? 'var(--color-text-muted)' : 'var(--color-primary)';
+    panelVoci.style.display    = isVoci ? '' : 'none';
+    panelStorico.style.display = isVoci ? 'none' : '';
+    if (!isVoci && currentDittaIdForTariff) loadStoricoTariffario(currentDittaIdForTariff);
+  }
+
+  tabVoci.addEventListener('click',    () => activateTab('voci'));
+  tabStorico.addEventListener('click', () => activateTab('storico'));
+})();
+
+// true quando "Cambia Tariffario" ha sbloccato il select su una ditta esistente
+let _cambioTariffarioMode = false;
+
 document.getElementById('dittaTariffarioSelect')?.addEventListener('change', async function () {
-  const tid = this.value || null;
+  const tid     = this.value || null;
+  const tName   = this.selectedOptions[0]?.text || '';
   const btnCambia = document.getElementById('btnCambiaTariffario');
+
   if (!currentDittaIdForTariff) {
     // Nuova ditta non ancora salvata — mostra anteprima voci
     if (btnCambia) btnCambia.style.display = 'none';
@@ -2477,40 +2510,62 @@ document.getElementById('dittaTariffarioSelect')?.addEventListener('change', asy
     }
     return;
   }
+
+  if (_cambioTariffarioMode) {
+    // Cambio tariffario su ditta esistente che ne aveva già uno
+    if (!tid) { toast('Seleziona un tariffario', 'error'); return; }
+    const ok = confirm(
+      '⚠️ Stai per cambiare il tariffario di questa ditta.\n\n' +
+      'Le voci precedenti verranno sostituite con quelle del nuovo tariffario.\n\n' +
+      'Vuoi procedere?'
+    );
+    if (!ok) {
+      // Annulla: ricarica il valore originale e riblocca
+      await loadDittaVoci(currentDittaIdForTariff);
+      this.disabled = true;
+      _cambioTariffarioMode = false;
+      if (btnCambia) btnCambia.textContent = 'Cambia Tariffario';
+      return;
+    }
+    try {
+      await api(`/api/ditte/${currentDittaIdForTariff}/cambia-tariffario`, 'POST',
+        { tariffario_id: +tid, note: `Cambiato in: ${tName}` });
+      toast('Tariffario cambiato', 'success');
+      this.disabled = true;
+      _cambioTariffarioMode = false;
+      if (btnCambia) btnCambia.textContent = 'Cambia Tariffario';
+      await loadDittaVoci(currentDittaIdForTariff);
+      loadDitte();
+    } catch(e) { toast('Errore: ' + e.message, 'error'); }
+    return;
+  }
+
+  // Prima assegnazione (ditta senza tariffario)
   try {
     await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/associa`, 'PUT', { tariffario_id: tid });
-    if (btnCambia) btnCambia.style.display = tid ? 'flex' : 'none';
-    toast('Tariffario associato', 'success');
+    if (tid) {
+      await api(`/api/ditte/${currentDittaIdForTariff}/tariffario/sync`, 'POST');
+      await loadDittaVoci(currentDittaIdForTariff);
+      toast('Tariffario assegnato e voci sincronizzate', 'success');
+      this.disabled = true;
+      if (btnCambia) btnCambia.style.display = 'flex';
+    } else {
+      if (btnCambia) btnCambia.style.display = 'none';
+      toast('Tariffario rimosso', 'success');
+    }
   } catch (e) {
     toast('Errore associazione: ' + e.message, 'error');
   }
 });
 
-// ── Bottone Cambia Tariffario (con avviso spec §6.2) ─────────
-document.getElementById('btnCambiaTariffario')?.addEventListener('click', async () => {
+// ── Bottone Cambia Tariffario ─────────────────────────────────
+document.getElementById('btnCambiaTariffario')?.addEventListener('click', function () {
   if (!currentDittaIdForTariff) return;
-  const tid = document.getElementById('dittaTariffarioSelect').value || null;
-  const tName = document.getElementById('dittaTariffarioSelect').selectedOptions[0]?.text || '';
-
-  const ok = confirm(
-    '⚠️ Stai per cambiare il tariffario di questa ditta.\n\n' +
-    'Attenzione: i costi e le voci già inseriti manterranno i prezzi del tariffario precedente.\n' +
-    'Il nuovo tariffario verrà applicato solo ai nuovi mesi.\n\n' +
-    'Vuoi procedere?'
-  );
-  if (!ok) return;
-
-  try {
-    await api(`/api/ditte/${currentDittaIdForTariff}/cambia-tariffario`, 'POST', {
-      tariffario_id: tid,
-      note: `Cambiato in: ${tName}`
-    });
-    toast('Tariffario cambiato e registrato nello storico', 'success');
-    await loadDittaVoci(currentDittaIdForTariff);
-    loadDitte();
-  } catch(e) {
-    toast('Errore: ' + (e.message || ''), 'error');
-  }
+  const sel = document.getElementById('dittaTariffarioSelect');
+  _cambioTariffarioMode = true;
+  sel.disabled = false;
+  sel.focus();
+  this.textContent = 'Seleziona nuovo tariffario…';
 });
 
 // ── Inizializza: sovrascrive tutto (identico al vecchio Sincronizza) ─────────
@@ -2995,6 +3050,62 @@ document.getElementById('btnDetElimina')?.addEventListener('click', async () => 
   } catch(e) { toast('Errore: ' + e.message, 'error'); }
 });
 
+document.getElementById('btnDetNuovoMovimento')?.addEventListener('click', async () => {
+  // Popola la select conti
+  const sel = document.getElementById('mrConto');
+  try {
+    const saldi = await fetch('/api/prima-nota/saldi').then(r => r.json());
+    sel.innerHTML = '<option value="">— Seleziona... —</option>';
+    saldi.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id; o.textContent = s.nome;
+      sel.appendChild(o);
+    });
+  } catch { sel.innerHTML = '<option value="cassa">Cassa</option>'; }
+  document.getElementById('mrImporto').value = '';
+  document.getElementById('mrDescrizione').value = '';
+  document.getElementById('mrError').style.display = 'none';
+  _mrSetTab('entrata');
+  openModal('modalMovimentoRapido');
+});
+
+function _mrSetTab(tipo) {
+  document.getElementById('mrTipo').value = tipo;
+  const isE = tipo === 'entrata';
+  const btnE = document.getElementById('mrTabEntrata');
+  const btnU = document.getElementById('mrTabUscita');
+  btnE.style.cssText = isE ? 'flex:1;background:var(--color-success);color:#fff;border:none' : 'flex:1';
+  btnE.className = isE ? 'btn btn-sm' : 'btn btn-secondary btn-sm';
+  btnU.style.cssText = !isE ? 'flex:1;background:var(--color-error);color:#fff;border:none' : 'flex:1';
+  btnU.className = !isE ? 'btn btn-sm' : 'btn btn-secondary btn-sm';
+}
+document.getElementById('mrTabEntrata')?.addEventListener('click', () => _mrSetTab('entrata'));
+document.getElementById('mrTabUscita')?.addEventListener('click',  () => _mrSetTab('uscita'));
+
+document.getElementById('mrBtnSalva')?.addEventListener('click', async () => {
+  const tipo      = document.getElementById('mrTipo').value;
+  const tipologia = document.getElementById('mrConto').value;
+  const importo   = parseFloat(document.getElementById('mrImporto').value);
+  const descr     = document.getElementById('mrDescrizione').value.trim();
+  const errEl     = document.getElementById('mrError');
+  const show = msg => { errEl.textContent = msg; errEl.style.display = 'block'; };
+  errEl.style.display = 'none';
+  if (!tipologia) return show('Seleziona un conto');
+  if (!importo || importo <= 0) return show("L'importo deve essere maggiore di zero");
+  try {
+    const res = await api('/api/prima-nota/movimento-rapido', 'POST',
+      { tipo, tipologia, importo, descrizione: descr, ditta_id: currentDetId });
+    if (res.ok !== false) {
+      closeModal('modalMovimentoRapido');
+      toast('Movimento registrato!', 'success');
+      if (currentDetId) _loadDettaglio(false);
+      if (typeof PrimaNota !== 'undefined') PrimaNota.refresh();
+    } else {
+      show(res.error || 'Errore nel salvataggio');
+    }
+  } catch(e) { show('Errore di rete'); }
+});
+
 /* Annotazioni — salvataggio al blur */
 document.getElementById('dettaglioAnnotazioni')?.addEventListener('blur', async () => {
   const val = document.getElementById('dettaglioAnnotazioni').value;
@@ -3207,6 +3318,44 @@ document.getElementById('btnDetPrevisionale')?.addEventListener('click', () => {
   openPrevisionale();
 });
 
+document.getElementById('btnDetContabilizzaFissi')?.addEventListener('click', () => {
+  const now = new Date();
+  _buildAnnoSel('ccf_anno', now.getFullYear());
+  document.getElementById('ccf_mese_da').value = now.getMonth() + 1;
+  document.getElementById('ccf_mese_a').value  = now.getMonth() + 1;
+  ccfPreviewData = null;
+  document.getElementById('ccfRiepilogo').style.display = 'none';
+  document.getElementById('ccfTabella').innerHTML = '';
+  document.getElementById('btnContabilizzaEsegui').disabled = true;
+  _populateCcfDitta();
+  // Pre-seleziona il cliente corrente e blocca la select
+  const sel = document.getElementById('ccf_ditta');
+  sel.value = String(currentDetId);
+  sel.disabled = true;
+  openModal('modalContabilizzaCostiFissi');
+});
+
+// Ripristina la select ccf_ditta quando il modal viene chiuso
+document.querySelector('[data-close="modalContabilizzaCostiFissi"]')?.addEventListener('click', () => {
+  document.getElementById('ccf_ditta').disabled = false;
+});
+
+document.getElementById('btnDetContabilizzaVariabili')?.addEventListener('click', () => {
+  const now = new Date();
+  _buildAnnoSel('iv_anno', now.getFullYear());
+  document.getElementById('iv_mese').value = now.getMonth() + 1;
+  ivTabData = null;
+  ivDittaLocked = currentDetId;
+  document.getElementById('ivTabella').innerHTML =
+    '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Caricamento…</p>';
+  openModal('modalInserimentoVariabili');
+  _loadIvTabella();
+});
+
+document.querySelector('[data-close="modalInserimentoVariabili"]')?.addEventListener('click', () => {
+  ivDittaLocked = null;
+});
+
 /* ══════════════════════════════════════════════════════════════════════════
    BLOCCO 4 — STRUMENTI TRASVERSALI
 ══════════════════════════════════════════════════════════════════════════ */
@@ -3338,6 +3487,7 @@ document.getElementById('btnApplicaCostiMassivi')?.addEventListener('click', asy
 
 /* ── 4.3 Inserimento Costi Variabili ─────────────────────────────────────── */
 let ivTabData = null;
+let ivDittaLocked = null;
 
 document.getElementById('btnInserimentoCostiVariabili')?.addEventListener('click', () => {
   const now = new Date();
@@ -3358,7 +3508,8 @@ async function _loadIvTabella() {
   const mese = document.getElementById('iv_mese').value;
   if (!anno || !mese) return;
   try {
-    ivTabData = await api(`/api/strumenti/variabili/tabella?anno=${anno}&mese=${mese}`);
+    const qs = `anno=${anno}&mese=${mese}${ivDittaLocked ? `&ditta_id=${ivDittaLocked}` : ''}`;
+    ivTabData = await api(`/api/strumenti/variabili/tabella?${qs}`);
     _renderIvTabella();
   } catch(e) { toast('Errore caricamento tabella: ' + e.message, 'error'); }
 }
@@ -3422,11 +3573,17 @@ document.getElementById('btnCaricaVariabili')?.addEventListener('click', async (
     .filter(i => parseFloat(i.value) > 0)
     .map(i => ({ ditta_id: +i.dataset.ditta, voce_id: +i.dataset.voce, qta: +i.value }));
   if (!righe.length) { toast('Nessuna quantità inserita', 'error'); return; }
+  const fromScheda = ivDittaLocked !== null;
   try {
     const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, dati: righe });
     toast(`Costi variabili caricati (${res.aggiunte || righe.length} voci)`, 'success');
+    ivDittaLocked = null;
     closeModal('modalInserimentoVariabili');
-    loadDitte();
+    if (fromScheda && currentDetId) {
+      await _loadDettaglio(false);
+    } else {
+      loadDitte();
+    }
   } catch(e) { toast('Errore: ' + e.message, 'error'); }
 });
 
@@ -3506,13 +3663,19 @@ document.getElementById('btnContabilizzaEsegui')?.addEventListener('click', asyn
   const meseDa = +document.getElementById('ccf_mese_da').value;
   const meseA  = +document.getElementById('ccf_mese_a').value;
   const dittaId = document.getElementById('ccf_ditta').value || null;
+  const fromScheda = document.getElementById('ccf_ditta').disabled;
   try {
     const res = await api('/api/strumenti/contabilizza', 'POST',
       { anno, mese_da: meseDa, mese_a: meseA, ...(dittaId ? { ditta_id: +dittaId } : {}) });
     toast(`Contabilizzate ${res.aggiunte} voci (${res.saltate} già presenti)`, 'success');
     UnsavedGuard.markSaved();
+    document.getElementById('ccf_ditta').disabled = false;
     closeModal('modalContabilizzaCostiFissi');
-    loadDitte();
+    if (fromScheda && currentDetId) {
+      await _loadDettaglio(false);
+    } else {
+      loadDitte();
+    }
   } catch(e) { toast('Errore: ' + e.message, 'error'); }
 });
 
@@ -5214,6 +5377,8 @@ const Rendiconto = (() => {
         if (_cacheUscite)  _renderUscite(_cacheUscite);
       });
       $('rdMostraArchiviati').addEventListener('change', () => { _cacheEntrate = null; _caricaEntrate(); });
+      $('rdFiltroPaghe').addEventListener('change', () => { if (_cacheEntrate) _renderEntrate(_cacheEntrate); });
+      $('rdFiltroCont').addEventListener('change',  () => { if (_cacheEntrate) _renderEntrate(_cacheEntrate); });
       $('rdBtnEsportaPdf').addEventListener('click', _esportaPdf);
       $('rdBtnEsportaExcel').addEventListener('click', _esportaExcel);
       _initialized = true;
@@ -5287,7 +5452,18 @@ const Rendiconto = (() => {
 
   function _renderEntrate(d) {
     const wrap = $('rdEntrateWrap');
-    const haData = d.sezioni_clienti.length > 0 || d.macrogruppi.length > 0;
+    const chkP = $('rdFiltroPaghe')?.checked;
+    const chkC = $('rdFiltroCont')?.checked;
+    const sezioni = (chkP || chkC)
+      ? d.sezioni_clienti.filter(sez => {
+          const haP = sez.colore === 'paghe' || sez.colore === 'paghe_cont';
+          const haC = sez.colore === 'cont'  || sez.colore === 'paghe_cont';
+          if (chkP && chkC) return haP && haC;
+          if (chkP) return haP;
+          return haC;
+        })
+      : d.sezioni_clienti;
+    const haData = sezioni.length > 0 || d.macrogruppi.length > 0;
     if (!haData) {
       wrap.innerHTML = '<div style="padding:var(--space-6);text-align:center;color:var(--color-text-muted);font-size:var(--text-sm)">Nessuna entrata nel periodo selezionato</div>';
       return;
@@ -5307,7 +5483,7 @@ const Rendiconto = (() => {
 
     let sidx = 0;
     // Sezioni clienti
-    d.sezioni_clienti.forEach(sez => {
+    sezioni.forEach(sez => {
       const cls = { paghe:'rd-sez-paghe', cont:'rd-sez-cont', paghe_cont:'rd-sez-paghe-cont', altro:'rd-sez-altro' }[sez.colore] || 'rd-sez-altro';
       const sid = 'e' + (sidx++);
       html += `<tr class="rd-sez-hdr ${cls}" data-sid="${sid}" data-open="1">`;
@@ -5523,6 +5699,42 @@ const Rendiconto = (() => {
 
   return { init };
 })();
+
+/* ══════════════════════════════════════════════════════════
+   IMPOSTAZIONI — BACKUP DB
+══════════════════════════════════════════════════════════ */
+let _importDbFile = null;
+
+function onImportDbSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  _importDbFile = file;
+  document.getElementById('importDbFileName').textContent = file.name;
+  openModal('modalImportDb');
+}
+
+async function eseguiImportDb() {
+  if (!_importDbFile) return;
+  const btn = document.getElementById('btnConfermaImportDb');
+  btn.disabled = true;
+  btn.textContent = 'Importazione…';
+  try {
+    const fd = new FormData();
+    fd.append('file', _importDbFile);
+    const res = await fetch('/api/backup/import', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore durante l\'importazione');
+    closeModal('modalImportDb');
+    toast('Database importato con successo', 'success');
+    document.getElementById('inputImportDb').value = '';
+    _importDbFile = null;
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Importa e sostituisci';
+  }
+}
 
 /* INIT */
 checkAuth();

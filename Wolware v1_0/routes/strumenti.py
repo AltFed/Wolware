@@ -253,8 +253,9 @@ def variabili_tabella():
     - righe: un record per ditta con le celle compilabili
     Query params: anno, mese
     """
-    anno = int(request.args.get('anno', 2026))
-    mese = int(request.args.get('mese', 1))
+    anno     = int(request.args.get('anno', 2026))
+    mese     = int(request.args.get('mese', 1))
+    ditta_id = request.args.get('ditta_id', type=int)
 
     db = get_db()
     try:
@@ -284,10 +285,15 @@ def variabili_tabella():
                 })
                 colonne_ids.add(v['voce_costo_id'])
 
-        # Per ogni ditta costruisce il record riga
-        ditte = db.execute(
-            'SELECT * FROM ditte WHERE archiviato=0 ORDER BY ragione_sociale COLLATE NOCASE'
-        ).fetchall()
+        # Per ogni ditta (opzionalmente filtrata) costruisce il record riga
+        if ditta_id:
+            ditte = db.execute(
+                'SELECT * FROM ditte WHERE id=? AND archiviato=0', (ditta_id,)
+            ).fetchall()
+        else:
+            ditte = db.execute(
+                'SELECT * FROM ditte WHERE archiviato=0 ORDER BY ragione_sociale COLLATE NOCASE'
+            ).fetchall()
 
         righe = []
         for ditta in ditte:
