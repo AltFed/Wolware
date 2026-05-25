@@ -2675,11 +2675,21 @@ function _vcAggiornaSezioneDinamica() {
   const isVar = tipo === 'costi_variabili_mensili' || tipo === 'costi_variabili_annuali';
   const mesiSec   = document.getElementById('vcMesiSection');
   const coloreSec = document.getElementById('vcColoreSection');
+  const grid      = document.getElementById('vcMainGrid');
   if (mesiSec)   mesiSec.style.display   = isAnn ? '' : 'none';
   if (coloreSec) coloreSec.style.display = isVar ? '' : 'none';
+  // Aggiorna colonne grid: 3 colonne se variabile, 2 altrimenti
+  if (grid) grid.style.gridTemplateColumns = isVar ? '1fr 120px 70px' : '1fr 120px';
 }
 
 document.getElementById('vcTipo')?.addEventListener('change', _vcAggiornaSezioneDinamica);
+
+const _TIPO_META_VC = {
+  costi_fissi_mensili:     'Costi Fissi Mensili',
+  costi_fissi_annuali:     'Costi Fissi Annuali',
+  costi_variabili_mensili: 'Costi Variabili Mensili',
+  costi_variabili_annuali: 'Costi Variabili Annuali',
+};
 
 // Apri modale voce custom (nuova)
 document.getElementById('btnAddVoceCustom')?.addEventListener('click', () => {
@@ -2690,14 +2700,13 @@ document.getElementById('btnAddVoceCustom')?.addEventListener('click', () => {
   document.getElementById('vcPrezzo').value = '';
   document.getElementById('vcGruppo').value = '';
   document.getElementById('vcTipo').value = 'costi_fissi_mensili';
-  document.getElementById('vcTipo').disabled = false;
-  document.getElementById('vcTipoLockBadge').style.display = 'none';
-  document.getElementById('vcGruppoSection').style.display = '';
   document.getElementById('vcNote').value = '';
   document.getElementById('vcEsente').checked = false;
   document.getElementById('vcAnnop').checked = false;
   document.getElementById('vcColore').value = '#6366f1';
   document.getElementById('errVoceCustom').style.display = 'none';
+  document.getElementById('vcTipoBadge').style.display = 'none';
+  document.getElementById('vcCustomFields').style.display = '';
   _renderVcMesiChips([]);
   _vcAggiornaSezioneDinamica();
   openModal('modalVoceCustom');
@@ -2712,19 +2721,25 @@ function openEditVoceCustom(id, v) {
   document.getElementById('modalVoceCustomTitolo').textContent = isCustom ? 'Modifica Voce Custom' : 'Modifica Voce';
   document.getElementById('vcNome').value = v.nome || '';
   document.getElementById('vcPrezzo').value = v.prezzo != null ? v.prezzo : '';
-  document.getElementById('vcGruppo').value = v.macrogruppo_nome || '';
-  // Tipo: bloccato per voci sincronizzate
-  const tipoSel = document.getElementById('vcTipo');
-  tipoSel.value = v.tipo || 'costi_fissi_mensili';
-  tipoSel.disabled = !isCustom;
-  document.getElementById('vcTipoLockBadge').style.display = isCustom ? 'none' : 'inline';
-  // Gruppo: mostra solo per voci custom
-  document.getElementById('vcGruppoSection').style.display = isCustom ? '' : 'none';
   document.getElementById('vcNote').value = v.note || '';
   document.getElementById('vcEsente').checked = !!v.esente_iva;
   document.getElementById('vcAnnop').checked = !!v.richiede_anno_precedente;
   document.getElementById('vcColore').value = v.colore || '#6366f1';
   document.getElementById('errVoceCustom').style.display = 'none';
+  // Badge tipo per voci sincronizzate
+  const badge = document.getElementById('vcTipoBadge');
+  const badgeLabel = document.getElementById('vcTipoBadgeLabel');
+  badge.style.display = isCustom ? 'none' : '';
+  if (badgeLabel) badgeLabel.textContent = _TIPO_META_VC[v.tipo] || v.tipo || '';
+  // Campi custom (gruppo + tipo select)
+  document.getElementById('vcCustomFields').style.display = isCustom ? '' : 'none';
+  if (isCustom) {
+    document.getElementById('vcGruppo').value = v.macrogruppo_nome || '';
+    document.getElementById('vcTipo').value = v.tipo || 'costi_fissi_mensili';
+  } else {
+    // Tipo usato solo per determinare le sezioni dinamiche — lo impostiamo senza mostrarlo
+    document.getElementById('vcTipo').value = v.tipo || 'costi_fissi_mensili';
+  }
   // Mesi
   let mesiSel = [];
   if (v.mesi_json) { try { mesiSel = JSON.parse(v.mesi_json); } catch(e) {} }

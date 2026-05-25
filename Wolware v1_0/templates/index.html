@@ -1380,64 +1380,96 @@
   </div><!-- chiude modal-overlay -->
 
 
-  <!-- MODALE VOCE CUSTOM DITTA -->
+  <!-- MODALE VOCE DITTA — layout identico all'edit inline del tariffario -->
   <div class="modal-overlay" id="modalVoceCustom">
-    <div class="modal" style="max-width:480px">
+    <div class="modal" style="max-width:520px">
       <div class="modal-header">
-        <h2 class="modal-title" id="modalVoceCustomTitolo">Nuova Voce Custom</h2>
+        <h2 class="modal-title" id="modalVoceCustomTitolo">Modifica Voce</h2>
         <button class="modal-close" data-close="modalVoceCustom">&#x2715;</button>
       </div>
-      <div class="modal-body">
-        <div id="errVoceCustom" class="form-error" style="display:none"></div>
+      <div class="modal-body" style="padding:var(--space-4)">
         <input type="hidden" id="voceCustomEditId" />
         <input type="hidden" id="voceCustomIsCustom" value="1" />
-        <div class="form-grid">
-          <div class="form-field col-span-2">
-            <label>Nome Voce <span class="required">*</span></label>
-            <input type="text" id="vcNome" placeholder="es. Consulenza straordinaria" />
-          </div>
-          <div class="form-field">
-            <label>Prezzo €</label>
-            <input type="number" id="vcPrezzo" step="0.01" placeholder="0.00" />
-          </div>
-          <div class="form-field" id="vcColoreSection" style="display:none">
-            <label>Colore colonna</label>
-            <input type="color" id="vcColore" value="#6366f1"
-                   style="width:100%;height:34px;padding:2px 3px;border:1px solid var(--color-border);
-                          border-radius:var(--radius-sm);cursor:pointer"/>
-          </div>
-          <div class="form-field col-span-2" id="vcGruppoSection">
-            <label>Gruppo</label>
-            <input type="text" id="vcGruppo" placeholder="es. Prestazioni Extra" />
-          </div>
-          <div class="form-field col-span-2">
-            <label>Tipo <span id="vcTipoLockBadge" style="display:none;font-size:var(--text-xs);font-weight:400;color:var(--color-text-muted);margin-left:4px">(bloccato — voce sincronizzata)</span></label>
-            <select id="vcTipo">
-              <option value="costi_fissi_mensili">Fisso Mensile</option>
-              <option value="costi_fissi_annuali">Fisso Annuale</option>
-              <option value="costi_variabili_mensili">Variabile Mensile</option>
-              <option value="costi_variabili_annuali">Variabile Annuale</option>
-            </select>
-          </div>
-          <div class="form-field col-span-2" id="vcMesiSection" style="display:none">
-            <label>Mesi di applicazione</label>
-            <div id="vcMesiChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
-          </div>
-          <div class="form-field col-span-2">
-            <div style="display:flex;gap:var(--space-6);padding-top:var(--space-1)">
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--text-sm)">
-                <input type="checkbox" id="vcEsente" style="width:14px;height:14px"/>
-                Esente IVA
-              </label>
-              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--text-sm)">
-                <input type="checkbox" id="vcAnnop" style="width:14px;height:14px"/>
-                Anno Precedente
-              </label>
+        <!-- Badge tipo — visibile solo per voci sincronizzate -->
+        <div id="vcTipoBadge" style="display:none;margin-bottom:var(--space-3)">
+          <span id="vcTipoBadgeLabel" style="font-size:var(--text-xs);font-weight:600;padding:3px 10px;
+                border-radius:var(--radius-full);background:var(--color-surface-offset);
+                color:var(--color-text-muted)"></span>
+        </div>
+        <!-- Campi custom (gruppo + tipo) — visibili solo per voci custom -->
+        <div id="vcCustomFields" style="display:none;margin-bottom:var(--space-3)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)">
+            <div>
+              <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">Gruppo</label>
+              <input type="text" id="vcGruppo" placeholder="es. Prestazioni Extra"
+                     style="width:100%;padding:6px 10px;border:1px solid var(--color-border);
+                            border-radius:var(--radius-sm);background:var(--color-surface);
+                            font-size:var(--text-sm);color:var(--color-text)"/>
+            </div>
+            <div>
+              <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">Tipo</label>
+              <select id="vcTipo" style="width:100%;padding:6px 10px;border:1px solid var(--color-border);
+                      border-radius:var(--radius-sm);background:var(--color-surface);
+                      font-size:var(--text-sm);color:var(--color-text)">
+                <option value="costi_fissi_mensili">Fisso Mensile</option>
+                <option value="costi_fissi_annuali">Fisso Annuale</option>
+                <option value="costi_variabili_mensili">Variabile Mensile</option>
+                <option value="costi_variabili_annuali">Variabile Annuale</option>
+              </select>
             </div>
           </div>
-          <div class="form-field col-span-2">
-            <label>Note</label>
-            <textarea id="vcNote" rows="2" placeholder="Note opzionali"></textarea>
+        </div>
+        <!-- Contenitore stile inline tariffario -->
+        <div style="padding:var(--space-3) var(--space-4);border-radius:var(--radius-sm);
+                    background:var(--color-primary-highlight);border:1px solid var(--color-primary)">
+          <div id="errVoceCustom" class="form-error" style="display:none;margin-bottom:var(--space-2)"></div>
+          <!-- Grid nome / prezzo / colore -->
+          <div id="vcMainGrid" style="display:grid;grid-template-columns:1fr 120px;gap:var(--space-2);align-items:end">
+            <div>
+              <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">
+                Descrizione <span style="color:var(--color-error)">*</span>
+              </label>
+              <input type="text" id="vcNome" placeholder="es. Consulenza straordinaria"
+                     style="width:100%;padding:6px 10px;border:1px solid var(--color-primary);
+                            border-radius:var(--radius-sm);background:var(--color-surface);
+                            font-size:var(--text-sm);color:var(--color-text)"/>
+            </div>
+            <div>
+              <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">Prezzo (€)</label>
+              <input type="number" id="vcPrezzo" step="0.01" placeholder="0.00"
+                     style="width:100%;padding:6px 10px;border:1px solid var(--color-primary);
+                            border-radius:var(--radius-sm);background:var(--color-surface);
+                            font-size:var(--text-sm);color:var(--color-text)"/>
+            </div>
+            <!-- Colore — aggiunto/rimosso via JS per voci variabili -->
+            <div id="vcColoreSection" style="display:none">
+              <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">Colore</label>
+              <input type="color" id="vcColore" value="#6366f1"
+                     style="width:100%;height:34px;padding:2px 3px;border:1px solid var(--color-primary);
+                            border-radius:var(--radius-sm);cursor:pointer;background:var(--color-surface)"/>
+            </div>
+          </div>
+          <!-- Checkbox row -->
+          <div style="display:flex;gap:var(--space-4);margin-top:var(--space-2);align-items:center;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;font-size:var(--text-xs);cursor:pointer">
+              <input type="checkbox" id="vcEsente" style="width:14px;height:14px"/> Esente IVA
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:var(--text-xs);cursor:pointer">
+              <input type="checkbox" id="vcAnnop" style="width:14px;height:14px"/> Anno Precedente
+            </label>
+          </div>
+          <!-- Mesi chips (annuali) -->
+          <div id="vcMesiSection" style="display:none;margin-top:var(--space-2)">
+            <label style="font-size:var(--text-xs);color:var(--color-text-muted)">Mesi di applicazione</label>
+            <div id="vcMesiChips" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
+          </div>
+          <!-- Note -->
+          <div style="margin-top:var(--space-2)">
+            <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">Note</label>
+            <textarea id="vcNote" rows="2" placeholder="Note opzionali"
+                      style="width:100%;padding:6px 10px;border:1px solid var(--color-primary);
+                             border-radius:var(--radius-sm);background:var(--color-surface);
+                             font-size:var(--text-sm);color:var(--color-text);resize:vertical"></textarea>
           </div>
         </div>
       </div>
