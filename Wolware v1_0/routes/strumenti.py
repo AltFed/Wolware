@@ -253,8 +253,8 @@ def variabili_tabella():
     - righe: un record per ditta con le celle compilabili
     Query params: anno, mese
     """
-    anno     = int(request.args.get('anno', 2026))
-    mese     = int(request.args.get('mese', 1))
+    anno = int(request.args.get('anno', 2026))
+    mese = int(request.args.get('mese', 1))
     ditta_id = request.args.get('ditta_id', type=int)
 
     db = get_db()
@@ -275,21 +275,23 @@ def variabili_tabella():
         for v in tutte_voci:
             if v['voce_costo_id'] in colonne_ids:
                 continue
+
             attiva = _voce_attiva_nel_mese(dict(v), mese, v['tipo'])
             if attiva:
                 colonne.append({
                     'voce_id': v['voce_costo_id'],
-                    'nome':    v['nome'],
+                    'nome': v['nome'],
                     'mg_nome': v['macrogruppo_nome'],
-                    'tipo':    v['tipo'],
-                    'colore':  v['colore'],
+                    'tipo': v['tipo'],
+                    'colore': v['colore'],
                 })
                 colonne_ids.add(v['voce_costo_id'])
 
         # Per ogni ditta (opzionalmente filtrata) costruisce il record riga
         if ditta_id:
             ditte = db.execute(
-                'SELECT * FROM ditte WHERE id=? AND archiviato=0', (ditta_id,)
+                'SELECT * FROM ditte WHERE id=? AND archiviato=0',
+                (ditta_id,)
             ).fetchall()
         else:
             ditte = db.execute(
@@ -299,6 +301,7 @@ def variabili_tabella():
         righe = []
         for ditta in ditte:
             celle = {}
+
             for col in colonne:
                 # Legge dalla copia del cliente — nessun JOIN al tariffario originale
                 dv = db.execute(
@@ -306,8 +309,12 @@ def variabili_tabella():
                        FROM ditta_voci
                        WHERE ditta_id=? AND voce_costo_id=?
                          AND tipo IN (?,?)''',
-                    (ditta['id'], col['voce_id'],
-                     'costi_variabili_mensili', 'costi_variabili_annuali')
+                    (
+                        ditta['id'],
+                        col['voce_id'],
+                        'costi_variabili_mensili',
+                        'costi_variabili_annuali'
+                    )
                 ).fetchone()
 
                 if dv and _voce_attiva_nel_mese(dict(dv), mese, col['tipo']):
@@ -315,21 +322,41 @@ def variabili_tabella():
                         '''SELECT quantita FROM pratiche
                            WHERE ditta_id=? AND voce_id=? AND anno=? AND mese=?
                              AND tipo IN (?,?)''',
-                        (ditta['id'], col['voce_id'], anno, mese,
-                         'costi_variabili_mensili', 'costi_variabili_annuali')
+                        (
+                            ditta['id'],
+                            col['voce_id'],
+                            anno,
+                            mese,
+                            'costi_variabili_mensili',
+                            'costi_variabili_annuali'
+                        )
                     ).fetchone()
+
                     celle[col['voce_id']] = {
                         'attiva': True,
-                        'qta':    esistente['quantita'] if esistente else 0,
+                        'qta': esistente['quantita'] if esistente else 0,
                         'prezzo': float(dv['prezzo'] or 0),
                     }
                 else:
                     celle[col['voce_id']] = {'attiva': False}
 
+            paghe_attiva = _gestione_attiva(dict(ditta), anno, 'paghe')
+            contabilita_attiva = _gestione_attiva(dict(ditta), anno, 'contabilita')
+
+            if paghe_attiva and contabilita_attiva:
+                tipologia = 'paghe_contabilita'
+            elif paghe_attiva:
+                tipologia = 'paghe'
+            elif contabilita_attiva:
+                tipologia = 'contabilita'
+            else:
+                tipologia = 'altro'
+
             righe.append({
-                'ditta_id':   ditta['id'],
+                'ditta_id': ditta['id'],
                 'ditta_nome': ditta['ragione_sociale'],
-                'celle':      celle,
+                'tipologia': tipologia,
+                'celle': celle,
             })
 
         return jsonify({'colonne': colonne, 'righe': righe})

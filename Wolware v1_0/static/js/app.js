@@ -2759,7 +2759,6 @@ function openEditVoceCustom(id, v) {
   document.getElementById('vcNote').value = v.note || '';
   document.getElementById('vcEsente').checked = !!v.esente_iva;
   document.getElementById('vcAnnop').checked = !!v.richiede_anno_precedente;
-  document.getElementById('vcColore').value = v.colore || '#6366f1';
   document.getElementById('errVoceCustom').style.display = 'none';
   // Badge tipo per voci sincronizzate
   const badge = document.getElementById('vcTipoBadge');
@@ -2798,19 +2797,18 @@ document.getElementById('btnSalvaVoceCustom')?.addEventListener('click', async f
   }
   const tipo = document.getElementById('vcTipo').value;
   const isAnn = tipo === 'costi_fissi_annuali' || tipo === 'costi_variabili_annuali';
-  const isVar = tipo === 'costi_variabili_mensili' || tipo === 'costi_variabili_annuali';
   const isCustom = document.getElementById('voceCustomIsCustom').value === '1';
   const mesi = isAnn ? _getVcMesiSelezionati() : null;
+
   const payload = {
     nome,
-    prezzo:               parseFloat(document.getElementById('vcPrezzo').value) || 0,
-    macrogruppo_nome:     isCustom ? (document.getElementById('vcGruppo').value.trim() || 'Extra') : undefined,
-    tipo:                 isCustom ? tipo : undefined,
-    note:                 document.getElementById('vcNote').value.trim(),
-    esente_iva:           document.getElementById('vcEsente').checked ? 1 : 0,
+    prezzo: parseFloat(document.getElementById('vcPrezzo').value) || 0,
+    macrogruppo_nome: isCustom ? (document.getElementById('vcGruppo').value.trim() || 'Extra') : undefined,
+    tipo: isCustom ? tipo : undefined,
+    note: document.getElementById('vcNote').value.trim(),
+    esente_iva: document.getElementById('vcEsente').checked ? 1 : 0,
     richiede_anno_precedente: document.getElementById('vcAnnop').checked ? 1 : 0,
-    mesi_json:            mesi ? JSON.stringify(mesi) : null,
-    colore:               isVar ? (document.getElementById('vcColore').value || null) : null,
+    mesi_json: mesi ? JSON.stringify(mesi) : null,
   };
   const editId = document.getElementById('voceCustomEditId').value;
   const btn = this;
@@ -3541,82 +3539,178 @@ document.getElementById('btnImportaEsegui')?.addEventListener('click', async () 
 });
 
 /* ── 4.2 Costi Massivi ───────────────────────────────────────────────────── */
-document.getElementById('btnCostiMassivi')?.addEventListener('click', () => {
+
+document.getElementById('btnCostiMassivi')?.addEventListener('click', async () => {
   const now = new Date();
+
   document.getElementById('cm_anno').value = now.getFullYear();
   document.getElementById('cm_mese').value = now.getMonth() + 1;
   document.getElementById('cm_qta').value = 1;
   document.getElementById('cm_descrizione').value = '';
   document.getElementById('cm_importo').value = '';
   document.getElementById('cm_esente_iva').checked = false;
+
   document.getElementById('cm_sel_tutti').checked = true;
+  document.getElementById('cm_tariff_sel').value = '';
   document.getElementById('cm_tariff_sel_wrap').style.display = 'none';
   document.getElementById('cm_manuale_wrap').style.display = 'none';
-  document.getElementById('cmAnteprima').textContent = 'Clienti selezionati: —';
+
+  document.getElementById('cmAnteprimaCount').textContent = '—';
+  document.getElementById('cmAnteprimaList').innerHTML =
+    '<div style="color:var(--color-text-muted);font-size:var(--text-sm)">Caricamento clienti...</div>';
+
+  await loadDitte();
   _populateTariffSelect('cm_tariff_sel');
   _loadCmManualeList();
+  _updateCmAnteprima();
+
   openModal('modalCostiMassivi');
 });
 
 async function _loadCmManualeList() {
   const list = allDitte.filter(d => !d.archiviato);
+
   document.getElementById('cm_manuale_list').innerHTML = list.map(d =>
-    `<label class="filter-check" style="padding:2px 0">
+    `<label class="filter-check" style="padding:2px 0;display:flex;align-items:flex-start;gap:8px">
       <input type="checkbox" class="cm-check" value="${d.id}" />
-      ${d.ragione_sociale}${d.tariffario_nome ? ` <span style="color:var(--color-text-faint)">(${d.tariffario_nome})</span>` : ''}
+      <span>
+        ${d.ragione_sociale}
+        ${d.tariffario_nome ? ` <span style="color:var(--color-text-faint)">(${d.tariffario_nome})</span>` : ''}
+      </span>
     </label>`
   ).join('');
 }
 
+function _getCmClientiSelezionati() {
+  const sel = document.querySelector('input[name="cm_sel"]:checked')?.value || 'tutti';
+
+  if (sel === 'tutti') {
+    return allDitte.filter(d => !d.archiviato);
+  }
+
+  if (sel === 'tariffario') {
+    const selEl = document.getElementById('cm_tariff_sel');
+    const tid = String(selEl.value || '').trim();
+    const selectedText = (selEl.options[selEl.selectedIndex]?.text || '').trim().toLowerCase();
+
+    if (!tid) return [];
+
+    return allDitte.filter(d => {
+      if (d.archiviato) return false;
+
+      const dTariffId = String(d.tariffario_id || '').trim();
+      const dTariffNome = String(d.tariffario_nome || '').trim().toLowerCase();
+
+      return dTariffId === tid || (selectedText && dTariffNome === selectedText);
+    });
+  }
+
+  const idsSelezionati = [...document.querySelectorAll('.cm-check:checked')].map(c => String(c.value));
+  return allDitte.filter(d => !d.archiviato && idsSelezionati.includes(String(d.id)));
+}
+
+function _renderCmClientiSelezionati(clienti) {
+  const countEl = document.getElementById('cmAnteprimaCount');
+  const listEl = document.getElementById('cmAnteprimaList');
+
+  const imp = parseFloat(document.getElementById('cm_importo').value) || 0;
+  const qta = parseInt(document.getElementById('cm_qta').value) || 1;
+  const tot = formatEur(imp * qta * clienti.length);
+
+  countEl.textContent = `Totale clienti: ${clienti.length} · Totale: ${tot}`;
+
+  if (!clienti.length) {
+    listEl.innerHTML = '<div style="color:var(--color-text-muted);font-size:var(--text-sm)">Nessun cliente selezionato.</div>';
+    return;
+  }
+
+  listEl.innerHTML = clienti.map(d => `
+    <div style="padding:6px 0;border-bottom:1px solid var(--color-divider);font-size:var(--text-sm)">
+      <div style="font-weight:500;color:var(--color-text)">${d.ragione_sociale}</div>
+      <div style="font-size:var(--text-xs);color:var(--color-text-muted)">
+        ${d.tariffario_nome ? `Tariffario: ${d.tariffario_nome}` : 'Nessun tariffario'}
+      </div>
+    </div>
+  `).join('');
+}
+
+function _updateCmAnteprima() {
+  const clienti = _getCmClientiSelezionati();
+  _renderCmClientiSelezionati(clienti);
+}
+
 document.querySelectorAll('input[name="cm_sel"]').forEach(r => {
   r.addEventListener('change', () => {
-    document.getElementById('cm_tariff_sel_wrap').style.display = r.value === 'tariffario' ? '' : 'none';
-    document.getElementById('cm_manuale_wrap').style.display   = r.value === 'manuale' ? '' : 'none';
+    const sel = document.querySelector('input[name="cm_sel"]:checked')?.value || 'tutti';
+
+    document.getElementById('cm_tariff_sel_wrap').style.display = sel === 'tariffario' ? '' : 'none';
+    document.getElementById('cm_manuale_wrap').style.display = sel === 'manuale' ? '' : 'none';
+
     _updateCmAnteprima();
   });
 });
 
-['cm_importo','cm_qta','cm_tariff_sel'].forEach(id => {
+['cm_importo', 'cm_qta', 'cm_tariff_sel'].forEach(id => {
   document.getElementById(id)?.addEventListener('input', _updateCmAnteprima);
+  document.getElementById(id)?.addEventListener('change', _updateCmAnteprima);
 });
 
-function _updateCmAnteprima() {
-  const sel   = document.querySelector('input[name="cm_sel"]:checked')?.value || 'tutti';
-  const imp   = parseFloat(document.getElementById('cm_importo').value) || 0;
-  const qta   = parseInt(document.getElementById('cm_qta').value) || 1;
-  let n = 0;
-  if (sel === 'tutti')      n = allDitte.filter(d => !d.archiviato).length;
-  else if (sel === 'tariffario') {
-    const tid = document.getElementById('cm_tariff_sel').value;
-    n = tid ? allDitte.filter(d => !d.archiviato && String(d.tariffario_id) === tid).length : 0;
-  } else {
-    n = document.querySelectorAll('.cm-check:checked').length;
-  }
-  const tot = formatEur(imp * qta * n);
-  document.getElementById('cmAnteprima').textContent = `Clienti selezionati: ${n}  ·  Totale: ${tot}`;
-}
 document.addEventListener('change', e => {
-  if (e.target.classList.contains('cm-check')) _updateCmAnteprima();
+  if (e.target.classList.contains('cm-check')) {
+    _updateCmAnteprima();
+  }
 });
 
 document.getElementById('btnApplicaCostiMassivi')?.addEventListener('click', async () => {
   const descrizione = document.getElementById('cm_descrizione').value.trim();
-  const importo     = parseFloat(document.getElementById('cm_importo').value);
-  const qta         = parseInt(document.getElementById('cm_qta').value) || 1;
-  const mese        = +document.getElementById('cm_mese').value;
-  const anno        = +document.getElementById('cm_anno').value;
-  const esente      = document.getElementById('cm_esente_iva').checked;
-  if (!descrizione || !importo) { toast('Compila descrizione e importo', 'error'); return; }
-  const sel  = document.querySelector('input[name="cm_sel"]:checked')?.value || 'tutti';
-  const body = { descrizione, importo, qta, mese, anno, esente_iva: esente ? 1 : 0, selezione: sel };
-  if (sel === 'tariffario') body.tariffario_id = document.getElementById('cm_tariff_sel').value;
-  if (sel === 'manuale')    body.ditta_ids = [...document.querySelectorAll('.cm-check:checked')].map(c => +c.value);
+  const importo = parseFloat(document.getElementById('cm_importo').value);
+  const qta = parseInt(document.getElementById('cm_qta').value) || 1;
+  const mese = +document.getElementById('cm_mese').value;
+  const anno = +document.getElementById('cm_anno').value;
+  const esente = document.getElementById('cm_esente_iva').checked;
+
+  if (!descrizione || !importo) {
+    toast('Compila descrizione e importo', 'error');
+    return;
+  }
+
+  const sel = document.querySelector('input[name="cm_sel"]:checked')?.value || 'tutti';
+  const body = {
+    descrizione,
+    importo,
+    qta,
+    mese,
+    anno,
+    esente_iva: esente ? 1 : 0,
+    selezione: sel
+  };
+
+  if (sel === 'tariffario') {
+    const tariffarioId = document.getElementById('cm_tariff_sel').value;
+    if (!tariffarioId) {
+      toast('Seleziona un tariffario', 'error');
+      return;
+    }
+    body.tariffario_id = tariffarioId;
+  }
+
+  if (sel === 'manuale') {
+    const ids = [...document.querySelectorAll('.cm-check:checked')].map(c => +c.value);
+    if (!ids.length) {
+      toast('Seleziona almeno un cliente', 'error');
+      return;
+    }
+    body.ditta_ids = ids;
+  }
+
   try {
     const res = await api('/api/strumenti/costi-massivi', 'POST', body);
-    toast(`Costo applicato a ${res.n_clienti || '?'} clienti`, 'success');
+    toast(`Costo applicato a ${res.inseriti || res.n_clienti || '?'} clienti`, 'success');
     closeModal('modalCostiMassivi');
     loadDitte();
-  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+  } catch (e) {
+    toast('Errore: ' + e.message, 'error');
+  }
 });
 
 /* ── 4.3 Inserimento Costi Variabili ─────────────────────────────────────── */
@@ -3627,52 +3721,106 @@ document.getElementById('btnInserimentoCostiVariabili')?.addEventListener('click
   const now = new Date();
   _buildAnnoSel('iv_anno', now.getFullYear());
   document.getElementById('iv_mese').value = now.getMonth() + 1;
+
+  const filtroCliente = document.getElementById('iv_filtro_cliente');
+  const filtroTipologia = document.getElementById('iv_filtro_tipologia');
+  if (filtroCliente) filtroCliente.value = '';
+  if (filtroTipologia) filtroTipologia.value = 'tutti';
+
   ivTabData = null;
   document.getElementById('ivTabella').innerHTML =
     '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Seleziona anno e mese e clicca "Carica".</p>';
+
   openModal('modalInserimentoVariabili');
   _loadIvTabella();
 });
 
-['iv_anno','iv_mese'].forEach(id =>
-  document.getElementById(id)?.addEventListener('change', _loadIvTabella));
+['iv_anno', 'iv_mese'].forEach(id =>
+  document.getElementById(id)?.addEventListener('change', _loadIvTabella)
+);
+
+function filtraTabellaCostiVariabili() {
+  const filtroCliente = (document.getElementById('iv_filtro_cliente')?.value || '')
+    .toLowerCase()
+    .trim();
+
+  const filtroTipologia = (document.getElementById('iv_filtro_tipologia')?.value || 'tutti')
+    .toLowerCase()
+    .trim();
+
+  const righe = document.querySelectorAll('#ivTabella .iv-riga-cliente');
+
+  righe.forEach(riga => {
+    const nomeCliente = (riga.dataset.cliente || '').toLowerCase();
+    const tipologiaCliente = (riga.dataset.tipologia || '').toLowerCase();
+
+    const matchCliente = !filtroCliente || nomeCliente.includes(filtroCliente);
+    const matchTipologia = filtroTipologia === 'tutti' || tipologiaCliente === filtroTipologia;
+
+    riga.style.display = (matchCliente && matchTipologia) ? '' : 'none';
+  });
+}
 
 async function _loadIvTabella() {
   const anno = document.getElementById('iv_anno').value;
   const mese = document.getElementById('iv_mese').value;
   if (!anno || !mese) return;
+
   try {
     const qs = `anno=${anno}&mese=${mese}${ivDittaLocked ? `&ditta_id=${ivDittaLocked}` : ''}`;
     ivTabData = await api(`/api/strumenti/variabili/tabella?${qs}`);
     _renderIvTabella();
-  } catch(e) { toast('Errore caricamento tabella: ' + e.message, 'error'); }
+  } catch (e) {
+    toast('Errore caricamento tabella: ' + e.message, 'error');
+  }
 }
 
 function _renderIvTabella() {
   const { colonne, righe } = ivTabData;
   const el = document.getElementById('ivTabella');
+
   if (!colonne.length) {
     el.innerHTML = '<p style="color:var(--color-text-muted);font-size:var(--text-sm)">Nessuna voce variabile disponibile per questo mese.</p>';
     return;
   }
+
   const ths = colonne.map(c => {
     const colStyle = c.colore
       ? ` style="background:${c.colore};color:#fff;border-color:${c.colore}"`
       : '';
     return `<th title="${c.mg_nome}"${colStyle}>${c.nome}</th>`;
   }).join('');
+
   const trs = righe.map(r => {
     let totaleCliente = 0;
+
+    const nomeCliente = (r.ditta_nome || '').toLowerCase();
+
+    const tipologiaCliente = (
+      r.tipologia ||
+      r.tipo ||
+      r.servizio ||
+      r.categoria ||
+      'altro'
+    )
+      .toLowerCase()
+      .replace(/\s*\+\s*/g, '_')
+      .replace(/\s+/g, '_');
+
     const celle = colonne.map(c => {
       const cella = r.celle[c.voce_id];
-      const bgBase    = c.colore ? `${c.colore}1a` : '';          // 10% opacità — colonna colorata
-      const bgAttiva  = c.colore ? `${c.colore}40` : 'var(--color-primary-highlight)'; // 25% opacità quando compilata
-      if (!cella || !cella.attiva)
+      const bgBase = c.colore ? `${c.colore}1a` : '';
+      const bgAttiva = c.colore ? `${c.colore}40` : 'var(--color-primary-highlight)';
+
+      if (!cella || !cella.attiva) {
         return `<td style="background:${bgBase}"><span class="variabili-cell-na">×</span></td>`;
+      }
+
       const qta = cella.qta ?? 0;
       const importo = qta * (cella.prezzo || 0);
       totaleCliente += importo;
       const bgIniziale = qta > 0 ? bgAttiva : bgBase;
+
       return `<td style="background:${bgIniziale}"><input type="number" min="0" step="1" value="${qta}"
         data-ditta="${r.ditta_id}" data-voce="${c.voce_id}" data-prezzo="${cella.prezzo || 0}"
         data-bg-base="${bgBase}" data-bg-attiva="${bgAttiva}"
@@ -3680,7 +3828,10 @@ function _renderIvTabella() {
         oninput="this.closest('td').style.background=+this.value>0?this.dataset.bgAttiva:this.dataset.bgBase;_aggiornaRigaTotale(this)"
         /></td>`;
     }).join('');
-    return `<tr>
+
+    return `<tr class="iv-riga-cliente"
+      data-cliente="${nomeCliente}"
+      data-tipologia="${tipologiaCliente}">
       <td class="col-cliente">${r.ditta_nome}</td>
       ${celle}
       <td class="iv-tot-cliente" id="iv-tot-${r.ditta_id}" style="font-weight:600;text-align:right;white-space:nowrap;color:var(--color-primary)">
@@ -3688,10 +3839,13 @@ function _renderIvTabella() {
       </td>
     </tr>`;
   }).join('');
+
   el.innerHTML = `<table class="variabili-table">
     <thead><tr><th>Cliente</th>${ths}<th style="text-align:right">Totale</th></tr></thead>
     <tbody>${trs}</tbody>
   </table>`;
+
+  filtraTabellaCostiVariabili();
 }
 
 function _aggiornaRigaTotale(input) {
@@ -3699,9 +3853,11 @@ function _aggiornaRigaTotale(input) {
   const riga = input.closest('tr');
   const inputs = riga.querySelectorAll('.iv-input');
   let tot = 0;
+
   inputs.forEach(inp => {
     tot += (parseFloat(inp.value) || 0) * (parseFloat(inp.dataset.prezzo) || 0);
   });
+
   const totEl = document.getElementById(`iv-tot-${dittaId}`);
   if (totEl) totEl.textContent = `€ ${tot.toFixed(2)}`;
 }
@@ -3710,22 +3866,32 @@ document.getElementById('btnCaricaVariabili')?.addEventListener('click', async (
   const anno = +document.getElementById('iv_anno').value;
   const mese = +document.getElementById('iv_mese').value;
   const inputs = [...document.querySelectorAll('.iv-input')];
+
   const righe = inputs
     .filter(i => parseFloat(i.value) > 0)
     .map(i => ({ ditta_id: +i.dataset.ditta, voce_id: +i.dataset.voce, qta: +i.value }));
-  if (!righe.length) { toast('Nessuna quantità inserita', 'error'); return; }
+
+  if (!righe.length) {
+    toast('Nessuna quantità inserita', 'error');
+    return;
+  }
+
   const fromScheda = ivDittaLocked !== null;
+
   try {
     const res = await api('/api/strumenti/variabili/carica', 'POST', { anno, mese, dati: righe });
     toast(`Costi variabili caricati (${res.aggiunte || righe.length} voci)`, 'success');
     ivDittaLocked = null;
     closeModal('modalInserimentoVariabili');
+
     if (fromScheda && currentDetId) {
       await _loadDettaglio(false);
     } else {
       loadDitte();
     }
-  } catch(e) { toast('Errore: ' + e.message, 'error'); }
+  } catch (e) {
+    toast('Errore: ' + e.message, 'error');
+  }
 });
 
 /* ── 4.4 Contabilizza Costi Fissi ────────────────────────────────────────── */
@@ -3821,13 +3987,26 @@ document.getElementById('btnContabilizzaEsegui')?.addEventListener('click', asyn
 });
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
-function _populateTariffSelect(selId) {
-  const sel = document.getElementById(selId);
+function _populateTariffSelect(selectId) {
+  const sel = document.getElementById(selectId);
   if (!sel) return;
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">— Nessun tariffario —</option>' +
-    tariffariGlobali.map(t =>
-      `<option value="${t.id}"${String(t.id)===cur?' selected':''}>${t.nome}</option>`).join('');
+
+  const map = new Map();
+
+  allDitte
+    .filter(d => !d.archiviato && d.tariffario_id && d.tariffario_nome)
+    .forEach(d => {
+      map.set(String(d.tariffario_id), d.tariffario_nome);
+    });
+
+  const options = [
+    '<option value="">— seleziona tariffario —</option>',
+    ...[...map.entries()]
+      .sort((a, b) => a[1].localeCompare(b[1], 'it'))
+      .map(([id, nome]) => `<option value="${id}">${nome}</option>`)
+  ];
+
+  sel.innerHTML = options.join('');
 }
 
 function _buildAnnoSel(selId, defaultAnno) {

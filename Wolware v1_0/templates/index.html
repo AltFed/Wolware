@@ -72,7 +72,7 @@
             <rect x="2" y="7" width="20" height="14" rx="2" />
             <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
           </svg>
-          Clienti
+          Schede Clienti
         </a>
         <!-- Solo admin -->
         <a href="#" class="nav-item" data-tab="impostazioni" id="navImpostazioni" style="display:none">
@@ -163,7 +163,7 @@
               <rect x="2" y="7" width="20" height="14" rx="2" />
               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
             </svg>
-            Clienti
+            Schede Clienti
           </button>
           <button class="tab-btn" data-tab="impostazioni" id="tabBtnImpostazioni" style="display:none">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -429,8 +429,8 @@
         <section class="tab-panel" id="tab-ditte">
           <div class="page-header">
             <div>
-              <h1 class="page-title">Clienti</h1>
-              <p class="page-subtitle">Gestisci i tuoi clienti</p>
+              <h1 class="page-title">Schede Clienti</h1>
+              <p class="page-subtitle">Gestisci le tue schede clienti</p>
             </div>
             <div class="header-actions">
               <button class="btn btn-secondary btn-sm" id="btnImportaExcel">
@@ -451,7 +451,7 @@
               </button>
               <button class="btn btn-primary" id="btnNuovaDitta2">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Nuovo Cliente
+                Nuova Scheda Cliente
               </button>
             </div>
           </div>
@@ -485,9 +485,9 @@
               <tbody id="ditteBody">
                 <tr><td colspan="8" class="empty-state-row">
                   <span class="empty-glyph">🏢</span>
-                  <span class="empty-title">Nessun cliente attivo</span>
-                  <span class="empty-sub">Aggiungi il tuo primo cliente per iniziare</span>
-                  <button class="btn btn-primary btn-sm" id="btnEmptyAddCliente">+ Aggiungi cliente</button>
+                  <span class="empty-title">Nessuna scheda cliente attiva</span>
+                  <span class="empty-sub">Aggiungi la tua prima scheda cliente per iniziare</span>
+                  <button class="btn btn-primary btn-sm" id="btnEmptyAddCliente">+ Aggiungi scheda cliente</button>
                 </td></tr>
               </tbody>
             </table>
@@ -1441,13 +1441,8 @@
                             border-radius:var(--radius-sm);background:var(--color-surface);
                             font-size:var(--text-sm);color:var(--color-text)"/>
             </div>
-            <!-- Colore — aggiunto/rimosso via JS per voci variabili -->
-            <div id="vcColoreSection" style="display:none">
-              <label style="font-size:var(--text-xs);color:var(--color-text-muted);display:block;margin-bottom:3px">Colore</label>
-              <input type="color" id="vcColore" value="#6366f1"
-                     style="width:100%;height:34px;padding:2px 3px;border:1px solid var(--color-primary);
-                            border-radius:var(--radius-sm);cursor:pointer;background:var(--color-surface)"/>
-            </div>
+          <!-- Colore disabilitato nella scheda cliente -->
+          <input type="hidden" id="vcColore" value="" />
           </div>
           <!-- Checkbox row -->
           <div style="display:flex;gap:var(--space-4);margin-top:var(--space-2);align-items:center;flex-wrap:wrap">
@@ -2672,7 +2667,15 @@
             <div id="cm_manuale_list"><!-- JS --></div>
           </div>
         </div>
-        <div id="cmAnteprima" class="dettaglio-anteprima-box">Clienti selezionati: —</div>
+        <div id="cmAnteprima" class="dettaglio-anteprima-box">
+        <div style="font-weight:600;margin-bottom:var(--space-2)">Clienti selezionati</div>
+        <div id="cmAnteprimaCount" style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-2)">
+          —
+        </div>
+        <div id="cmAnteprimaList" style="max-height:220px;overflow-y:auto;padding-right:6px">
+          <div style="color:var(--color-text-muted);font-size:var(--text-sm)">Nessun cliente selezionato.</div>
+        </div>
+      </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -2707,9 +2710,35 @@
           </select>
         </div>
       </div>
+
+      <!-- NUOVI FILTRI -->
+      <div class="form-grid" style="grid-template-columns: 1fr 220px; gap: var(--space-4); margin-bottom: var(--space-4); max-width: 700px;">
+        <div class="form-field">
+          <label for="iv_filtro_cliente">Nome cliente</label>
+          <input
+            type="text"
+            id="iv_filtro_cliente"
+            placeholder="Cerca cliente..."
+            oninput="filtraTabellaCostiVariabili()"
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="iv_filtro_tipologia">Tipologia</label>
+          <select id="iv_filtro_tipologia" onchange="filtraTabellaCostiVariabili()">
+            <option value="tutti">Tutti</option>
+            <option value="paghe">Paghe</option>
+            <option value="contabilita">Contabilità</option>
+            <option value="paghe_contabilita">Paghe + Contabilità</option>
+            <option value="altro">Altro</option>
+          </select>
+        </div>
+      </div>
+
       <div id="ivTabella" style="overflow-x:auto">
         <p style="color:var(--color-text-muted);font-size:var(--text-sm)">Seleziona anno e mese per caricare la tabella.</p>
       </div>
+
       <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-3)">
         Legenda: <strong>[N]</strong> = quantità &nbsp;·&nbsp; <strong>×</strong> = voce non applicabile a questo cliente
       </p>
