@@ -368,6 +368,13 @@ function renderDitte(list) {
           ? `<span style="color:var(--color-success);font-weight:600">${formatEur(Math.abs(residuo))}</span>`
           : `<span style="color:var(--color-text-faint)">—</span>`;
 
+    const residuoTot = d.totale_residuo_con_prec != null ? d.totale_residuo_con_prec : null;
+    const residuoTotHTML = residuoTot == null || residuoTot === 0
+      ? '<span style="color:var(--color-text-faint)">—</span>'
+      : residuoTot > 0
+        ? `<span style="color:var(--color-error);font-weight:600">${formatEur(residuoTot)}</span>`
+        : `<span style="color:var(--color-success);font-weight:600">${formatEur(Math.abs(residuoTot))}</span>`;
+
     const cadBadge = d.cadenza
       ? `<span class="badge-cadenza">${d.cadenza}</span>`
       : '<span style="color:var(--color-text-faint)">—</span>';
@@ -405,6 +412,7 @@ onclick="openDettaglioCliente(${d.id})" title="${d.ragione_sociale}">
       <td class="col-money mono">${dovuto}</td>
       <td class="col-money mono">${pagato}</td>
       <td class="col-money mono">${residuoHTML}</td>
+      <td class="col-money mono">${residuoTotHTML}</td> 
       <td class="col-cadenza">${cadBadge}</td>
       <td class="col-data mono">${d.ultimo_ec || '<span style="color:var(--color-text-faint)">—</span>'}</td>
       <td class="col-data mono">${d.ultimo_pag || '<span style="color:var(--color-text-faint)">—</span>'}</td>
@@ -2973,7 +2981,7 @@ function _renderDetRiepilogo(s) {
   const arrot = (s.abbuoni || 0) - (s.addebiti || 0);
   document.getElementById('dettaglioRiepilogo').innerHTML = `
     <div class="dettaglio-stat-card">
-      <div class="dettaglio-stat-label">Resid. anni prec.</div>
+      <div class="dettaglio-stat-label">Residuo anni prec.</div>
       <div class="dettaglio-stat-val" style="font-size:var(--text-sm)">${formatEur(s.residuo_iniziale)}</div>
     </div>
     <div class="dettaglio-stat-card">

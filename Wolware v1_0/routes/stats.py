@@ -12,19 +12,72 @@ from auth.decorators import login_required
 
 stats_bp = Blueprint('stats', __name__)
 
+def _residuo_anni_precedenti(conn, ditta_id: int, anno: int) -> float:
+    """
+    Calcola il totale non pagato dal cliente in tutti gli anni precedenti ad 'anno'.
+    Somma anno per anno dal primo anno con dati fino ad anno-1,
+    partendo dal residuo_iniziale manuale come saldo di apertura.
+    """
+    # Prendi il residuo_iniziale manuale come base di partenza
+    d = conn.execute('SELECT residuo_iniziale FROM ditte WHERE id=?', (ditta_id,)).fetchone()
+    base = round(float(d['residuo_iniziale'] or 0.0), 2) if d else 0.0
+
+    # Trova il primo anno con dati (pratiche o pagamenti)
+    row = conn.execute(
+        '''SELECT MIN(anno) FROM (
+            SELECT anno FROM pratiche WHERE ditta_id=?
+            UNION
+            SELECT anno FROM pagamenti WHERE ditta_id=?
+        )''', (ditta_id, ditta_id)
+    ).fetchone()
+    primo_anno = row[0] if row and row[0] else anno
+
+    # Somma i residui anno per anno fino ad anno-1
+    totale = base
+    for a in range(primo_anno, anno):
+        r = _riepilogo_ditta(conn, ditta_id, a, residuo_iniziale_override=0.0)
+        totale += r['dovuto'] - r['pagato'] - r['abbuoni'] + r['addebiti']
+
+    return round(totale, 2)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HELPER — calcola il riepilogo finanziario completo di una ditta per un anno
 # ═══════════════════════════════════════════════════════════════════════════════
-def _riepilogo_ditta(conn, ditta_id: int, anno: int) -> dict:
+def _residuo_anni_precedenti(conn, ditta_id: int, anno: int) -> float:
+    """
+    Calcola il totale non pagato dal cliente in tutti gli anni precedenti ad 'anno'.
+    Somma anno per anno dal primo anno con dati fino ad anno-1,
+    partendo dal residuo_iniziale manuale come saldo di apertura.
+    """
+    d = conn.execute('SELECT residuo_iniziale FROM ditte WHERE id=?', (ditta_id,)).fetchone()
+    base = round(float(d['residuo_iniziale'] or 0.0), 2) if d else 0.0
+
+    row = conn.execute(
+        '''SELECT MIN(anno) FROM (
+            SELECT anno FROM pratiche WHERE ditta_id=?
+            UNION
+            SELECT anno FROM pagamenti WHERE ditta_id=?
+        )''', (ditta_id, ditta_id)
+    ).fetchone()
+    primo_anno = row[0] if row and row[0] else anno
+
+    totale = base
+    for a in range(primo_anno, anno):
+        r = _riepilogo_ditta(conn, ditta_id, a, residuo_iniziale_override=0.0)
+        totale += r['dovuto'] - r['pagato'] - r['abbuoni'] + r['addebiti']
+
+    return round(totale, 2)
+
+
+def _riepilogo_ditta(conn, ditta_id: int, anno: int, residuo_iniziale_override: float = None) -> dict:
     """
     Calcola per (ditta_id, anno):
       - dovuto      = somma importi pratiche dell'anno + IVA 22% su non-esenti
       - pagato      = somma pagamenti dell'anno
       - abbuoni     = somma arrotondamenti tipo 'abbuono'
       - addebiti    = somma arrotondamenti tipo 'addebito'
-      - residuo     = dovuto - pagato - abbuoni + addebiti + residuo_iniziale
-    Il residuo_iniziale è un campo manuale sulla ditta (saldo di partenza).
+      - residuo     = dovuto - pagato - abbuoni + addebiti + residuo_anni_precedenti
+    Il residuo_anni_precedenti è calcolato dinamicamente sommando i residui di tutti gli anni precedenti.
     """
 
     # Dovuto: somma importi pratiche dell'anno + IVA 22% per le non esenti
@@ -65,24 +118,27 @@ def _riepilogo_ditta(conn, ditta_id: int, anno: int) -> dict:
         elif r[0] == 'addebito':
             addebiti = round(float(r[1]), 2)
 
-    # Residuo iniziale (campo manuale sulla ditta, anno-agnostico)
-    d = conn.execute('SELECT residuo_iniziale FROM ditte WHERE id=?', (ditta_id,)).fetchone()
-    residuo_iniziale = round(float(d['residuo_iniziale'] or 0.0), 2) if d else 0.0
+    # Residuo anni precedenti — usa override se passato (evita loop ricorsivo), altrimenti calcola dinamicamente
+    if residuo_iniziale_override is not None:
+        residuo_anni_prec = round(float(residuo_iniziale_override), 2)
+    else:
+        residuo_anni_prec = _residuo_anni_precedenti(conn, ditta_id, anno)
 
-    # Residuo = dovuto + addebiti - pagato - abbuoni + residuo_iniziale
-    residuo = round(dovuto + addebiti - pagato - abbuoni + residuo_iniziale, 2)
+    # Residuo = dovuto + addebiti - pagato - abbuoni + residuo_anni_precedenti
+    residuo = round(dovuto + addebiti - pagato - abbuoni + residuo_anni_prec, 2)
 
     return {
-        'anno':             anno,
-        'imponibile':       imponibile,
-        'esente':           esente,
-        'iva':              iva,
-        'dovuto':           dovuto,
-        'pagato':           pagato,
-        'abbuoni':          abbuoni,
-        'addebiti':         addebiti,
-        'residuo_iniziale': residuo_iniziale,
-        'residuo':          residuo,
+        'anno':                    anno,
+        'imponibile':              imponibile,
+        'esente':                  esente,
+        'iva':                     iva,
+        'dovuto':                  dovuto,
+        'pagato':                  pagato,
+        'abbuoni':                 abbuoni,
+        'addebiti':                addebiti,
+        'residuo_iniziale':        residuo_anni_prec,  # mantenuto per compatibilità frontend
+        'residuo_anni_precedenti': residuo_anni_prec,  # nuovo campo esplicito
+        'residuo':                 residuo,
     }
 
 
@@ -94,16 +150,20 @@ def _riepilogo_ditta(conn, ditta_id: int, anno: int) -> dict:
 def get_stats():
     conn = get_db()
     try:
-        n_clienti  = conn.execute("SELECT COUNT(*) FROM ditte WHERE archiviato=0").fetchone()[0]
+        n_ditte     = conn.execute("SELECT COUNT(*) FROM ditte WHERE archiviato=0").fetchone()[0]
         n_archiviati = conn.execute("SELECT COUNT(*) FROM ditte WHERE archiviato=1").fetchone()[0]
-        n_pratiche = conn.execute("SELECT COUNT(*) FROM pratiche").fetchone()[0]
-        n_pagamenti = conn.execute("SELECT COUNT(*) FROM pagamenti").fetchone()[0]
+        n_totali    = conn.execute("SELECT COUNT(*) FROM pratiche").fetchone()[0]
+        n_aperte    = conn.execute("SELECT COUNT(*) FROM pratiche WHERE data_esecuzione IS NULL").fetchone()[0]
+        n_chiuse    = conn.execute("SELECT COUNT(*) FROM pratiche WHERE data_esecuzione IS NOT NULL").fetchone()[0]
 
         return jsonify({
-            'clienti':    n_clienti,
+            'ditte':      n_ditte,
             'archiviati': n_archiviati,
-            'pratiche':   n_pratiche,
-            'pagamenti':  n_pagamenti,
+            'pratiche': {
+                'totali': n_totali,
+                'aperte': n_aperte,
+                'chiuse': n_chiuse,
+            },
         })
     finally:
         conn.close()

@@ -13,6 +13,7 @@ from flask import Blueprint, request, jsonify
 from database import get_db
 from auth.decorators import login_required
 from routes.events import notify_all
+from routes.stats import _residuo_anni_precedenti
 
 ditte_bp = Blueprint('ditte', __name__)
 
@@ -147,13 +148,17 @@ def get_ditte():
             tot_abbuoni = float(a.get('tot_abbuoni', 0) or 0)
             tot_pagamenti = float(pg.get('tot_pagamenti', 0) or 0)
 
-            totale_dovuto = round(res_iniziale + tot_pratiche + iva_pratiche + tot_addebiti, 2)
-            totale_pagato = round(tot_pagamenti + tot_abbuoni, 2)
-            totale_residuo = round(totale_dovuto - totale_pagato, 2)
+            totale_dovuto  = round(tot_pratiche + iva_pratiche + tot_addebiti, 2)
+            totale_pagato  = round(tot_pagamenti + tot_abbuoni, 2)
+            totale_residuo = round(totale_dovuto - totale_pagato + res_iniziale, 2)
+            residuo_anni_prec = _residuo_anni_precedenti(conn, did, anno)   # Calcola residuo anni precedenti FA N query per ogni cliente
+            totale_residuo_con_prec = round(totale_residuo + residuo_anni_prec, 2)
 
             row['totale_dovuto'] = totale_dovuto
             row['totale_pagato'] = totale_pagato
             row['totale_residuo'] = totale_residuo
+            row['residuo_anni_precedenti'] = res_iniziale  
+            row['totale_residuo_con_prec'] = totale_residuo_con_prec
 
             cf_set = cf_map.get(did, set())
             vr_set = vr_map.get(did, set())
