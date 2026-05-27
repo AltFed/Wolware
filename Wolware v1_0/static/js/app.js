@@ -3211,27 +3211,17 @@ function _buildVistaEstesa(pratiche, arrot) {
     mgOrder.forEach(mgNome => {
       const mgList = mgMap.get(mgNome);
 
-      // Header macrogruppo (blu primario)
-      html += `<tr style="${S.secHdr}">
-        <td colspan="14" style="padding:5px 10px">${mgNome}</td>
-      </tr>`;
-
-      // Per ogni tipologia con voci in questo macrogruppo
+      // Per ogni tipologia con voci in questo macrogruppo — header unificato
       tipoInfo.forEach(({ label, filter, annuale }) => {
         const sub = mgList.filter(filter);
         if (!sub.length) return;
 
-        // Sub-header tipologia con barra verticale sinistra
-        html += `<tr>
-          <td colspan="14" style="
-            padding:4px 10px 4px 14px;
-            background:var(--color-surface-2);
-            border:1px solid var(--color-border);
-            border-left:3px solid var(--color-primary);
-            font-size:10px;font-weight:700;
-            letter-spacing:.05em;text-transform:uppercase;
-            color:var(--color-text-muted);
-          ">${label}</td>
+        // Header unico: MACROGRUPPO (tipologia) — una sola riga
+        html += `<tr style="${S.secHdr}">
+          <td colspan="14" style="padding:5px 10px;border-left:3px solid rgba(255,255,255,.35)">
+            ${mgNome}
+            <span style="font-weight:400;opacity:.75;font-size:9px;letter-spacing:.04em;margin-left:6px">(${label})</span>
+          </td>
         </tr>`;
 
         html += renderVociBlock(sub, annuale);
