@@ -3079,6 +3079,165 @@ function _renderDetPratiche(list) {
   }).join('');
 }
 
+/* ══════════════════════════════════════════════════════════
+   VISTA ESTESA PRATICHE
+══════════════════════════════════════════════════════════ */
+const VE_MESI_S = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const VE_MESI_L = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                    'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+async function openVistaEstesa() {
+  closeModal('modalDettaglioCliente');
+  try {
+    const [pratiche, arrot] = await Promise.all([
+      api(`/api/pratiche?ditta_id=${currentDetId}&anno=${currentDetAnno}`),
+      api(`/api/arrotondamenti?ditta_id=${currentDetId}`),
+    ]);
+    const dittaNome = document.getElementById('dettaglioTitle')?.textContent || '';
+    document.getElementById('veTitle').textContent = `Visualizzazione Estesa — ${dittaNome}`;
+    document.getElementById('veSubtitle').textContent = `Anno ${currentDetAnno}`;
+    document.getElementById('veContent').innerHTML = _buildVistaEstesa(pratiche, arrot);
+    openModal('modalVistaEstesa');
+  } catch(e) { toast('Errore caricamento vista estesa: ' + e.message, 'error'); openModal('modalDettaglioCliente'); }
+}
+
+function closeVistaEstesa() {
+  closeModal('modalVistaEstesa');
+  openModal('modalDettaglioCliente');
+}
+
+function _buildVistaEstesa(pratiche, arrot) {
+  // ── Separa per tipo ──────────────────────────────────────
+  const isFissoMensile = p => !p.tipo?.includes('variabil') && p.tipo !== 'richiesta' && p.tipo !== 'costo_annuale';
+  const isVariabile    = p => p.tipo?.includes('variabil');
+  const isAnnuale      = p => p.tipo === 'costo_annuale';
+  const isRichiesta    = p => p.tipo === 'richiesta';
+
+  const gruppi = [
+    { label: 'COSTI FISSI MENSILI',       filter: isFissoMensile, annuale: false },
+    { label: 'COSTI VARIABILI MENSILI',    filter: isVariabile,    annuale: false },
+    { label: 'COSTI FISSI ANNUALI',        filter: isAnnuale,      annuale: true  },
+    { label: 'PRATICHE A RICHIESTA',       filter: isRichiesta,    annuale: false },
+  ];
+
+  // ── Costruisce mappa nome→{prezzo, byMese} ────────────────
+  function buildVociMap(list) {
+    const map = new Map();
+    list.forEach(p => {
+      if (!map.has(p.nome)) map.set(p.nome, { prezzo: p.prezzo, esente: !!p.esente_iva, byMese: {} });
+      map.get(p.nome).byMese[p.mese] = p;
+    });
+    return map;
+  }
+
+  // ── Calcola totali per mese ──────────────────────────────
+  const totM = Array.from({length: 13}, () => ({ imp: 0, iva: 0, esente: 0 }));
+  pratiche.forEach(p => {
+    const imp = p.importo || 0;
+    if (p.esente_iva) { totM[p.mese].esente += imp; }
+    else              { totM[p.mese].imp += imp; totM[p.mese].iva += Math.round(imp * 22) / 100; }
+  });
+
+  // Arrotondamenti per mese (dalla data)
+  const arrotM = Array(13).fill(0);
+  (arrot || []).forEach(a => {
+    if (!a.data) return;
+    const m = parseInt(a.data.slice(5, 7), 10);
+    if (!m) return;
+    arrotM[m] += a.tipo === 'abbuono' ? (a.importo || 0) : -(a.importo || 0);
+  });
+
+  // ── CSS ───────────────────────────────────────────────────
+  const S = {
+    table:  'width:100%;border-collapse:collapse;font-size:var(--text-xs)',
+    thBase: 'padding:6px 8px;border:1px solid var(--color-border);background:var(--color-surface-offset);font-weight:600;text-align:center;white-space:nowrap',
+    thName: 'padding:6px 10px;border:1px solid var(--color-border);background:var(--color-surface-offset);font-weight:600;text-align:left;min-width:160px',
+    thCost: 'padding:6px 8px;border:1px solid var(--color-border);background:var(--color-surface-offset);font-weight:600;text-align:right;min-width:80px',
+    secHdr: 'background:var(--color-primary);color:#fff;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase',
+    tdName: 'padding:4px 10px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text)',
+    tdCost: 'padding:4px 8px;border:1px solid var(--color-border);background:var(--color-surface);text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:var(--color-primary)',
+    tdVal:  'padding:4px 8px;border:1px solid var(--color-border);background:var(--color-surface);text-align:right;font-variant-numeric:tabular-nums',
+    tdGray: 'padding:4px 8px;border:1px solid var(--color-border);background:var(--color-surface-offset)',
+    tdFoot: 'padding:5px 8px;border:1px solid var(--color-border);background:var(--color-surface-2);text-align:right;font-variant-numeric:tabular-nums',
+    tdFootL:'padding:5px 10px;border:1px solid var(--color-border);background:var(--color-surface-2);font-weight:600',
+    tdTot:  'padding:6px 8px;border:1px solid var(--color-border);background:var(--color-primary);color:#fff;text-align:right;font-variant-numeric:tabular-nums;font-weight:700',
+    tdTotL: 'padding:6px 10px;border:1px solid var(--color-border);background:var(--color-primary);color:#fff;font-weight:700',
+  };
+
+  const fEur = v => v ? formatEur(v) : '—';
+  const fEur0 = v => formatEur(v || 0);
+
+  // ── Render sezione ────────────────────────────────────────
+  function renderSection(label, list, annuale) {
+    if (!list.length) return '';
+    const voci = buildVociMap(list);
+    let rows = '';
+    voci.forEach((data, nome) => {
+      const cells = Array.from({length: 12}, (_, i) => {
+        const m = i + 1;
+        const p = data.byMese[m];
+        if (!p) return annuale
+          ? `<td style="${S.tdGray}"></td>`
+          : `<td style="${S.tdVal};color:var(--color-text-faint)">—</td>`;
+        let txt = fEur(p.importo);
+        if (p.quantita && p.quantita !== 1 && p.prezzo)
+          txt += `<br><span style="font-size:9px;color:var(--color-text-muted)">${p.quantita}×${fEur(p.prezzo)}</span>`;
+        const esStyle = p.esente_iva ? 'opacity:.7;' : '';
+        return `<td style="${S.tdVal};${esStyle}">${txt}</td>`;
+      }).join('');
+      rows += `<tr>
+        <td style="${S.tdName}">${nome}</td>
+        <td style="${S.tdCost}">${data.prezzo ? fEur(data.prezzo) : '—'}</td>
+        ${cells}
+      </tr>`;
+    });
+    return `<tr style="${S.secHdr}"><td colspan="14" style="padding:5px 10px">${label}</td></tr>${rows}`;
+  }
+
+  // ── Render footer proforma ────────────────────────────────
+  function footRow(label, vals, style = S.tdFoot, labelStyle = S.tdFootL) {
+    const cells = vals.map(v => `<td style="${style}">${v}</td>`).join('');
+    return `<tr><td style="${labelStyle}">${label}</td><td style="${labelStyle}"></td>${cells}</tr>`;
+  }
+
+  const proformaHdr = `<tr style="background:#ffe066;color:#333">
+    <td colspan="14" style="padding:5px 10px;font-weight:700;font-size:10px;letter-spacing:.04em">
+      FATTURA PROFORMA (Preventivo)
+    </td>
+  </tr>`;
+
+  const hasArrot = arrotM.some(v => v !== 0);
+  const totDovuto = Array.from({length: 12}, (_, i) => {
+    const m = i + 1;
+    return totM[m].imp + totM[m].iva + totM[m].esente + arrotM[m];
+  });
+
+  const footer = proformaHdr
+    + footRow('TOTALE Imponibile Mese',      Array.from({length:12},(_,i)=>fEur0(totM[i+1].imp)))
+    + footRow('IVA 22%',                     Array.from({length:12},(_,i)=>{
+        const iva = totM[i+1].iva;
+        return iva ? `<span style="color:var(--color-text-muted);font-size:9px">22%</span> ${fEur0(iva)}` : '—';
+      }))
+    + footRow('Voci Esenti IVA',             Array.from({length:12},(_,i)=>totM[i+1].esente?fEur0(totM[i+1].esente):'—'))
+    + (hasArrot ? footRow('Arrotondamenti/Abbuoni', Array.from({length:12},(_,i)=>arrotM[i+1]?fEur0(arrotM[i+1]):'—')) : '')
+    + `<tr>
+        <td style="${S.tdTotL}">TOTALE DOVUTO MESE ${currentDetAnno}</td>
+        <td style="${S.tdTot}"></td>
+        ${Array.from({length:12},(_,i)=>`<td style="${S.tdTot}">${fEur0(totDovuto[i])}</td>`).join('')}
+       </tr>`;
+
+  // ── Intestazione mesi ─────────────────────────────────────
+  const thead = `<thead><tr>
+    <th style="${S.thName}">Voce</th>
+    <th style="${S.thCost}">Costo Unitario</th>
+    ${VE_MESI_S.slice(1).map(m=>`<th style="${S.thBase}">${m}</th>`).join('')}
+  </tr></thead>`;
+
+  const sectionsHtml = gruppi.map(g => renderSection(g.label, pratiche.filter(g.filter), g.annuale)).join('');
+
+  return `<table style="${S.table}">${thead}<tbody>${sectionsHtml}${footer}</tbody></table>`;
+}
+
 async function deletePraticaDet(id) {
   if (!confirm('Eliminare questa pratica?')) return;
   try {
