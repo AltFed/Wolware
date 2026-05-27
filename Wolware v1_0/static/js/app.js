@@ -1,7 +1,7 @@
 /* THEME TOGGLE */
 (function () {
   const root = document.documentElement, btn = document.querySelector('[data-theme-toggle]');
-  let d = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  let d = 'light';
   root.setAttribute('data-theme', d);
   function setIcon() {
     if (!btn) return; btn.innerHTML = d === 'dark'
@@ -3113,11 +3113,11 @@ function _buildVistaEstesa(pratiche, arrot) {
   const isAnnuale      = p => p.tipo === 'costo_annuale';
   const isRichiesta    = p => p.tipo === 'richiesta';
 
-  const gruppi = [
-    { label: 'COSTI FISSI MENSILI',       filter: isFissoMensile, annuale: false },
-    { label: 'COSTI VARIABILI MENSILI',    filter: isVariabile,    annuale: false },
-    { label: 'COSTI FISSI ANNUALI',        filter: isAnnuale,      annuale: true  },
-    { label: 'PRATICHE A RICHIESTA',       filter: isRichiesta,    annuale: false },
+  const tipoInfo = [
+    { label: 'COSTI FISSI MENSILI',    filter: isFissoMensile, annuale: false },
+    { label: 'COSTI VARIABILI MENSILI',filter: isVariabile,    annuale: false },
+    { label: 'COSTI FISSI ANNUALI',    filter: isAnnuale,      annuale: true  },
+    { label: 'PRATICHE A RICHIESTA',   filter: isRichiesta,    annuale: false },
   ];
 
   // ── Costruisce mappa nome→{prezzo, byMese} ────────────────
@@ -3148,6 +3148,7 @@ function _buildVistaEstesa(pratiche, arrot) {
   });
 
   // ── CSS ───────────────────────────────────────────────────
+  const SEP = 'border-left:3px solid var(--color-primary)';  // separatore costi→mesi
   const S = {
     table:  'width:100%;border-collapse:collapse;font-size:var(--text-xs)',
     thBase: 'padding:6px 8px;border:1px solid var(--color-border);background:var(--color-surface-offset);font-weight:600;text-align:center;white-space:nowrap',
@@ -3167,36 +3168,81 @@ function _buildVistaEstesa(pratiche, arrot) {
   const fEur = v => v ? formatEur(v) : '—';
   const fEur0 = v => formatEur(v || 0);
 
-  // ── Render sezione ────────────────────────────────────────
-  function renderSection(label, list, annuale) {
-    if (!list.length) return '';
+  // ── Render cella mese (first=true aggiunge separatore) ────
+  function renderCell(p, annuale, first) {
+    const sep = first ? ';' + SEP : '';   // DOPO border base, altrimenti viene sovrascritto
+    if (!p) return annuale
+      ? `<td style="${S.tdGray}${sep}"></td>`
+      : `<td style="${S.tdVal};color:var(--color-text-faint)${sep}">—</td>`;
+    let txt = fEur(p.importo);
+    if (p.quantita && p.quantita !== 1 && p.prezzo)
+      txt += `<br><span style="font-size:9px;color:var(--color-text-muted)">${p.quantita}×${fEur(p.prezzo)}</span>`;
+    const esStyle = p.esente_iva ? ';opacity:.7' : '';
+    return `<td style="${S.tdVal}${esStyle}${sep}">${txt}</td>`;
+  }
+
+  // ── Render voci di un macrogruppo×tipologia ───────────────
+  function renderVociBlock(list, annuale) {
     const voci = buildVociMap(list);
     let rows = '';
     voci.forEach((data, nome) => {
-      const cells = Array.from({length: 12}, (_, i) => {
-        const m = i + 1;
-        const p = data.byMese[m];
-        if (!p) return annuale
-          ? `<td style="${S.tdGray}"></td>`
-          : `<td style="${S.tdVal};color:var(--color-text-faint)">—</td>`;
-        let txt = fEur(p.importo);
-        if (p.quantita && p.quantita !== 1 && p.prezzo)
-          txt += `<br><span style="font-size:9px;color:var(--color-text-muted)">${p.quantita}×${fEur(p.prezzo)}</span>`;
-        const esStyle = p.esente_iva ? 'opacity:.7;' : '';
-        return `<td style="${S.tdVal};${esStyle}">${txt}</td>`;
-      }).join('');
+      const cells = Array.from({length: 12}, (_, i) => renderCell(data.byMese[i + 1], annuale, i === 0)).join('');
       rows += `<tr>
-        <td style="${S.tdName}">${nome}</td>
+        <td style="${S.tdName};padding-left:22px">${nome}</td>
         <td style="${S.tdCost}">${data.prezzo ? fEur(data.prezzo) : '—'}</td>
         ${cells}
       </tr>`;
     });
-    return `<tr style="${S.secHdr}"><td colspan="14" style="padding:5px 10px">${label}</td></tr>${rows}`;
+    return rows;
+  }
+
+  // ── Render: raggruppa per MACROGRUPPO (esterno) → TIPOLOGIA (interno) ──
+  function renderAllSections() {
+    // 1. Raccogli tutti i macrogruppi nell'ordine di apparizione
+    const mgOrder = [];
+    const mgMap   = new Map();
+    pratiche.forEach(p => {
+      const mg = p.macrogruppo_nome || '—';
+      if (!mgMap.has(mg)) { mgMap.set(mg, []); mgOrder.push(mg); }
+      mgMap.get(mg).push(p);
+    });
+
+    let html = '';
+    mgOrder.forEach(mgNome => {
+      const mgList = mgMap.get(mgNome);
+
+      // Header macrogruppo (blu primario)
+      html += `<tr style="${S.secHdr}">
+        <td colspan="14" style="padding:5px 10px">${mgNome}</td>
+      </tr>`;
+
+      // Per ogni tipologia con voci in questo macrogruppo
+      tipoInfo.forEach(({ label, filter, annuale }) => {
+        const sub = mgList.filter(filter);
+        if (!sub.length) return;
+
+        // Sub-header tipologia con barra verticale sinistra
+        html += `<tr>
+          <td colspan="14" style="
+            padding:4px 10px 4px 14px;
+            background:var(--color-surface-2);
+            border:1px solid var(--color-border);
+            border-left:3px solid var(--color-primary);
+            font-size:10px;font-weight:700;
+            letter-spacing:.05em;text-transform:uppercase;
+            color:var(--color-text-muted);
+          ">${label}</td>
+        </tr>`;
+
+        html += renderVociBlock(sub, annuale);
+      });
+    });
+    return html;
   }
 
   // ── Render footer proforma ────────────────────────────────
   function footRow(label, vals, style = S.tdFoot, labelStyle = S.tdFootL) {
-    const cells = vals.map(v => `<td style="${style}">${v}</td>`).join('');
+    const cells = vals.map((v, i) => `<td style="${style}${i === 0 ? ';' + SEP : ''}">${v}</td>`).join('');
     return `<tr><td style="${labelStyle}">${label}</td><td style="${labelStyle}"></td>${cells}</tr>`;
   }
 
@@ -3223,17 +3269,17 @@ function _buildVistaEstesa(pratiche, arrot) {
     + `<tr>
         <td style="${S.tdTotL}">TOTALE DOVUTO MESE ${currentDetAnno}</td>
         <td style="${S.tdTot}"></td>
-        ${Array.from({length:12},(_,i)=>`<td style="${S.tdTot}">${fEur0(totDovuto[i])}</td>`).join('')}
+        ${Array.from({length:12},(_,i)=>`<td style="${S.tdTot}${i===0?';'+SEP:''}">${fEur0(totDovuto[i])}</td>`).join('')}
        </tr>`;
 
   // ── Intestazione mesi ─────────────────────────────────────
   const thead = `<thead><tr>
     <th style="${S.thName}">Voce</th>
     <th style="${S.thCost}">Costo Unitario</th>
-    ${VE_MESI_S.slice(1).map(m=>`<th style="${S.thBase}">${m}</th>`).join('')}
+    ${VE_MESI_S.slice(1).map((m,i)=>`<th style="${S.thBase}${i===0?';'+SEP:''}">${m}</th>`).join('')}
   </tr></thead>`;
 
-  const sectionsHtml = gruppi.map(g => renderSection(g.label, pratiche.filter(g.filter), g.annuale)).join('');
+  const sectionsHtml = renderAllSections();
 
   return `<table style="${S.table}">${thead}<tbody>${sectionsHtml}${footer}</tbody></table>`;
 }
