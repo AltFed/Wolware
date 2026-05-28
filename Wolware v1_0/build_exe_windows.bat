@@ -2,8 +2,7 @@
 REM  Wolware — Build Windows (senza pywebview, compatibile Python 3.14)
 
 echo Installazione dipendenze...
-pip install flask pyinstaller -q
-
+pip install -r requirements.txt
 echo.
 echo Build in corso...
 

@@ -3089,14 +3089,34 @@ const VE_MESI_L = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
 async function openVistaEstesa() {
   closeModal('modalDettaglioCliente');
   try {
-    const [pratiche, arrot] = await Promise.all([
+    const [pratiche, arrot, stats] = await Promise.all([
       api(`/api/pratiche?ditta_id=${currentDetId}&anno=${currentDetAnno}`),
       api(`/api/arrotondamenti?ditta_id=${currentDetId}`),
+      api(`/api/stats/ditta/${currentDetId}?anno=${currentDetAnno}`),
     ]);
     const dittaNome = document.getElementById('dettaglioTitle')?.textContent || '';
     document.getElementById('veTitle').textContent = `Visualizzazione Estesa — ${dittaNome}`;
     document.getElementById('veSubtitle').textContent = `Anno ${currentDetAnno}`;
     document.getElementById('veContent').innerHTML = _buildVistaEstesa(pratiche, arrot);
+
+    // ── Pillole riepilogo header ───────────────────────────
+    const residuo     = stats.residuo ?? 0;
+    const residuoAnno = (stats.dovuto ?? 0) - (stats.pagato ?? 0);
+    const resColor    = r => r > 0 ? 'var(--color-error)' : r < 0 ? 'var(--color-success)' : 'var(--color-text-muted)';
+    const pill = (label, val, color) =>
+      `<div style="display:flex;flex-direction:column;align-items:flex-end;padding:4px 10px;
+         background:var(--color-surface-2);border-radius:var(--radius-md);border:1px solid var(--color-border)">
+         <span style="font-size:9px;color:var(--color-text-muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase">${label}</span>
+         <span style="font-size:var(--text-sm);font-weight:700;color:${color};font-variant-numeric:tabular-nums">${formatEur(val)}</span>
+       </div>`;
+    const residuoPrec = stats.residuo_iniziale ?? 0;
+    document.getElementById('veStats').innerHTML =
+        pill('Dovuto',             stats.dovuto ?? 0,   'var(--color-text)')
+      + pill('Pagato',             stats.pagato ?? 0,   'var(--color-success)')
+      + pill('Residuo anno',       residuoAnno,          resColor(residuoAnno))
+      + pill('Anni precedenti',    residuoPrec,          resColor(residuoPrec))
+      + pill('Residuo totale',     residuo,              resColor(residuo));
+
     openModal('modalVistaEstesa');
   } catch(e) { toast('Errore caricamento vista estesa: ' + e.message, 'error'); openModal('modalDettaglioCliente'); }
 }
@@ -3242,7 +3262,6 @@ function _buildVistaEstesa(pratiche, arrot) {
     </td>
   </tr>`;
 
-  const hasArrot = arrotM.some(v => v !== 0);
   const totDovuto = Array.from({length: 12}, (_, i) => {
     const m = i + 1;
     return totM[m].imp + totM[m].iva + totM[m].esente + arrotM[m];
@@ -3255,7 +3274,7 @@ function _buildVistaEstesa(pratiche, arrot) {
         return iva ? `<span style="color:var(--color-text-muted);font-size:9px">22%</span> ${fEur0(iva)}` : '—';
       }))
     + footRow('Voci Esenti IVA',             Array.from({length:12},(_,i)=>totM[i+1].esente?fEur0(totM[i+1].esente):'—'))
-    + (hasArrot ? footRow('Arrotondamenti/Abbuoni', Array.from({length:12},(_,i)=>arrotM[i+1]?fEur0(arrotM[i+1]):'—')) : '')
+    + footRow('Arrotondamenti/Abbuoni',        Array.from({length:12},(_,i)=>arrotM[i+1]?fEur0(arrotM[i+1]):'—'))
     + `<tr>
         <td style="${S.tdTotL}">TOTALE DOVUTO MESE ${currentDetAnno}</td>
         <td style="${S.tdTot}"></td>

@@ -3663,12 +3663,13 @@
 <!-- MODAL Vista Estesa Pratiche -->
 <div class="modal-overlay" id="modalVistaEstesa" style="z-index:2000">
   <div class="modal" style="width:97vw;max-width:97vw;max-height:92vh;display:flex;flex-direction:column">
-    <div class="modal-header" style="flex-shrink:0">
-      <div>
+    <div class="modal-header" style="flex-shrink:0;gap:var(--space-4)">
+      <div style="flex-shrink:0">
         <h3 class="modal-title" id="veTitle">Visualizzazione Estesa — Pratiche</h3>
         <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:2px" id="veSubtitle"></p>
       </div>
-      <button class="modal-close" onclick="closeVistaEstesa()">&#x2715;</button>
+      <div id="veStats" style="display:flex;gap:var(--space-3);align-items:center;flex:1;flex-wrap:wrap;justify-content:flex-end"></div>
+      <button class="modal-close" onclick="closeVistaEstesa()" style="flex-shrink:0">&#x2715;</button>
     </div>
     <div class="modal-body" style="flex:1;overflow:auto;padding:0">
       <div id="veContent" style="min-width:900px"></div>
