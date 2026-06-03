@@ -292,14 +292,20 @@ def _genera_pdf_estratto(
     C_DARK   = colors.HexColor('#2d3748')
 
     # Colori tag badge
-    C_TAG_FISSO    = colors.HexColor('#3182ce')
-    C_TAG_VAR      = colors.HexColor('#dd6b20')
-    C_TAG_ANNUALE  = colors.HexColor('#805ad5')
-    C_TAG_PAG      = colors.HexColor('#38a169')
+    C_TAG_FISSO    = colors.HexColor('#2b6cb0')   # fisso mensile  — blu
+    C_TAG_ANN      = colors.HexColor('#553c9a')   # fisso annuale  — viola
+    C_TAG_VAR      = colors.HexColor('#dd6b20')   # var. mensile   — arancio
+    C_TAG_GOLD     = colors.HexColor('#b7791f')   # var. annuale   — oro
+    C_TAG_RICH     = colors.HexColor('#c05621')   # a richiesta    — ambra
+    C_TAG_PAG      = colors.HexColor('#276749')   # pagamento      — verde
     C_TAG_FISSO_BG = colors.HexColor('#ebf8ff')
-    C_TAG_VAR_BG   = colors.HexColor('#fffaf0')
     C_TAG_ANN_BG   = colors.HexColor('#faf5ff')
+    C_TAG_VAR_BG   = colors.HexColor('#fff7ed')
+    C_TAG_GOLD_BG  = colors.HexColor('#fefce8')
+    C_TAG_RICH_BG  = colors.HexColor('#ffedd5')
     C_TAG_PAG_BG   = colors.HexColor('#f0fff4')
+    # alias mantenuto per compatibilità interna
+    C_TAG_ANNUALE  = C_TAG_ANN
 
     W, H = A4
     ML = MR = 1.8 * cm
@@ -429,23 +435,26 @@ def _genera_pdf_estratto(
     S_VERDE  = sty('verde',  fontSize=9,  fontName='Helvetica-Bold', textColor=C_VERDE)
 
     # Mappa tipo -> (label badge, colore testo, colore sfondo)
+    # Label allineate al tariffario: Fisso Mensile / Fisso Annuale / Var. Mensile / Var. Annuale / A Richiesta
     TIPO_TAG = {
-        # valori pratiche.tipo
-        'costo_fisso':             ('fisso',   C_TAG_FISSO,   C_TAG_FISSO_BG),
-        'costo_fisso_mensile':     ('fisso',   C_TAG_FISSO,   C_TAG_FISSO_BG),
-        'costo_fisso_annuale':     ('annuale', C_TAG_ANNUALE, C_TAG_ANN_BG),
-        'costo_variabile':         ('variab.', C_TAG_VAR,     C_TAG_VAR_BG),
-        'a_richiesta':             ('annuale', C_TAG_ANNUALE, C_TAG_ANN_BG),
-        # valori ditta_voci.tipo
-        'fisso_mensile':           ('fisso',   C_TAG_FISSO,   C_TAG_FISSO_BG),
-        'costi_fissi_mensili':     ('fisso',   C_TAG_FISSO,   C_TAG_FISSO_BG),
-        'variabile_mensile':       ('variab.', C_TAG_VAR,     C_TAG_VAR_BG),
-        'variabile':               ('variab.', C_TAG_VAR,     C_TAG_VAR_BG),
-        'costi_variabili':         ('variab.', C_TAG_VAR,     C_TAG_VAR_BG),
-        'costi_variabili_mensili': ('variab.', C_TAG_VAR,     C_TAG_VAR_BG),
-        'variabile_annuale':       ('annuale', C_TAG_ANNUALE, C_TAG_ANN_BG),
-        'fisso_annuale':           ('annuale', C_TAG_ANNUALE, C_TAG_ANN_BG),
-        'costi_fissi_annuali':     ('annuale', C_TAG_ANNUALE, C_TAG_ANN_BG),
+        'costo_fisso':              ('Fisso mens.',  C_TAG_FISSO, C_TAG_FISSO_BG),
+        'costo_fisso_mensile':      ('Fisso mens.',  C_TAG_FISSO, C_TAG_FISSO_BG),
+        'fisso_mensile':            ('Fisso mens.',  C_TAG_FISSO, C_TAG_FISSO_BG),
+        'costi_fissi_mensili':      ('Fisso mens.',  C_TAG_FISSO, C_TAG_FISSO_BG),
+        'costo_fisso_annuale':      ('Fisso ann.',   C_TAG_ANN,   C_TAG_ANN_BG),
+        'fisso_annuale':            ('Fisso ann.',   C_TAG_ANN,   C_TAG_ANN_BG),
+        'costi_fissi_annuali':      ('Fisso ann.',   C_TAG_ANN,   C_TAG_ANN_BG),
+        'costo_annuale':            ('Fisso ann.',   C_TAG_ANN,   C_TAG_ANN_BG),
+        'costo_variabile':          ('Var. mens.',   C_TAG_VAR,   C_TAG_VAR_BG),
+        'variabile':                ('Var. mens.',   C_TAG_VAR,   C_TAG_VAR_BG),
+        'variabile_mensile':        ('Var. mens.',   C_TAG_VAR,   C_TAG_VAR_BG),
+        'costi_variabili':          ('Var. mens.',   C_TAG_VAR,   C_TAG_VAR_BG),
+        'costi_variabili_mensili':  ('Var. mens.',   C_TAG_VAR,   C_TAG_VAR_BG),
+        'variabile_annuale':        ('Var. ann.',    C_TAG_GOLD,  C_TAG_GOLD_BG),
+        'costi_variabili_annuali':  ('Var. ann.',    C_TAG_GOLD,  C_TAG_GOLD_BG),
+        'richiesta':                ('A richiesta',  C_TAG_RICH,  C_TAG_RICH_BG),
+        'a_richiesta':              ('A richiesta',  C_TAG_RICH,  C_TAG_RICH_BG),
+        'a richiesta':              ('A richiesta',  C_TAG_RICH,  C_TAG_RICH_BG),
     }
 
     def _tipo_label(tipo):
@@ -581,7 +590,7 @@ def _genera_pdf_estratto(
                 sp = round(sp - float(p.get('importo', 0)), 2)
             saldo_prog[m] = sp
 
-        for m in sorted(pratiche_per_mese.keys(), reverse=True):
+        for m in sorted(pratiche_per_mese.keys()):
             voci_m = pratiche_per_mese[m]
             pag_m  = pagamenti_per_mese.get(m, [])
 
@@ -611,30 +620,27 @@ def _genera_pdf_estratto(
             # Mappa tipo -> (label badge UI, colori hex testo/sfondo)
             # Copre sia i valori di pratiche.tipo sia di ditta_voci.tipo
             TIPO_BADGE = {
-                # valori pratiche.tipo
-                'costo_fisso':              ('COSTO FISSO',  '#2b6cb0', '#ebf8ff'),
-                'costo_fisso_mensile':      ('COSTO FISSO',  '#2b6cb0', '#ebf8ff'),
-                'costo_fisso_annuale':      ('COSTO ANNUALE','#553c9a', '#faf5ff'),
-                'costo_variabile':          ('VARIABILE',    '#276749', '#f0fff4'),
-                'variabile':                ('VARIABILE',    '#276749', '#f0fff4'),
-                'a_richiesta':              ('A RICHIESTA',  '#744210', '#fffaf0'),
-                # valori ditta_voci.tipo
-                'fisso_mensile':            ('COSTO FISSO',  '#2b6cb0', '#ebf8ff'),
-                'costi_fissi_mensili':      ('COSTO FISSO',  '#2b6cb0', '#ebf8ff'),
-                'variabile_mensile':        ('VARIABILE',    '#276749', '#f0fff4'),
-                'costi_variabili':          ('VARIABILE',    '#276749', '#f0fff4'),
-                'costi_variabili_mensili':  ('VARIABILE',    '#276749', '#f0fff4'),
-                'variabile_annuale':        ('A RICHIESTA',  '#744210', '#fffaf0'),
-                'fisso_annuale':            ('COSTO ANNUALE','#553c9a', '#faf5ff'),
-                'costi_fissi_annuali':      ('COSTO ANNUALE','#553c9a', '#faf5ff'),
-                # NUOVE CHIAVI PER LE TUE PRATICHE
-                'costi_variabili_annuali':  ('A RICHIESTA',  '#744210', '#ffedd5'),
-                'costi_variabili_annuali':  ('A RICHIESTA',  '#744210', '#ffedd5'),  # (doppia per sicurezza)
-                # varianti con spazi
-                'costo fisso':              ('COSTO FISSO',  '#2b6cb0', '#ebf8ff'),
-                'costo annuale':            ('COSTO ANNUALE','#553c9a', '#faf5ff'),
-                'a richiesta':              ('A RICHIESTA',  '#744210', '#ffedd5'),
-                'variabile annuale':        ('A RICHIESTA',  '#744210', '#ffedd5'),
+                'costo_fisso':              ('FISSO MENS.',  '#2b6cb0', '#ebf8ff'),
+                'costo_fisso_mensile':      ('FISSO MENS.',  '#2b6cb0', '#ebf8ff'),
+                'fisso_mensile':            ('FISSO MENS.',  '#2b6cb0', '#ebf8ff'),
+                'costi_fissi_mensili':      ('FISSO MENS.',  '#2b6cb0', '#ebf8ff'),
+                'costo fisso':              ('FISSO MENS.',  '#2b6cb0', '#ebf8ff'),
+                'costo_fisso_annuale':      ('FISSO ANN.',   '#553c9a', '#faf5ff'),
+                'fisso_annuale':            ('FISSO ANN.',   '#553c9a', '#faf5ff'),
+                'costi_fissi_annuali':      ('FISSO ANN.',   '#553c9a', '#faf5ff'),
+                'costo_annuale':            ('FISSO ANN.',   '#553c9a', '#faf5ff'),
+                'costo annuale':            ('FISSO ANN.',   '#553c9a', '#faf5ff'),
+                'costo_variabile':          ('VAR. MENS.',   '#dd6b20', '#fff7ed'),
+                'variabile':                ('VAR. MENS.',   '#dd6b20', '#fff7ed'),
+                'variabile_mensile':        ('VAR. MENS.',   '#dd6b20', '#fff7ed'),
+                'costi_variabili':          ('VAR. MENS.',   '#dd6b20', '#fff7ed'),
+                'costi_variabili_mensili':  ('VAR. MENS.',   '#dd6b20', '#fff7ed'),
+                'variabile_annuale':        ('VAR. ANN.',    '#b7791f', '#fefce8'),
+                'costi_variabili_annuali':  ('VAR. ANN.',    '#b7791f', '#fefce8'),
+                'variabile annuale':        ('VAR. ANN.',    '#b7791f', '#fefce8'),
+                'richiesta':                ('A RICHIESTA',  '#c05621', '#ffedd5'),
+                'a_richiesta':              ('A RICHIESTA',  '#c05621', '#ffedd5'),
+                'a richiesta':              ('A RICHIESTA',  '#c05621', '#ffedd5'),
                 'altro':                    ('ALTRO',        '#718096', '#f7fafc'),
             }
 
@@ -700,7 +706,8 @@ def _genera_pdf_estratto(
                 
                 # --- Costruzione della descrizione arricchita ---
                 # Mostra: "Nome voce (Qtà × Prezzo unitario)"
-                descrizione_arricchita = f"{nome} ({qty} × {_eur(prz)})"
+                nome_display = info.get('nome_display', nome)
+                descrizione_arricchita = f"{nome_display} ({qty} × {_eur(prz)})"
                 voce_par = Paragraph(descrizione_arricchita, 
                                     sty(f'vn_{nome[:6]}_{qty}', fontSize=8.5, textColor=C_DARK))
 
@@ -800,12 +807,13 @@ def _genera_pdf_estratto(
 
         # Legenda: ogni badge = colonna con etichetta + descrizione su due righe
         _LEG = [
-            ('COSTO FISSO',   '#2b6cb0', '#dbeafe', 'Fisso mensile'),
-            ('VARIABILE',     '#276749', '#dcfce7', 'Costo variabile'),
-            ('COSTO ANNUALE', '#553c9a', '#ede9fe', 'Fisso annuale'),
-            ('A RICHIESTA',   '#744210', '#ffedd5', 'Variabile / a richiesta'),
-            ('PAGAMENTO',     '#276749', '#dcfce7', 'Pagamento ricevuto'),
-            ('ESENTE IVA',    '#92400e', '#fef9c3', 'Esente IVA'),
+            ('FISSO MENS.',  '#2b6cb0', '#ebf8ff', 'Costi fissi mensili'),
+            ('FISSO ANN.',   '#553c9a', '#faf5ff', 'Costi fissi annuali'),
+            ('VAR. MENS.',   '#dd6b20', '#fff7ed', 'Costi variabili mensili'),
+            ('VAR. ANN.',    '#b7791f', '#fefce8', 'Costi variabili annuali'),
+            ('A RICHIESTA',  '#c05621', '#ffedd5', 'Pratiche a richiesta'),
+            ('PAGAMENTO',    '#276749', '#f0fff4',  'Pagamento ricevuto'),
+            ('ESENTE IVA',   '#92400e', '#fef9c3',  'Esente IVA'),
         ]
 
         leg_row1 = [Paragraph('<b>LEGENDA</b>', sty('leg_hdr', fontSize=7, textColor=C_MUTED, leading=9))]
@@ -1002,7 +1010,7 @@ def _genera_pdf_estratto(
         story.append(Paragraph("DETTAGLIO COMPETENZE", S_H2))
         story.append(Spacer(1, 0.2 * cm))
 
-        for m in sorted(pratiche_per_mese.keys(), reverse=True):
+        for m in sorted(pratiche_per_mese.keys()):
             voci_m = pratiche_per_mese[m]
             e_m = sum(float(v.get('importo') or 0) for v in voci_m if v.get('esente_iva'))
             i_m = sum(float(v.get('importo') or 0) for v in voci_m) - e_m
@@ -1041,7 +1049,7 @@ def _genera_pdf_estratto(
                 tot_v = qty * prz + iva_v
                 qty_str = f"{qty} × {_eur(prz)}"
                 righe_v.append([
-                    Paragraph(nome, S_BODY),
+                    Paragraph(info.get('nome_display', nome), S_BODY),
                     Paragraph(qty_str,
                               sty('qty', fontSize=8.5, alignment=TA_RIGHT, textColor=C_MUTED)),
                     Paragraph(f"<b>{_eur(tot_v)}</b>",
